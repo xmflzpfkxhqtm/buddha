@@ -6,8 +6,7 @@ export default function Home() {
   const router = useRouter();
 
   return (
-<main className="min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-[#F5F1E6] px-6 py-10"
-style={{ paddingBottom: 'calc(2.25rem + env(safe-area-inset-bottom))' }}>
+<main className="min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-[#F5F1E6] px-6 py-10">
 <div className="w-full h-80 bg-[#F8F5EE] border border-[#E0DBCF] rounded-xl p-4 shadow-xl mb-6 flex flex-col items-center justify-center">
   <img
     src="/vip.png"

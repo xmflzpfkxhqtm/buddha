@@ -10,8 +10,7 @@ function AnswerContent() {
   const router = useRouter();
 
   return (
-    <main className="relative min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-[#F5F1E6] px-6 py-10"
-    style={{ paddingBottom: 'calc(2.25rem + env(safe-area-inset-bottom))' }}>
+    <main className="relative min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-[#F5F1E6] px-6 py-10">
       <div className="absolute top-0 left-0 w-full h-50 bg-brown z-0"></div>
 
       <div className="w-full h-10 z-1">
@@ -30,11 +29,13 @@ function AnswerContent() {
       </div>
 
       <div className="max-w-md w-full">
-        <h3 className="text-xl font-bold text-[#4B3B2A] mb-4"></h3>
+      <p className="font-bold text-lg text-left mb-4">
+      🪷 이르시길</p>        
         <div className="p-4 rounded border border-[#CBBBA0] mb-6 whitespace-pre-wrap text-base font-bold text-[#4B3B2A]">
           {answer}
         </div>
-        <h2 className="text-l font-bold text-[#4B3B2A] mb-4">나의 질문</h2>
+        <h2 className="text-lg font-bold text-[#4B3B2A] mb-4">
+        🧘🏻‍♀️ 나의 질문</h2>
         <div className="p-4 rounded border border-[#CBBBA0] whitespace-pre-wrap text-[#4B3B2A] mb-4">
           {question}
         </div>
@@ -42,7 +43,7 @@ function AnswerContent() {
 
       <button
         onClick={() => router.push('/')}
-        className="mt-auto w-full py-2 bg-brown text-white rounded-xl font-semibold hover:bg-[#9C886D] transition"
+        className="mt-6 w-full px-6 py-3 font-bold bg-brown text-lg text-white rounded-xl hover:bg-[#9C886D] transition"
       >
         처음으로
       </button>

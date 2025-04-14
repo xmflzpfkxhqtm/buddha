@@ -23,8 +23,7 @@ export default function AskPage() {
   };
 
   return (
-<main className="relative min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-[#F5F1E6] px-6 py-10"
-style={{ paddingBottom: 'calc(2.25rem + env(safe-area-inset-bottom))' }}>
+<main className="relative min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-[#F5F1E6] px-6 py-10">
   <div className="absolute top-0 left-0 w-full h-50 bg-brown z-0"></div>
   <div className="w-full h-10 z-1">      
   <h2 className="text-xl text-white font-bold text-center">마음 속 이야기를 나누고<br></br>
@@ -38,6 +37,9 @@ style={{ paddingBottom: 'calc(2.25rem + env(safe-area-inset-bottom))' }}>
   />  
 </div>
       <div className="max-w-md w-full z-1">
+      <p className="font-bold text-lg	text-center mb-8">
+      “무엇이든 여쭈어 보세요.<br></br>
+부처님께서 답하십니다.”      </p>
         <textarea
           className="w-full h-40 p-4 rounded border border-[#CBBBA0] bg-[#FFFDF8] text-base resize-none focus:outline-none focus:ring-2 focus:ring-[#B29E7D]"
           rows={5}
@@ -47,7 +49,7 @@ style={{ paddingBottom: 'calc(2.25rem + env(safe-area-inset-bottom))' }}>
         />
       </div>
       <button
-          className="mt-auto w-full py-2 bg-brown text-white rounded-xl font-semibold hover:bg-[#9C886D] transition"
+          className="mt-6 w-full px-6 py-3 font-bold bg-brown text-lg text-white rounded-xl hover:bg-[#9C886D] transition"
           onClick={handleAsk}
         >
           부처님께 여쭙기
