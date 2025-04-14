@@ -22,7 +22,7 @@ export default function AskPage() {
     고요히 마음을 들여다보십시오. 괴로움도, 기쁨도 모두 지나가는 구름과 같습니다. 고요히 마음을 들여다보십시오. 괴로움도, 기쁨도 모두 지나가는 구름과 같습니다. 고요히 마음을 들여다보십시오. 괴로움도, 기쁨도 모두 지나가는 구름과 같습니다.
     
     고요히 마음을 들여다보십시오. 괴로움도, 기쁨도 모두 지나가는 구름과 같습니다. 고요히 마음을 들여다보십시오. 괴로움도, 기쁨도 모두 지나가는 구름과 같습니다. 고요히 마음을 들여다보십시오. 괴로움도, 기쁨도 모두 지나가는 구름과 같습니다.`;
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    await new Promise((resolve) => setTimeout(resolve, 5000));
 
     // URL 파라미터로 질문과 응답을 전달
     const encodedAnswer = encodeURIComponent(fakeAnswer);

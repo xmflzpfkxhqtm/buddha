@@ -16,6 +16,20 @@
   .animate-fadeIn {
     animation: fadeIn 1s ease-in-out both;
   }
+  
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  .animate-float {
+    animation: float 2.5s ease-in-out infinite;
+  }
+
 }
 
 @theme inline {
