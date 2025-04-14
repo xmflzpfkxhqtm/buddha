@@ -11,7 +11,7 @@ function AnswerContent() {
 
   return (
     <main className="relative min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-[#F5F1E6] px-6 py-10">
-      <div className="absolute top-0 left-0 w-full h-50 bg-brown z-0"></div>
+      <div className="absolute top-0 left-0 w-full h-50 shadow-xl bg-brown z-0"></div>
 
       <div className="w-full h-10 z-1">
         <h2 className="text-xl text-white font-bold text-center">
@@ -31,12 +31,12 @@ function AnswerContent() {
       <div className="max-w-md w-full">
       <p className="font-bold text-lg text-left mb-4">
       🪷 이르시길</p>        
-        <div className="p-4 rounded border border-[#CBBBA0] mb-6 whitespace-pre-wrap text-base font-bold text-[#4B3B2A]">
+        <div className="p-4 rounded-xl shadow-xl border border-[#CBBBA0] mb-6 whitespace-pre-wrap text-base font-bold text-[#4B3B2A]">
           {answer}
         </div>
         <h2 className="text-lg font-bold text-[#4B3B2A] mb-4">
         🧘🏻‍♀️ 나의 물음</h2>
-        <div className="p-4 rounded border border-[#CBBBA0] whitespace-pre-wrap text-[#4B3B2A] mb-4">
+        <div className="p-4 rounded-xl shadow-xl border border-[#CBBBA0] whitespace-pre-wrap text-[#4B3B2A] mb-4">
           {question}
         </div>
       </div>

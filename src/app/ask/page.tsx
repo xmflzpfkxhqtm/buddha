@@ -24,7 +24,7 @@ export default function AskPage() {
 
   return (
 <main className="relative min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-[#F5F1E6] px-6 py-10">
-  <div className="absolute top-0 left-0 w-full h-50 bg-brown z-0"></div>
+  <div className="absolute top-0 left-0 w-full h-50 shadow-xl bg-brown z-0"></div>
   <div className="w-full h-10 z-1">      
   <h2 className="text-xl text-white font-bold text-center">마음 속 이야기를 나누고<br></br>
 부처님의 지혜에 귀 기울여 보세요</h2>
@@ -41,7 +41,7 @@ export default function AskPage() {
       “무엇이든 여쭈어 보세요.<br></br>
 부처님께서 답하십니다.”      </p>
         <textarea
-          className="w-full h-40 p-4 rounded border border-[#CBBBA0] bg-[#FFFDF8] text-base resize-none focus:outline-none focus:ring-2 focus:ring-[#B29E7D]"
+          className="w-full h-40 p-4 rounded-xl border border-[#CBBBA0] bg-[#FFFDF8] text-base resize-none focus:outline-none focus:ring-2 focus:ring-[#B29E7D]"
           rows={5}
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
