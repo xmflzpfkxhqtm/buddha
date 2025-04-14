@@ -23,7 +23,8 @@ export default function AskPage() {
   };
 
   return (
-<main className="relative min-h-screen w-full max-w-[430px] pb-[calc(2.25rem+env(safe-area-inset-bottom))] flex flex-col justify-start items-center mx-auto bg-[#F5F1E6] px-6 py-10">
+<main className="relative min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-[#F5F1E6] px-6 py-10"
+style={{ paddingBottom: 'calc(2.25rem + env(safe-area-inset-bottom))' }}>
   <div className="absolute top-0 left-0 w-full h-50 bg-brown z-0"></div>
   <div className="w-full h-10 z-1">      
   <h2 className="text-xl text-white font-bold text-center">마음 속 이야기를 나누고<br></br>
