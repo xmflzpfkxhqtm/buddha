@@ -3,9 +3,9 @@
 import { useSearchParams, useRouter } from 'next/navigation';
 
 export default function AnswerPage() {
-  const params = useSearchParams();
-  const question = params.get('question') || '';
-  const answer = params.get('answer') || '';
+    const params = useSearchParams();
+    const question = params?.get('question') || '';
+    const answer = params?.get('answer') || '';
   const router = useRouter();
 
   return (
