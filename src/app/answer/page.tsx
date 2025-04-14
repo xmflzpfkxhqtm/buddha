@@ -35,7 +35,7 @@ function AnswerContent() {
           {answer}
         </div>
         <h2 className="text-lg font-bold text-[#4B3B2A] mb-4">
-        🧘🏻‍♀️ 나의 질문</h2>
+        🧘🏻‍♀️ 나의 물음</h2>
         <div className="p-4 rounded border border-[#CBBBA0] whitespace-pre-wrap text-[#4B3B2A] mb-4">
           {question}
         </div>
