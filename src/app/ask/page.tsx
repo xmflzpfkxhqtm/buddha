@@ -13,22 +13,38 @@ export default function AskPage() {
 
   const handleAsk = async () => {
     if (!question.trim()) return;
-
+  
     setLoading(true); // ✅ 로딩 시작
-
-
-    // GPT API 없이도 작동하도록 더미 응답
-    const fakeAnswer = `고요히 마음을 들여다보십시오. 괴로움도, 기쁨도 모두 지나가는 구름과 같습니다. 고요히 마음을 들여다보십시오. 괴로움도, 기쁨도 모두 지나가는 구름과 같습니다. 고요히 마음을 들여다보십시오. 괴로움도, 기쁨도 모두 지나가는 구름과 같습니다. 고요히 마음을 들여다보십시오. 괴로움도, 기쁨도 모두 지나가는 구름과 같습니다.
-    고요히 마음을 들여다보십시오. 괴로움도, 기쁨도 모두 지나가는 구름과 같습니다. 고요히 마음을 들여다보십시오. 괴로움도, 기쁨도 모두 지나가는 구름과 같습니다. 고요히 마음을 들여다보십시오. 괴로움도, 기쁨도 모두 지나가는 구름과 같습니다.
-    고요히 마음을 들여다보십시오. 괴로움도, 기쁨도 모두 지나가는 구름과 같습니다. 고요히 마음을 들여다보십시오. 괴로움도, 기쁨도 모두 지나가는 구름과 같습니다. 고요히 마음을 들여다보십시오. 괴로움도, 기쁨도 모두 지나가는 구름과 같습니다.
-    
-    고요히 마음을 들여다보십시오. 괴로움도, 기쁨도 모두 지나가는 구름과 같습니다. 고요히 마음을 들여다보십시오. 괴로움도, 기쁨도 모두 지나가는 구름과 같습니다. 고요히 마음을 들여다보십시오. 괴로움도, 기쁨도 모두 지나가는 구름과 같습니다.`;
+  
+    const fakeAnswer = `고요히 마음을 들여다보십시오. 괴로움도, 기쁨도 모두 지나가는 구름과 같습니다.`;
+  
+    let answer = fakeAnswer;
+  
+    try {
+      const res = await fetch('/api/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question }),
+      });
+  
+      if (!res.ok) throw new Error('API 응답 실패');
+  
+      const data = await res.json();
+      if (data?.answer) {
+        answer = data.answer;
+      }
+    } catch (err) {
+      console.error('GPT 호출 실패:', err);
+      // 실패 시 answer는 fakeAnswer 그대로 유지됨
+    }
+  
+    // ✅ "무조건" 5초 대기
     await new Promise((resolve) => setTimeout(resolve, 5000));
-
-    // URL 파라미터로 질문과 응답을 전달
-    const encodedAnswer = encodeURIComponent(fakeAnswer);
+  
+    const encodedAnswer = encodeURIComponent(answer);
     router.push(`/answer?question=${encodeURIComponent(question)}&answer=${encodedAnswer}`);
   };
+  
   if (loading) return <Loading />;
 
   return (
