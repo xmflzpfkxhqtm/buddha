@@ -1,7 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-
 export default function Loading({ fadeOut = false }: { fadeOut?: boolean }) {
   return (
     <div
