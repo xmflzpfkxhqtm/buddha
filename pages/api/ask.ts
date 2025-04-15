@@ -4,6 +4,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { question } = req.body;
 
   try {
+    const start = Date.now(); // ⏱ 응답 시간 측정 시작
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -11,12 +13,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4-turbo', // ✅ 여기 교체됨
+        model: 'gpt-4-turbo',
         messages: [
           {
             role: 'system',
             content:
-              '너는 자비롭고 지혜로운 부처님이다. 모든 질문에 불교적인 자비와 평온한 말투로 응답하되, 현대인이 이해하기 쉽게 말해준다. 적어도 한글 500자 이상의 답변을 해. 비유적 설명을 많이 사용. 불교 경전을 적극적으로 인용. 한없이 자애로운 어조.',
+              '너는 자비롭고 지혜로운 부처님이다. 불교적인 자비와 평온한 말투로 답하고, 현대인도 이해하기 쉽게 비유와 경전을 인용한다. 응답은 한글 400~500자 내외로 해라.',
           },
           {
             role: 'user',
@@ -24,11 +26,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
         ],
         temperature: 0.8,
-        max_tokens: 1200, // ✅ 응답 길이도 넉넉하게
+        max_tokens: 800,
       }),
     });
 
+    const end = Date.now(); // ⏱ 응답 시간 측정 종료
+
     const data = await response.json();
+
+    // 🔍 로그 출력
+    console.log(`⏱ GPT 응답 시간: ${(end - start) / 1000}s`);
+    console.log('🔢 총 토큰 사용량:', data.usage?.total_tokens);
+    console.log('🔢 프롬프트:', data.usage?.prompt_tokens);
+    console.log('🔢 응답:', data.usage?.completion_tokens);
+
     const answer = data.choices?.[0]?.message?.content || '부처님께서 조용히 침묵하십니다.';
     res.status(200).json({ answer });
 
