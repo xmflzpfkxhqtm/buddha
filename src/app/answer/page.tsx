@@ -10,7 +10,7 @@ function AnswerContent() {
   const [fullAnswer, setFullAnswer] = useState('');
   const [displayedAnswer, setDisplayedAnswer] = useState('');
   const [done, setDone] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [fadeOut, setFadeOut] = useState(false);
   const router = useRouter();
   const bufferRef = useRef('');
