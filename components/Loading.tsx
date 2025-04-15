@@ -2,20 +2,11 @@
 
 import { useEffect, useState } from 'react';
 
-export default function Loading() {
-  const [fade, setFade] = useState(false);
-
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setFade(true);
-    }, 4000); // 5초 중 마지막 1초에 fade 시작
-    return () => clearTimeout(timeout);
-  }, []);
-
+export default function Loading({ fadeOut = false }: { fadeOut?: boolean }) {
   return (
     <div
       className={`flex flex-col justify-center items-center h-screen bg-[#F5F1E6] text-[#3E3E3E]
-        transition-opacity duration-1000 ${fade ? 'opacity-0' : 'opacity-100'}`}
+        transition-opacity duration-500 ${fadeOut ? 'opacity-0' : 'opacity-100'}`}
     >
       <div className="text-5xl animate-float mb-4">🪷</div>
       <p className="text-xl font-bold text-center tracking-wide animate-fadeIn px-6">

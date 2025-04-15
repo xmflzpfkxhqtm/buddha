@@ -9,6 +9,7 @@ export default function AskPage() {
     const [showModal, setShowModal] = useState(false);
   const [question, setQuestion] = useState('');
   const [loading, setLoading] = useState(false); 
+  const [fadeOut, setFadeOut] = useState(false);
   const router = useRouter();
 
   const handleAsk = async () => {
@@ -39,13 +40,21 @@ export default function AskPage() {
     }
   
     // ✅ "무조건" 5초 대기
-    await new Promise((resolve) => setTimeout(resolve, 5000));
-  
-    const encodedAnswer = encodeURIComponent(answer);
-    router.push(`/answer?question=${encodeURIComponent(question)}&answer=${encodedAnswer}`);
+    await Promise.all([
+        new Promise((resolve) => setTimeout(resolve, 5000)), // 5초 대기
+        // 위에서 fetch()는 병렬로 이미 시작돼 있음
+      ]);
+      
+      setFadeOut(true); // 👉 페이드아웃 시작
+      
+      setTimeout(() => {
+        const encodedAnswer = encodeURIComponent(answer);
+        router.push(`/answer?question=${encodeURIComponent(question)}&answer=${encodedAnswer}`);
+      }, 500); // 👉 페이드아웃 애니메이션 시간 (0.5초 후 이동)
+      
   };
   
-  if (loading) return <Loading />;
+  if (loading) return <Loading fadeOut={fadeOut} />;
 
   return (
     <>
