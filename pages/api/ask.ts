@@ -24,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
         ],
         temperature: 0.8,
-        max_tokens: 1500, // ✅ 응답 길이도 넉넉하게
+        max_tokens: 1200, // ✅ 응답 길이도 넉넉하게
       }),
     });
 

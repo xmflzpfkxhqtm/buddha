@@ -18,32 +18,32 @@ export default function AskPage() {
     setLoading(true); // ✅ 로딩 시작
   
     const fakeAnswer = `고요히 마음을 들여다보십시오. 괴로움도, 기쁨도 모두 지나가는 구름과 같습니다.`;
-  
     let answer = fakeAnswer;
-  
-    try {
-      const res = await fetch('/api/ask', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question }),
-      });
-  
-      if (!res.ok) throw new Error('API 응답 실패');
-  
-      const data = await res.json();
-      if (data?.answer) {
-        answer = data.answer;
+    
+    const gptCall = (async () => {
+      try {
+        const res = await fetch('/api/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question }),
+        });
+    
+        if (!res.ok) throw new Error('API 응답 실패');
+    
+        const data = await res.json();
+        if (data?.answer) {
+          answer = data.answer;
+        }
+      } catch (err) {
+        console.error('GPT 호출 실패:', err);
       }
-    } catch (err) {
-      console.error('GPT 호출 실패:', err);
-      // 실패 시 answer는 fakeAnswer 그대로 유지됨
-    }
-  
-    // ✅ "무조건" 5초 대기
+    })();
+    
     await Promise.all([
-        new Promise((resolve) => setTimeout(resolve, 5000)), // 5초 대기
-        // 위에서 fetch()는 병렬로 이미 시작돼 있음
-      ]);
+      gptCall, // ✅ GPT 호출 동시에 시작
+      new Promise((resolve) => setTimeout(resolve, 5000)), // ✅ 5초 대기도 동시에 시작
+    ]);
+    
       
       setFadeOut(true); // 👉 페이드아웃 시작
       
