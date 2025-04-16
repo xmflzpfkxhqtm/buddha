@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 export default function Home() {
   const router = useRouter();
@@ -8,10 +9,12 @@ export default function Home() {
   return (
 <main className="min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-[#F5F1E6] px-6 py-10">
 <div className="w-full h-80 bg-[#F8F5EE] border border-[#E0DBCF] rounded-xl p-4 shadow-xl mb-6 flex flex-col items-center justify-center">
-  <img
+  <Image
     src="/vip.png"
     alt="부처님"
-    className="w-48 h-48 object-contain mb-2"
+    width={192}
+    height={192}
+    className="object-contain mb-2"
   />
   <h1 className="text-4xl font-bold text-[#4B3B2A] text-center">
     부처님 손바닥
@@ -34,7 +37,7 @@ export default function Home() {
       </button>
 
       <p className="text-xs font-medium text-center mt-auto">
-      “부처님 손바닥”은 인공지능(AI)을 통해 경전 속 부처님의 가르침을 쉽게 전해드리는, 누구나 질문하고 위로받을 수 있는 작은 법당입니다.
+        &ldquo;부처님 손바닥&rdquo;은 인공지능(AI)을 통해 경전 속 부처님의 가르침을 쉽게 전해드리는, 누구나 질문하고 위로받을 수 있는 작은 법당입니다.
       </p>
     </main>
   );

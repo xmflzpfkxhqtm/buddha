@@ -2,71 +2,63 @@
 
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useEffect, useState, Suspense, useRef } from 'react';
+import Image from 'next/image';
 import Loading from '../../../components/Loading';
 
 function AnswerContent() {
   const params = useSearchParams();
   const question = params?.get('question') || '';
+  const model = params?.get('model') || 'gpt4.1';
   const [fullAnswer, setFullAnswer] = useState('');
   const [displayedAnswer, setDisplayedAnswer] = useState('');
   const [done, setDone] = useState(false);
-  const [, setLoading] = useState(true);
+  const [, setLoading] = useState(false);
   const [fadeOut, setFadeOut] = useState(false);
   const router = useRouter();
-  const bufferRef = useRef('');
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const [showLoading, setShowLoading] = useState(true);
-
+  const isApiCalled = useRef(false);
+  const [usedModel, setUsedModel] = useState(model);
 
   useEffect(() => {
-    if (!question) return;
-
-    const fetchStream = async () => {
+    if (!question || isApiCalled.current) return;
+    
+    isApiCalled.current = true;
+    setLoading(true);
+    
+    const fetchAnswer = async () => {
       try {
         const response = await fetch('/api/ask', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question }),
+          body: JSON.stringify({ question, model }),
         });
 
-        if (!response.ok || !response.body) throw new Error('스트리밍 응답 실패');
+        if (!response.ok) throw new Error('응답 실패');
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder('utf-8');
-
-        setLoading(false);
-
-        let buffer = '';
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value);
-          buffer += chunk;
-          bufferRef.current = buffer;
+        const data = await response.json();
+        
+        if (data && data.answer) {
+          setFullAnswer(data.answer);
+          if (data.model) {
+            setUsedModel(data.model);
+          }
+        } else {
+          throw new Error('응답 데이터가 올바르지 않습니다');
         }
 
-        const cleaned = bufferRef.current
-        .replace(/^\s*[{"]*answer["']*\s*:\s*"?/, '') // ✅ 마지막 " → "? 로 바꿔서 선택적으로 제거
-        .replace(/"\s*}\s*$/, '')                    // ✅ 맨 끝 " 또는 } 제거
-        .replace(/\\n/g, '\n')                       // ✅ 줄바꿈 복원
-        .replace(/\\"/g, '"');                       // ✅ \" → " 로 변환
-      
-
-      
-
-        setFullAnswer(cleaned);
         setDone(true);
+        setLoading(false);
       } catch (error) {
-        console.error('GPT 스트리밍 실패:', error);
+        console.error('API 호출 실패:', error);
         setFullAnswer('부처님과의 연결이 원활하지 않습니다. 다시 시도해 주세요.');
         setDone(true);
         setLoading(false);
       }
     };
 
-    fetchStream();
-  }, [question]);
+    fetchAnswer();
+  }, [question, model]);
 
   useEffect(() => {
     if (!fullAnswer) return;
@@ -104,7 +96,21 @@ function AnswerContent() {
   }, [fullAnswer]);
   
 
-if (showLoading) return <Loading fadeOut={fadeOut} />;
+  // 모델 이름 매핑
+  const getModelDisplayName = (modelId: string) => {
+    switch(modelId) {
+      case 'gpt4.1': return 'GPT-4.1';
+      case 'gpt4o': return 'GPT-4o';
+      case 'gpt-4.1-mini': return 'GPT-4.1 Mini';
+      case 'claude3.7': return 'Claude 3.7';
+      case 'gemini-2.5-pro': return 'Gemini 2.5 Pro';
+      case 'o4-mini': return 'O4 Mini';
+      case 'grok': return 'Grok 3';
+      default: return modelId;
+    }
+  };
+
+  if (showLoading) return <Loading fadeOut={fadeOut} />;
 
   return (
     <main className="relative min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-[#F5F1E6] px-6 py-10">
@@ -117,11 +123,16 @@ if (showLoading) return <Loading fadeOut={fadeOut} />;
       </div>
 
       <div className="w-full h-30 items-center flex flex-col z-1 mt-6 mb-10">
-        <img
+        <Image
           src="/vipon.png"
           alt="부처님"
+          width={144}
+          height={144}
           className="w-36 h-36 object-contain mb-2"
         />
+        <div className="bg-[#8A7350] text-white text-xs px-2 py-1 rounded-full">
+          {getModelDisplayName(usedModel)}
+        </div>
       </div>
 
       <div className="max-w-md w-full">

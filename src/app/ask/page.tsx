@@ -2,15 +2,30 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+
+const models = [
+  { id: 'gpt4.1', name: 'GPT-4.1', description: '가장 강력한 추론 능력' },
+  { id: 'gpt4o', name: 'GPT-4o', description: '빠르고 정확한 균형' },
+  { id: 'gpt-4.1-mini', name: 'GPT-4.1 Mini', description: '경제적인 선택' },
+  { id: 'claude3.7', name: 'Claude 3.7', description: '인간적인 답변' },
+  { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: '구글의 최신 모델' },
+  { id: 'o4-mini', name: 'O4 Mini', description: '인성과 창의성' },
+  { id: 'grok', name: 'Grok 3', description: '유머와 창의성' },
+];
 
 export default function AskPage() {
   const [showModal, setShowModal] = useState(false);
   const [question, setQuestion] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedModel, setSelectedModel] = useState('gpt4.1');
   const router = useRouter();
 
   const handleAsk = () => {
-    if (!question.trim()) return;
-    router.push(`/answer?question=${encodeURIComponent(question)}`);
+    if (!question.trim() || isSubmitting) return;
+    
+    setIsSubmitting(true);
+    router.push(`/answer?question=${encodeURIComponent(question)}&model=${selectedModel}`);
   };
 
   return (
@@ -23,15 +38,17 @@ export default function AskPage() {
           </h2>
         </div>
         <div className="w-full h-30 items-center flex flex-col z-1 mt-6 mb-10">
-          <img
+          <Image
             src="/vipoff.png"
             alt="부처님"
+            width={144}
+            height={144}
             className="w-36 h-36 object-contain mb-2"
           />
         </div>
         <div className="max-w-md w-full z-1">
           <p className="font-bold text-lg text-center mb-8">
-            “무엇이든 여쭈어 보세요.<br />부처님께서 답하십니다.”
+            &ldquo;무엇이든 여쭈어 보세요.<br />부처님께서 답하십니다.&rdquo;
           </p>
           <textarea
             className="w-full h-40 p-4 rounded-xl border border-[#CBBBA0] bg-[#FFFDF8] text-base resize-none focus:outline-none focus:ring-2 focus:ring-[#B29E7D]"
@@ -40,10 +57,31 @@ export default function AskPage() {
             onChange={(e) => setQuestion(e.target.value)}
             placeholder="고민을 적어보세요..."
           />
+          
+          <div className="mt-4 mb-6">
+            <p className="font-bold text-sm mb-2">부처님의 지혜를 빌려올 원천을 선택하세요</p>
+            <div className="grid grid-cols-2 gap-2">
+              {models.map((model) => (
+                <div 
+                  key={model.id}
+                  onClick={() => setSelectedModel(model.id)}
+                  className={`p-3 rounded-lg border cursor-pointer transition ${
+                    selectedModel === model.id 
+                      ? 'border-[#8A7350] bg-[#F0E6D2] text-[#4B3B2A]' 
+                      : 'border-[#E0DBCF] bg-[#FFFDF8] text-[#6B5E51]'
+                  }`}
+                >
+                  <div className="font-bold text-sm">{model.name}</div>
+                  <div className="text-xs mt-1">{model.description}</div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
         <button
-          className="mt-6 w-full px-6 py-3 font-bold bg-brown text-lg text-white rounded-xl hover:bg-[#9C886D] transition"
+          className="mt-2 w-full px-6 py-3 font-bold bg-brown text-lg text-white rounded-xl hover:bg-[#9C886D] transition"
           onClick={handleAsk}
+          disabled={isSubmitting || !question.trim()}
         >
           부처님께 여쭙기
         </button>

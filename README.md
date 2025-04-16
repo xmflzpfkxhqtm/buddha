@@ -1,3 +1,63 @@
+# Buddha 프로젝트
+
+이 프로젝트는 불교 텍스트를 Upstage 임베딩을 사용하여 Supabase에 저장하고, RAG(Retrieval-Augmented Generation) 기능을 제공합니다.
+
+## 주요 기능
+
+1. **텍스트 임베딩**: `/data` 폴더의 텍스트 파일을 Upstage AI를 사용하여 임베딩
+2. **벡터 데이터베이스 저장**: 임베딩된 텍스트를 Supabase 벡터 데이터베이스에 저장
+3. **의미 기반 검색**: 임베딩을 활용한 의미 기반 검색 API 제공
+
+## API 엔드포인트
+
+### 1. 데이터 임베딩 및 저장
+
+- **URL**: `/api/embed`
+- **Method**: GET
+- **설명**: `/data` 폴더의 모든 .txt 파일을 임베딩하고 Supabase에 저장합니다.
+
+### 2. 의미 기반 검색
+
+- **URL**: `/api/search`
+- **Method**: POST
+- **Body**:
+  ```json
+  {
+    "query": "검색할 텍스트",
+    "limit": 5 (선택 사항, 기본값: 5)
+  }
+  ```
+- **설명**: 입력된 텍스트와 의미적으로 유사한 문서를 검색합니다.
+
+## 기술 스택
+
+- **Frontend**: Next.js
+- **AI 임베딩**: Upstage AI
+- **데이터베이스**: Supabase (PostgreSQL + pgvector)
+
+## 설치 및 실행
+
+1. 의존성 설치:
+   ```bash
+   npm install
+   ```
+
+2. 개발 서버 실행:
+   ```bash
+   npm run dev
+   ```
+
+3. 텍스트 임베딩 처리:
+   ```
+   GET /api/embed
+   ```
+
+4. 검색 API 테스트:
+   ```
+   POST /api/search
+   Body: { "query": "검색할 내용" }
+   ```
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
