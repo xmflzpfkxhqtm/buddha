@@ -32,17 +32,39 @@
 
 }
 
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-main); /* ✅ Tailwind의 font-sans와 연동 */
   --font-mono: var(--font-geist-mono);
   --color-brown: #6D4D41;
-  --color-gold: #D4B76A;
+  --color-red: #6e1517;
+  --color-red-light: #9A4345;
+  --color-red-dark: #401201;
+  --color-white: #f8f5ee;
+  --color-beige: #f8f8db;
+  --color-black: #2E2B28;
+  --color-orange-light: #F29F05;   
+  --color-orange:       #F27405;  
+  --color-orange-dark:  #F25C05;
+  --color-grey: #C1C1C1;
+  --color-pink-light: #E1BABA;
+
 }
 
 body {
-  background: var(--background);
+  background-image: url('/marble.png');
+  background-repeat: repeat;
+  background-size: cover;
+  background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-main); /* ✅ 폴백까지 포함된 CSS 표준 */
 }
