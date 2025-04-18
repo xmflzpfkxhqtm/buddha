@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import type { User } from '@supabase/supabase-js';
 
 interface Answer {
   id: string;
@@ -11,8 +12,9 @@ interface Answer {
 }
 
 export default function MePage() {
-  const [user, setUser] = useState<any>(null);
-  const [answers, setAnswers] = useState<Answer[]>([]);
+    type MyUser = User & { user_metadata?: { full_name?: string; [key: string]: any } };
+    const [user, setUser] = useState<MyUser | null>(null);
+      const [answers, setAnswers] = useState<Answer[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

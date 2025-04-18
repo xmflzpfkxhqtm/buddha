@@ -6,6 +6,7 @@ import { useEffect, useState, useRef } from 'react';
 import html2canvas from 'html2canvas';
 import { supabase } from '@/lib/supabaseClient';
 import Loading from '../../../components/Loading';
+import type { User } from '@supabase/supabase-js';
 
 export default function AnswerPage() {
   const router = useRouter();
@@ -15,8 +16,9 @@ export default function AnswerPage() {
   const [done, setDone] = useState(false);
   const [fadeOut, setFadeOut] = useState(false);
   const [showLoading, setShowLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
-  const [saved, setSaved] = useState(false);
+  type MyUser = User & { user_metadata?: { full_name?: string; [key: string]: any } };
+  const [user, setUser] = useState<MyUser | null>(null);
+    const [saved, setSaved] = useState(false);
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const answerRef = useRef(null);
