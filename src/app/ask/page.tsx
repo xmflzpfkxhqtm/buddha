@@ -86,7 +86,7 @@ export default function AskPage() {
           </div>
         </div>
         <button
-          className="mt-2 w-full px-6 py-3 font-bold bg-red-light text-lg text-white rounded-4xl hover:bg-red-light transition"
+          className="mt-2 w-full px-6 py-3 font-bold bg-red text-lg text-white rounded-4xl hover:bg-red-light transition"
           onClick={handleAsk}
           disabled={isSubmitting || !question.trim()}
         >
