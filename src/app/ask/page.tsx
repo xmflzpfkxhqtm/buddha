@@ -38,7 +38,7 @@ export default function AskPage() {
           <h2 className="text-4xl text-red font-semibold text-start">
             부처님의 지혜에<br />귀를 기울여 보세요
           </h2>
-          <p className="text-lg text-red font-medium text-start mt-2">
+          <p className="text-base text-red font-medium text-start mt-2">
             무엇이든 여쭈어 보세요.<br />부처님께서 답하십니다.
           </p>
         </div>
@@ -64,7 +64,7 @@ export default function AskPage() {
   rows={5}
   value={question}
   onChange={(e) => setQuestion(e.target.value)}
-  placeholder="고민을 적어보세요..."
+  placeholder="마음을 담아 부처님께 여쭈고 싶은 이야기를 적어보세요"
 />
 
 <button
