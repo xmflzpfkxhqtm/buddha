@@ -37,14 +37,14 @@ export default function ConfirmPage() {
         <div className="flex flex-row w-full space-x-6 mb-12">
           <button
             onClick={handleBack}
-            className="w-full px-1 py-2 font-bold border border-red bg-white text-lg text-red-dark rounded-4xl hover:bg-red hover:text-white transition"
+            className="w-full px-1 py-3 font-bold border border-red bg-white text-lg text-red-dark rounded-4xl hover:bg-red hover:text-white transition"
           >
             수정하기
           </button>
 
           <button
             onClick={handleSubmit}
-            className="w-full px-1 py-2 font-bold bg-red-light text-lg text-white rounded-4xl hover:bg-red transition"
+            className="w-full px-1 py-3 font-bold bg-red-light text-lg text-white rounded-4xl hover:bg-red transition"
           >
             제출하기
           </button>
