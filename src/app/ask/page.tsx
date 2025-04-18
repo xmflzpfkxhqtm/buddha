@@ -86,7 +86,7 @@ export default function AskPage() {
           </div>
         </div>
         <button
-          className="mt-2 w-full px-6 py-3 font-bold bg-red text-lg text-white rounded-4xl hover:bg-red-light transition"
+          className="mt-2 w-full px-6 py-3 font-bold bg-red-light text-lg text-white rounded-4xl hover:bg-red-light transition"
           onClick={handleAsk}
           disabled={isSubmitting || !question.trim()}
         >
@@ -94,7 +94,7 @@ export default function AskPage() {
         </button>
         <button
           onClick={() => setShowModal(true)}
-          className="text-sm text-black underline mt-4"
+          className="text-sm text-black underline mt-4 mb-12"
         >
           질문/답변 예시 보기
         </button>
@@ -109,7 +109,7 @@ export default function AskPage() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#FFFCF5] rounded-xl p-6 w-[90%] max-w-[360px] max-h-[80vh] overflow-y-auto text-sm text-[#4A3F37] shadow-xl relative"
+            className="bg-[#FFFCF5] rounded-xl p-6 w-[90%] max-w-[360px] max-h-[80vh] overflow-y-auto text-sm text-black shadow-xl relative"
           >
             <div className="sticky top-0 bg-transparent z-10 flex justify-end px-0 pt-0">
               <button
@@ -119,16 +119,31 @@ export default function AskPage() {
                 ×
               </button>
             </div>
+            <div>
+            <div className="text-base text-left leading-relaxed space-y-2">
+  <p>처음 오신 것을 진심으로 환영합니다. 🙏</p>
+  <p>이곳은 인공지능(AI)을 통해 부처님의 가르침을 전해드리는 마음 쉼터입니다.</p>
+  <p>괴로움이 있으시거나, 답을 찾기 어려운 일이 있다면 마치 부처님께 조용히 기도드리듯, 편안한 마음으로 말씀 남겨주세요.</p>
+  <p>고민을 상세히 적어주실수록, 보다 자비롭고 깊이 있는 답을 전해드릴 수 있습니다.</p>
+  <p>남기신 말씀은 외부에 공개되지 않으며, 오직 당신과 AI 부처님만이 함께 나누는 대화입니다.</p>
+  <p>스스로를 돌보는 시간, 지금 이 순간이 작은 수행이 될 수 있습니다. 🪷</p>
+</div>
 
-            <h3 className="text-xl font-extrabold mb-4">질문/답변 예시</h3>
-            <h4 className="text-xl font-extrabold mb-4">🧘🏻‍♀️나의 물음</h4>
-            <div className="p-4 rounded-xl shadow-xl border border-[#CBBBA0] mb-4 whitespace-pre-wrap text-base font-bold text-[#4B3B2A]">
+
+
+            </div>
+
+            <h3 className="text-xl text-red-dark font-extrabold mt-4 mb-4">질문/답변 예시</h3>
+            <div className="w-full h-12 bg-red-light rounded-xl flex flex-row items-center mt-6 pl-1 justify-start">
+<p className="pl-2 text-white text-start font-semibold">🧘🏻‍♀️ 나의 물음</p></div>
+            <div className="p-4 rounded-xl shadow-xl border border-red mb-4 whitespace-pre-wrap text-base font-semi text-black mt-4">
               누군가에게 깊은 상처를 받은 뒤, 마음속 원망이 쉽게 가시질 않습니다.
               이제는 그 마음을 놓아주고 싶지만, 자꾸만 과거의 일이 떠오릅니다.
               부처님, 이런 집착과 괴로움에서 벗어나기 위해 저는 어떻게 해야 할까요?
             </div>
-            <h4 className="text-xl font-extrabold mb-4">🪷부처님 말씀</h4>
-            <div className="p-4 rounded-xl shadow-xl border border-[#CBBBA0] mb-4 whitespace-pre-wrap text-base font-bold text-[#4B3B2A]">
+            <div className="w-full h-12 bg-red-light rounded-xl flex flex-row items-center mt-6 pl-1 justify-start">
+<p className="pl-2 text-white text-start font-semibold">🪷 이르시길</p></div>
+            <div className="p-4 rounded-xl shadow-xl border border-red mb-4 whitespace-pre-wrap text-base font-medium text-black mt-4">
               사랑하는 이여, 마음의 상처는 깊고 오랜 시간 동안 우리의 영혼을 어지럽히는 강물과 같습니다. 상처받은 마음은 고통의 강물을 따라 흐르기 마련이지요. 그러나 그 강물의 흐름을 조금씩 바꿔 나가는 것은 바로 당신의 몫입니다. 이는 마치 봄바람이 겨우내 얼어붙은 대지를 녹이듯, 당신의 노력이 점차 상처를 치유하고 마음을 풀어주는 과정이 될 것입니다.
               <br /><br />
               부처님께서는 이렇게 말씀하셨습니다. &apos;마음은 모든 것을 만든다. 우리가 말하는 것도, 행하는 것도 모두 마음에서 비롯된다.&apos; 이 말씀은 우리의 생각과 태도가 우리의 경험을 형성한다는 교훈을 담고 있습니다. 따라서, 당신이 과거의 상처에 대한 집착을 내려놓고자 한다면, 먼저 마음의 초점을 바꾸어야 합니다.
@@ -145,7 +160,7 @@ export default function AskPage() {
             </div>
             <button
               onClick={() => setShowModal(false)}
-              className="mt-6 w-full py-2 bg-brown text-white font-semibold rounded-lg hover:bg-[#9C886D] transition"
+              className="mt-6 w-full py-2 bg-red-light text-white font-semibold rounded-lg hover:bg-red transition"
             >
               닫기
             </button>

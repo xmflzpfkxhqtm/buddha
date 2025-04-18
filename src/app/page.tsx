@@ -4,14 +4,17 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import ScrollHeader from '../../components/ScrollHeader'; // 경로는 맞게 수정!
 import BottomNav from '../../components/BottomNav'; // 경로는 폴더 구조에 따라 조절
+import MarbleOverlay from '../../components/Overlay';
 
 export default function Home() {
   const router = useRouter();
 
   return (
-<main className="min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-[url('/marble.png')] bg-red px-6 pt-[156px]">
+    <>
+    <MarbleOverlay />
+<main className="min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-[url('/marble.png')] bg-red px-6 pt">
 <ScrollHeader />
-<div className="w-full h-16 bg-red-light rounded-xl flex flex-row items-center pl-1 justify-start">
+<div className="w-full h-16 bg-red-light border border-[0.5px] border-pink-light rounded-xl flex flex-row items-center pl-1 mt-8 justify-start">
 
 <Image
   src="/lotusbeige.png"
@@ -30,13 +33,14 @@ export default function Home() {
 
 <div className="w-full rounded-xl flex flex-col items-start pl-1 justify-start">
 
-      <p className="text-2xl font-semibold text-white	text-center mt-4">
+      <p className="text-2xl font-semibold text-white	text-center mt-4 mb-4">
 어서오세요, 불자님      </p>
-<p className="text font-semibold text-white	text-left mt-6">
-오늘의 수행은 🪷 </p>
+
       </div>
-      <div className="w-full overflow-x-auto no-scrollbar mt-4">
-        <div className="flex space-x-4 overflow-x-auto no-scrollbar pb-4">
+      <div className="w-full overflow-x-auto no-scrollbar bg-red-light rounded-xl py-2 pl-2">
+      <p className="text font-semibold text-white	text-left pl-1">
+오늘의 수행은 🪷 </p>
+        <div className="flex space-x-4 overflow-x-auto no-scrollbar mt-4">
           {/* 카드 1 */}
           <div
             onClick={() => router.push('/ask')}
@@ -46,7 +50,7 @@ export default function Home() {
               <img
                 src="/askvip.png"
                 alt="부처님께 여쭙기"
-                className="w-full h-full object-cover"　
+                className="w-full h-full object-cover rounded-2xl"
               />
             </div>
             <div className="flex-1 px-3 py-2">
@@ -68,7 +72,7 @@ export default function Home() {
               <img
                 src="/askvip.png"
                 alt="부처님께 여쭙기"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover bg-red-light"
               />
             </div>
             <div className="flex-1 px-3 py-2">
@@ -82,16 +86,17 @@ export default function Home() {
           </div>
 </div>
 
-<div className="w-full h-[0.5px] opacity-50 bg-[#E0DBCF] mt-4" />
 </div>
 
+<div className="w-full h-[0.5px] opacity-50 bg-[#E0DBCF] mt-6" />
 
 
-      <p className="text-xs font-medium text-beige text-center mt-auto mb-24">
+      <p className="text-xs font-medium text-beige text-center mt-6 mb-24">
         &ldquo;부처님 손바닥&rdquo;은 인공지능(AI)을 통해 경전 속 부처님의 가르침을 쉽게 전해드리는, 누구나 질문하고 위로받을 수 있는 작은 법당입니다.
       </p>
       <BottomNav />
 
     </main>
+    </>
   );
 }
