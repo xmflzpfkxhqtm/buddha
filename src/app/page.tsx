@@ -14,7 +14,7 @@ export default function Home() {
     <MarbleOverlay />
 <main className="min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-gradient-to-b from-red to-redbrown px-6 pt">
 <ScrollHeader />
-<div className="w-full h-16 bg-red-light border border-[0.5px] border-pink-light rounded-xl flex flex-row items-center pl-1 mt-8 justify-start">
+<div className="w-full h-16 bg-red-light border-[0.5px] border-pink-light rounded-xl flex flex-row items-center pl-1 mt-8 justify-start">
 
 <Image
   src="/lotusbeige.png"
@@ -40,7 +40,7 @@ export default function Home() {
       <div className="w-full overflow-x-auto no-scrollbar bg-red-light rounded-xl mt-4 py-4">
       <p className="text font-semibold text-white	text-left pl-6">
 오늘의 수행은 🪷 </p>
-        <div className="flex space-x-4 overflow-x-auto no-scrollbar px-4 mt-4">
+        <div className="flex space-x-4 overflow-x-auto no-scrollbar px-4 mt-4 py-2">
           {/* 카드 1 */}
           <div
             onClick={() => router.push('/ask')}
@@ -65,7 +65,7 @@ export default function Home() {
 
           {/* 카드 2 - 복붙해서 추가 가능 */}
           <div
-            onClick={() => router.push('/ask')}
+            onClick={() => router.push('/scripture')}
             className="min-w-[240px] h-[360px] rounded-2xl overflow-hidden flex flex-col cursor-pointer hover:shadow-lg transition"
           >
             <div className="h-[280px] w-full">
