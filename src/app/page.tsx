@@ -72,7 +72,7 @@ export default function Home() {
               <img
                 src="/jumpingdoo.png"
                 alt="호날두께 여쭙기"
-                className="w-full h-full object-cover bg-red-light"
+                className="w-full h-full object-cover rounded-2xl"
               />
             </div>
             <div className="flex-1 px-3 py-2">
