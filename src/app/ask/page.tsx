@@ -59,15 +59,23 @@ export default function AskPage() {
         </div>
 
         <div className="max-w-md w-full z-1 mt-6">
-          <textarea
-            className="w-full h-40 p-4 rounded-xl border border-[#CBBBA0] bg-[#FFFDF8] text-base resize-none focus:outline-none focus:ring-2 focus:ring-[#B29E7D]"
-            rows={5}
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            placeholder="고민을 적어보세요..."
-          />
+        <textarea
+  className="w-full h-40 p-4 rounded-xl border border-red-light bg-[#FFFDF8] text-base resize-none focus:outline-none focus:ring-2 focus:ring-red"
+  rows={5}
+  value={question}
+  onChange={(e) => setQuestion(e.target.value)}
+  placeholder="고민을 적어보세요..."
+/>
 
-          <div className="mt-4 mb-6">
+<button
+  onClick={() => setQuestion('')}
+  className="text-sm text-red mt-0 float-right"
+>
+  모두 지우기
+</button>
+
+
+          <div className="mt-12 mb-6">
             <p className="font-bold text-sm mb-2">부처님의 지혜를 빌려올 원천을 선택하세요(QA용)</p>
             <div className="grid grid-cols-2 gap-2">
               {models.map((model) => (
