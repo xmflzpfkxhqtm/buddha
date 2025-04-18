@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Mountain, Book, MessageCircle, User } from 'lucide-react'; // Book 추가
+import { Mountain, Book, MessageCircle, User as UserIcon } from 'lucide-react'; // Book 추가
 import { supabase } from '@/lib/supabaseClient';
+import type { User } from '@supabase/supabase-js';
 
 export default function BottomNav() {
   const router = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -28,7 +29,7 @@ export default function BottomNav() {
     { label: '질문', icon: MessageCircle, path: '/ask' },
     {
       label: user ? '내정보' : '로그인',
-      icon: User,
+      icon: UserIcon,
       path: '/me',
       action: async () => {
         if (user) {

@@ -18,7 +18,6 @@ export default function ConfirmPage() {
 
   return (
     <>
-      <BottomNav />
       <main className="relative min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-white px-6 py-10">
         <div className="w-full z-1 pt-12">
           <h2 className="text-3xl text-red font-semibold text-start mb-4">
