@@ -4,6 +4,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useEffect, useState, Suspense, useRef } from 'react';
 import Image from 'next/image';
 import Loading from '../../../components/Loading';
+import BottomNav from '../../../components/BottomNav'; 
 
 function AnswerContent() {
   const params = useSearchParams();
@@ -113,48 +114,42 @@ function AnswerContent() {
   if (showLoading) return <Loading fadeOut={fadeOut} />;
 
   return (
-    <main className="relative min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-[#F5F1E6] px-6 py-10">
-      <div className="absolute top-0 left-0 w-full h-50 shadow-xl bg-brown z-0"></div>
+    <main className="relative min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-white px-6 py-10">
 
-      <div className="w-full h-10 z-1">
-        <h2 className="text-xl text-white font-bold text-center">
+      <div className="w-full z-1 mt-6">
+        <h2 className="text-2xl text-red font-semibold text-start">
           부처님이라면 분명<br />이렇게 말씀하셨을 것입니다
         </h2>
       </div>
 
-      <div className="w-full h-30 items-center flex flex-col z-1 mt-6 mb-10">
-        <Image
-          src="/vipon.png"
-          alt="부처님"
-          width={144}
-          height={144}
-          className="w-36 h-36 object-contain mb-2"
-        />
-        <div className="bg-[#8A7350] text-white text-xs px-2 py-1 rounded-full">
+      {/* <div className="w-full h-30 items-center flex flex-col z-1 mt-6 mb-10"> */}
+      
+        {/* <div className="bg-[#8A7350] text-white text-xs px-2 py-1 rounded-full">
           {getModelDisplayName(usedModel)}
-        </div>
-      </div>
-
-      <div className="max-w-md w-full">
-        <p className="font-bold text-lg text-left mb-4">🪷 이르시길</p>
-        <div className="p-4 rounded-xl shadow-xl border border-[#CBBBA0] mb-6 whitespace-pre-wrap text-base font-bold text-[#4B3B2A] min-h-[160px]">
+        </div> */}
+      {/* </div> */}
+      <div className="w-full h-12 bg-red-light rounded-xl flex flex-row items-center mt-6 pl-1 justify-start">
+<p className="pl-2 text-white text-start font-semibold">🪷 이르시길</p></div>
+      <div className="max-w-md w-full pt-4">
+        <div className="p-4 rounded-xl shadow-xl border font-maruburi border-red mb-6 whitespace-pre-wrap text-base font-bold text-black min-h-[160px]">
           {displayedAnswer}
         </div>
-
-        <h2 className="text-lg font-bold text-[#4B3B2A] mb-4">🧘🏻‍♀️ 나의 물음</h2>
-        <div className="p-4 rounded-xl shadow-xl border border-[#CBBBA0] whitespace-pre-wrap text-[#4B3B2A] mb-4">
+        <div className="w-full h-12 bg-red-light rounded-xl flex flex-row items-center mt-6 pl-1 justify-start">
+<p className="pl-2 text-white text-start font-semibold">🪷 나의 물음</p></div>
+        <div className="p-4 rounded-xl shadow-xl border border-red whitespace-pre-wrap text-black mb-4 mt-4">
           {question}
         </div>
       </div>
 
       {done && (
         <button
-          onClick={() => router.push('/')}
-          className="mt-6 w-full px-6 py-3 font-bold bg-brown text-lg text-white rounded-xl hover:bg-[#9C886D] transition"
+          onClick={() => router.push('/ask')}
+          className="mt-6 w-full px-6 py-3 font-bold bg-red text-lg text-white rounded-xl hover:bg-red-light transition"
         >
-          처음으로
+          다시 하기
         </button>
       )}
+      <BottomNav />
     </main>
   );
 }

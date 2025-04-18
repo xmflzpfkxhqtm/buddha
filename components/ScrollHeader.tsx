@@ -26,12 +26,12 @@ export default function ScrollHeader() {
 
   return (
 <header
-  className={`fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] h-[192px] z-50 transition-transform duration-300 overflow-hidden ${
+  className={`fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] h-[128px] z-50 transition-transform duration-300 overflow-hidden ${
     visible ? 'translate-y-0' : '-translate-y-full'
   }`}
 >
 
-<div className="w-full h-full flex items-center justify-center">
+<div className="w-full h-full flex items-end justify-center">
 <Image
   src="/logo.png"
   alt="로고"

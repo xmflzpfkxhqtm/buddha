@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import BottomNav from '../../../components/BottomNav'; // 경로는 폴더 구조에 따라 조절
 
 const models = [
   { id: 'gpt4.1', name: 'GPT-4.1', description: '가장 강력한 추론 능력' },
@@ -30,26 +31,32 @@ export default function AskPage() {
 
   return (
     <>
-      <main className="relative min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-[#F5F1E6] px-6 py-10">
-        <div className="absolute top-0 left-0 w-full h-50 shadow-xl bg-brown z-0"></div>
-        <div className="w-full h-10 z-1">
-          <h2 className="text-xl text-white font-bold text-center">
-            마음 속 이야기를 나누고<br />부처님의 지혜에 귀 기울여 보세요
+      <main className="relative min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-white px-6 py-10">
+        <div className="w-full z-1 pt-12">
+          <h2 className="text-4xl text-red font-semibold text-start">
+            부처님의 지혜에<br />귀를 기울여 보세요
           </h2>
-        </div>
-        <div className="w-full h-30 items-center flex flex-col z-1 mt-6 mb-10">
-          <Image
-            src="/vipoff.png"
-            alt="부처님"
-            width={144}
-            height={144}
-            className="w-36 h-36 object-contain mb-2"
-          />
-        </div>
-        <div className="max-w-md w-full z-1">
-          <p className="font-bold text-lg text-center mb-8">
-            &ldquo;무엇이든 여쭈어 보세요.<br />부처님께서 답하십니다.&rdquo;
+          <p className="text-lg text-red font-medium text-start mt-2">
+            무엇이든 여쭈어 보세요.<br></br>부처님께서 답하십니다.
           </p>
+        </div>
+        <div className="w-full h-16 bg-red-light rounded-xl flex flex-row items-center mt-6 pl-1 justify-start">
+
+<Image
+  src="/lotusbeige.png"
+  alt="lotus"
+  width={48}
+  height={48}
+  className="object-contain border-beige mx-2"
+/>
+  <div className="flex flex-col">
+  <p className="text font-base text-white text-start">
+  한 자 한 자 마음을 담아 적어보세요.</p>
+  <p className="text font-base text-white text-start">
+  말씀이 깊을수록, 깨달음도 또렷해집니다.  </p>
+</div>
+</div>
+        <div className="max-w-md w-full z-1 mt-6">
           <textarea
             className="w-full h-40 p-4 rounded-xl border border-[#CBBBA0] bg-[#FFFDF8] text-base resize-none focus:outline-none focus:ring-2 focus:ring-[#B29E7D]"
             rows={5}
@@ -59,7 +66,7 @@ export default function AskPage() {
           />
           
           <div className="mt-4 mb-6">
-            <p className="font-bold text-sm mb-2">부처님의 지혜를 빌려올 원천을 선택하세요</p>
+            <p className="font-bold text-sm mb-2">부처님의 지혜를 빌려올 원천을 선택하세요(QA용)</p>
             <div className="grid grid-cols-2 gap-2">
               {models.map((model) => (
                 <div 
@@ -67,8 +74,8 @@ export default function AskPage() {
                   onClick={() => setSelectedModel(model.id)}
                   className={`p-3 rounded-lg border cursor-pointer transition ${
                     selectedModel === model.id 
-                      ? 'border-[#8A7350] bg-[#F0E6D2] text-[#4B3B2A]' 
-                      : 'border-[#E0DBCF] bg-[#FFFDF8] text-[#6B5E51]'
+                      ? 'border border-red bg-red-light text-white' 
+                      : 'border border-red bg-white text-black'
                   }`}
                 >
                   <div className="font-bold text-sm">{model.name}</div>
@@ -79,7 +86,7 @@ export default function AskPage() {
           </div>
         </div>
         <button
-          className="mt-2 w-full px-6 py-3 font-bold bg-brown text-lg text-white rounded-xl hover:bg-[#9C886D] transition"
+          className="mt-2 w-full px-6 py-3 font-bold bg-red text-lg text-white rounded-4xl hover:bg-red-light transition"
           onClick={handleAsk}
           disabled={isSubmitting || !question.trim()}
         >
@@ -87,16 +94,12 @@ export default function AskPage() {
         </button>
         <button
           onClick={() => setShowModal(true)}
-          className="text-sm text-[#6B5E51] underline mt-4"
+          className="text-sm text-black underline mt-4"
         >
           질문/답변 예시 보기
         </button>
-
-        <footer className="mt-10 text-sm text-[#6B5E51] text-center opacity-60">
-          마음이 담긴 긴 질문은, 마치 향처럼 부처님께 곧게 닿습니다.<br />
-          한 자 한 자 마음을 담아 적어보세요.<br />
-          말씀이 깊을수록, 깨달음도 또렷해집니다.
-        </footer>
+        <BottomNav />
+        
       </main>
 
       {showModal && (
@@ -147,6 +150,7 @@ export default function AskPage() {
               닫기
             </button>
           </div>
+          
         </div>
       )}
     </>

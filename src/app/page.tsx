@@ -9,20 +9,13 @@ export default function Home() {
   const router = useRouter();
 
   return (
-<main className="min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-[url('/marble.png')] bg-red px-6 pt-[192px]">
+<main className="min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-[url('/marble.png')] bg-red px-6 pt-[156px]">
 <ScrollHeader />
 <div className="w-full h-16 bg-red-light rounded-xl flex flex-row items-center pl-1 justify-start">
-  {/* <Image
-    src="/vip.png"
-    alt="부처님"
-    width={128}
-    height={128}
-    className="object-contain mb-2"
-  /> */}
 
 <Image
   src="/lotusbeige.png"
-  alt="로고"
+  alt="lotus"
   width={48}
   height={48}
   className="object-contain border-beige mx-2"
@@ -35,15 +28,14 @@ export default function Home() {
 </div>
 </div>
 
-<div className="w-full h-32 rounded-xl flex flex-col items-start pl-1 justify-start">
+<div className="w-full rounded-xl flex flex-col items-start pl-1 justify-start">
 
       <p className="text-2xl font-semibold text-white	text-center mt-4">
 어서오세요, 불자님      </p>
-<p className="text font-semibold text-white	text-left mt-8">
+<p className="text font-semibold text-white	text-left mt-6">
 오늘의 수행은 🪷 </p>
-
       </div>
-      <div className="w-full overflow-x-auto no-scrollbar">
+      <div className="w-full overflow-x-auto no-scrollbar mt-4">
         <div className="flex space-x-4 overflow-x-auto no-scrollbar pb-4">
           {/* 카드 1 */}
           <div
