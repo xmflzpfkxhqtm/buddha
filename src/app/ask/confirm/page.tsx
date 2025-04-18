@@ -6,7 +6,7 @@ import { useAskStore } from '../../../stores/askStore';
 
 export default function ConfirmPage() {
   const router = useRouter();
-  const { question, selectedModel } = useAskStore();
+  const { question } = useAskStore();
 
   const handleBack = () => {
     router.push('/ask');
