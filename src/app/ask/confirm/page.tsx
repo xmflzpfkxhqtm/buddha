@@ -1,7 +1,6 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import BottomNav from '../../../../components/BottomNav';
 import { useAskStore } from '../../../stores/askStore';
 
 export default function ConfirmPage() {

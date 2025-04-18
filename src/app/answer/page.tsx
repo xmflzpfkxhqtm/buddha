@@ -1,7 +1,6 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import BottomNav from '../../../components/BottomNav';
 import { useAskStore } from '../../stores/askStore';
 import { useEffect, useState, useRef } from 'react';
 import html2canvas from 'html2canvas';
