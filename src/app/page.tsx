@@ -57,7 +57,7 @@ export default function Home() {
               <p className="text-xs text-left text-white font-medium">
                 부처님께 여쭙기
               </p>
-              <p className="text-xs text-left text-grey font-medium">
+              <p className="text-xs text-left text-pink-light font-medium">
                 나의 고민에 대해 부처님이라면 어떤 말씀을 하실까요? 인공지능이 부처님의 지혜로 안내합니다
               </p>
             </div>
@@ -79,7 +79,7 @@ export default function Home() {
               <p className="text-xs text-left text-white font-medium">
                 부처님께 여쭙기
               </p>
-              <p className="text-xs text-left text-grey font-medium">
+              <p className="text-xs text-left text-pink-light font-medium">
                 나의 고민에 대해 부처님이라면 어떤 말씀을 하실까요? 인공지능이 부처님의 지혜로 안내합니다
               </p>
             </div>
