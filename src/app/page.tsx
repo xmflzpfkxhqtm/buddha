@@ -11,7 +11,8 @@ export default function Home() {
   return (
     <>
     <MarbleOverlay />
-<main className="min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-gradient-to-b from-red to-redbrown px-6 pt">
+    <div className="absolute bg-gradient-to-b from-red to-redbrown">
+<main className="min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto px-6 pt">
 <ScrollHeader />
 <div className="w-full h-16 bg-red-light border-[0.5px] border-pink-light rounded-xl flex flex-row items-center pl-1 mt-8 justify-start">
 
@@ -90,12 +91,13 @@ export default function Home() {
 <div className="w-full h-[0.5px] opacity-50 bg-[#E0DBCF] mt-6" />
 
 
-      <p className="text-xs font-medium text-white text-center mt-6 mb-24">
+      <p className="text-xs font-medium text-white text-center mt-6 mb-12">
         &ldquo;연등&rdquo;은 누구나 수행하고 위로받을 수 있는 작은 법당입니다.
       </p>
       
 
     </main>
+    </div>
     </>
   );
 }

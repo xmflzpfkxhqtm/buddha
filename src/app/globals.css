@@ -9,6 +9,18 @@
 
 }
 
+@keyframes sway {
+  0% { transform: rotate(0deg) translateX(0); }
+  25% { transform: rotate(2deg) translateX(2px); }
+  50% { transform: rotate(0deg) translateX(0); }
+  75% { transform: rotate(-2deg) translateX(-2px); }
+  100% { transform: rotate(0deg) translateX(0); }
+}
+
+.animate-sway {
+  animation: sway 4s ease-in-out infinite;
+}
+
 @font-face {
   font-family: 'Pretendard';
   src: url('/fonts/Pretendard-Regular.woff2') format('woff2');

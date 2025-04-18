@@ -32,7 +32,7 @@ export default function RootLayout({
         suppressHydrationWarning={true}
       >
         {/* ✅ 메인 콘텐츠 */}
-        <div className="relative min-h-screen w-full max-w-[430px] mx-auto pb-[90px]">
+        <div className="relative min-h-screen w-full max-w-[430px] mx-auto pb-[64px]">
           <PageTransition>{children}</PageTransition>
         </div>
 
