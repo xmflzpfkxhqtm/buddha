@@ -2,7 +2,6 @@
 
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useEffect, useState, Suspense, useRef } from 'react';
-import Image from 'next/image';
 import Loading from '../../../components/Loading';
 import BottomNav from '../../../components/BottomNav'; 
 
@@ -19,7 +18,7 @@ function AnswerContent() {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const [showLoading, setShowLoading] = useState(true);
   const isApiCalled = useRef(false);
-  const [usedModel, setUsedModel] = useState(model);
+  // const [usedModel, setUsedModel] = useState(model);
 
   useEffect(() => {
     if (!question || isApiCalled.current) return;
@@ -41,9 +40,9 @@ function AnswerContent() {
         
         if (data && data.answer) {
           setFullAnswer(data.answer);
-          if (data.model) {
-            setUsedModel(data.model);
-          }
+          // if (data.model) {
+          //   setUsedModel(data.model);
+          // }
         } else {
           throw new Error('응답 데이터가 올바르지 않습니다');
         }
@@ -98,18 +97,18 @@ function AnswerContent() {
   
 
   // 모델 이름 매핑
-  const getModelDisplayName = (modelId: string) => {
-    switch(modelId) {
-      case 'gpt4.1': return 'GPT-4.1';
-      case 'gpt4o': return 'GPT-4o';
-      case 'gpt-4.1-mini': return 'GPT-4.1 Mini';
-      case 'claude3.7': return 'Claude 3.7';
-      case 'gemini-2.5-pro': return 'Gemini 2.5 Pro';
-      case 'o4-mini': return 'O4 Mini';
-      case 'grok': return 'Grok 3';
-      default: return modelId;
-    }
-  };
+  // const getModelDisplayName = (modelId: string) => {
+  //   switch(modelId) {
+  //     case 'gpt4.1': return 'GPT-4.1';
+  //     case 'gpt4o': return 'GPT-4o';
+  //     case 'gpt-4.1-mini': return 'GPT-4.1 Mini';
+  //     case 'claude3.7': return 'Claude 3.7';
+  //     case 'gemini-2.5-pro': return 'Gemini 2.5 Pro';
+  //     case 'o4-mini': return 'O4 Mini';
+  //     case 'grok': return 'Grok 3';
+  //     default: return modelId;
+  //   }
+  // };
 
   if (showLoading) return <Loading fadeOut={fadeOut} />;
 
