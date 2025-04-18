@@ -10,7 +10,8 @@ export async function GET() {
       .filter((file) => file.endsWith('.txt'))
       .map((file) => file.replace('.txt', ''));
     return NextResponse.json({ titles });
-  } catch (error) {
+} catch (error) {
+    console.error('파일 목록 불러오기 실패:', error);
     return NextResponse.json({ error: '불러오기 실패' }, { status: 500 });
   }
 }

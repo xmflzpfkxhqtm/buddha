@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ content });
   } catch (error) {
+    console.error('파일을 찾을 수 없습니다:', error);
     return NextResponse.json({ error: 'File not found' }, { status: 404 });
   }
 }
