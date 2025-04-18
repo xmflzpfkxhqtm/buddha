@@ -1,16 +1,44 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Mountain, MessageCircle, User } from 'lucide-react';
+import { Mountain, Book, MessageCircle, User } from 'lucide-react'; // Book 추가
+import { supabase } from '@/lib/supabaseClient';
 
 export default function BottomNav() {
   const router = useRouter();
   const pathname = usePathname();
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
 
   const navItems = [
     { label: '홈', icon: Mountain, path: '/' },
+    { label: '경문', icon: Book, path: '/scripture' }, // ✅ 경문 추가
     { label: '질문', icon: MessageCircle, path: '/ask' },
-    { label: '내정보', icon: User, path: '/me' },
+    {
+      label: user ? '내정보' : '로그인',
+      icon: User,
+      path: '/me',
+      action: async () => {
+        if (user) {
+          router.push('/me');
+        } else {
+          const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+          if (error) alert('로그인 실패');
+        }
+      },
+    },
   ];
 
   return (
@@ -21,8 +49,8 @@ export default function BottomNav() {
 
         return (
           <button
-            key={item.path}
-            onClick={() => router.push(item.path)}
+            key={item.label}
+            onClick={() => (item.action ? item.action() : router.push(item.path))}
             className={`flex flex-col items-center text-xs transition duration-200 hover:scale-110 ${
               isActive ? 'text-red-light font-semibold' : 'text-red-dark'
             }`}

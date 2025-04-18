@@ -226,7 +226,7 @@ export default function ScripturePage() {
         {isSpeaking ? <Pause size={32} /> : <Play size={32} />}
       </button>
 
-      <BottomNav />
+  
 
       <style jsx>{`
         .animate-slide-up {

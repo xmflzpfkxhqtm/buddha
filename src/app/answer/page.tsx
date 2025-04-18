@@ -5,6 +5,7 @@ import BottomNav from '../../../components/BottomNav';
 import { useAskStore } from '../../stores/askStore';
 import { useEffect, useState, useRef } from 'react';
 import html2canvas from 'html2canvas';
+import { supabase } from '@/lib/supabaseClient';
 import Loading from '../../../components/Loading';
 
 export default function AnswerPage() {
@@ -15,9 +16,18 @@ export default function AnswerPage() {
   const [done, setDone] = useState(false);
   const [fadeOut, setFadeOut] = useState(false);
   const [showLoading, setShowLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
+  const [saved, setSaved] = useState(false);
+
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const answerRef = useRef(null);
 
+  // 로그인 유저 가져오기
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUser(data.user));
+  }, []);
+
+  // GPT 호출
   useEffect(() => {
     if (!question || !selectedModel) return;
 
@@ -50,6 +60,7 @@ export default function AnswerPage() {
     fetchAnswer();
   }, [question, selectedModel]);
 
+  // 타자 효과
   useEffect(() => {
     if (!fullAnswer) return;
 
@@ -72,6 +83,7 @@ export default function AnswerPage() {
     };
   }, [fullAnswer]);
 
+  // 로딩 페이드아웃
   useEffect(() => {
     if (fullAnswer) {
       setFadeOut(true);
@@ -82,11 +94,13 @@ export default function AnswerPage() {
     }
   }, [fullAnswer]);
 
+  // 질문 수정
   const handleEdit = () => {
     router.push('/ask');
   };
 
-  const handleSave = async () => {
+  // 이미지 저장
+  const handleCapture = async () => {
     if (!answerRef.current) return;
     const canvas = await html2canvas(answerRef.current);
     const dataUrl = canvas.toDataURL('image/png');
@@ -95,6 +109,34 @@ export default function AnswerPage() {
     link.href = dataUrl;
     link.download = 'buddha-answer.png';
     link.click();
+  };
+
+  // Supabase에 질문 + 답변 저장
+  const handleSaveToSupabase = async () => {
+    if (!user) {
+      alert('로그인이 필요합니다!');
+      return;
+    }
+    console.log('Saving to Supabase:', {
+      user_id: user?.id,
+      question,
+      answer: fullAnswer,
+    });
+    const { error } = await supabase.from('answers').insert([
+      {
+        user_id: user.id,
+        question,
+        answer: fullAnswer,
+      },
+    ]);
+
+    if (error) {
+      console.error('저장 실패:', error);
+      alert('저장 실패! 다시 시도해주세요.');
+    } else {
+      setSaved(true);
+      alert('✅ 부처님의 답변이 보관되었습니다.');
+    }
   };
 
   if (showLoading) return <Loading fadeOut={fadeOut} />;
@@ -124,23 +166,40 @@ export default function AnswerPage() {
       </div>
 
       {done && (
-        <div className="flex flex-row w-full space-x-4 mb-12 px-2">
+        <div className="w-full flex flex-col space-y-4 mt-8 px-2 mb-16">
+          {/* 1st row: 다시하기 */}
+          <div className="flex flex-row space-x-4">
+
+          <button
+              onClick={handleCapture}
+              className="w-full py-3 bg-red-light text-white font-bold rounded-4xl hover:bg-red transition"
+            >
+              캡처하기
+            </button>
+            <button
+              onClick={handleSaveToSupabase}
+              disabled={saved}
+              className={`w-full py-3 font-bold rounded-4xl transition ${
+                saved
+                  ? 'bg-red text-white cursor-not-allowed'
+                  : 'bg-red-light text-white hover:bg-red'
+              }`}
+            >
+              {saved ? '✅ 보관됨' : '보관하기'}
+            </button>
+            </div>
+
+          {/* 2nd row: 캡쳐 + 저장 */}
           <button
             onClick={handleEdit}
             className="w-full py-3 border border-red text-red-dark font-bold rounded-4xl hover:bg-red hover:text-white transition"
           >
-            질문 수정하기
-          </button>
-          <button
-            onClick={handleSave}
-            className="w-full py-3 bg-red-light text-white font-bold rounded-4xl hover:bg-red transition"
-          >
-            저장하기
+            다시 하기
           </button>
         </div>
       )}
 
-      <BottomNav />
+   
     </main>
   );
 }

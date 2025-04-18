@@ -111,7 +111,7 @@ export default function AskPage() {
           어떻게 사용하는 건가요?
         </button>
 
-        <BottomNav />
+      
       </main>
 
       {showModal && (
