@@ -86,7 +86,7 @@ export default function AskPage() {
           </div>
         </div>
         <button
-          className="mt-2 w-full px-6 py-3 font-bold bg-red text-lg text-white rounded-4xl hover:bg-red-light transition"
+          className="mt-2 w-full px-6 py-3 font-bold bg-red-light text-lg text-white rounded-4xl hover:bg-red transition"
           onClick={handleAsk}
           disabled={isSubmitting || !question.trim()}
         >
@@ -96,7 +96,7 @@ export default function AskPage() {
           onClick={() => setShowModal(true)}
           className="text-sm text-black underline mt-4 mb-12"
         >
-          질문/답변 예시 보기
+          어떻게 사용하는 건가요?
         </button>
         <BottomNav />
         

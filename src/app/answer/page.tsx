@@ -143,7 +143,7 @@ function AnswerContent() {
       {done && (
         <button
           onClick={() => router.push('/ask')}
-          className="mt-6 w-full px-6 py-3 font-bold bg-red text-lg text-white rounded-xl hover:bg-red-light transition"
+          className="mt-6 w-full px-6 py-3 mb-12 font-bold bg-red-light text-lg text-white rounded-xl hover:bg-red transition"
         >
           다시 하기
         </button>

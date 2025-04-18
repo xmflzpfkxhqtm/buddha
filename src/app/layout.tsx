@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import PageTransition from "../../components/PageTransition";
+import MarbleOverlay from "../../components/Overlay"; // ✅ 배경 추가
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,7 +30,14 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning={true}
       >
-        {children}
+
+
+        {/* ✅ 그 위에 페이지 콘텐츠 전환 */}
+        <PageTransition>{children}</PageTransition>
+             
+             
+     {/* ✅ 배경 먼저 깔고 */}
+      <MarbleOverlay />
       </body>
     </html>
   );

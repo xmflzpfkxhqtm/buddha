@@ -1,9 +1,7 @@
-
-
 'use client';
 
 import Image from 'next/image';
-
+import MarbleOverlay from './Overlay'; // ✅ 오버레이 가져오기
 
 export default function Loading({ fadeOut = false }: { fadeOut?: boolean }) {
   const message = fadeOut
@@ -12,19 +10,23 @@ export default function Loading({ fadeOut = false }: { fadeOut?: boolean }) {
 
   return (
     <div
-      className={`flex flex-col justify-center text-base items-center h-screen bg-red text-white
+      className={`relative flex flex-col justify-center text-base items-center h-screen bg-red text-white
         transition-opacity duration-1500 ${fadeOut ? 'opacity-0' : 'opacity-100'}`}
     >
-      <div className="text-5xl animate-float mb-4">
-      <Image
-  src="/lotusbeige.png"
-  alt="lotus"
-  width={48}
-  height={48}
-  className="object-contain border-beige mx-2"
-/>
+      {/* ✅ 연등 효과 등 위에 깔기 */}
+      <MarbleOverlay />
+
+      {/* ✅ 로딩 내용은 위로 */}
+      <div className="text-5xl animate-float mb-4 z-10">
+        <Image
+          src="/lotusbeige.png"
+          alt="lotus"
+          width={48}
+          height={48}
+          className="object-contain border-beige mx-2"
+        />
       </div>
-      <p className="text-base font-semibold text-center tracking-wide animate-fadeIn px-6 whitespace-pre-line">
+      <p className="text-base font-semibold text-center tracking-wide animate-fadeIn px-6 whitespace-pre-line z-10">
         {message}
       </p>
     </div>
