@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Mountain, Book, MessageCircle, User as UserIcon } from 'lucide-react'; // Book 추가
+import { Mountain, Book, MessageCircle, User as UserIcon } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 
@@ -25,7 +25,7 @@ export default function BottomNav() {
 
   const navItems = [
     { label: '홈', icon: Mountain, path: '/' },
-    { label: '경문', icon: Book, path: '/scripture' }, // ✅ 경문 추가
+    { label: '경문', icon: Book, path: '/scripture' },
     { label: '질문', icon: MessageCircle, path: '/ask' },
     {
       label: user ? '내정보' : '로그인',
@@ -35,7 +35,15 @@ export default function BottomNav() {
         if (user) {
           router.push('/me');
         } else {
-          const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+          const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+              redirectTo:
+                typeof window !== 'undefined'
+                  ? window.location.origin
+                  : 'https://buddha-dusky.vercel.app',
+            },
+          });
           if (error) alert('로그인 실패');
         }
       },
