@@ -130,7 +130,8 @@ function AnswerContent() {
             <p className="pl-2 text-white text-start font-semibold">🪷 나의 물음</p>
           </div>
           <div className="p-4 rounded-xl whitespace-pre-wrap text-black mt-2">
-            "{question}"
+          「{question}」
+
           </div>
         </div>
       </div>
