@@ -16,8 +16,13 @@ export default function AnswerPage() {
   const [done, setDone] = useState(false);
   const [fadeOut, setFadeOut] = useState(false);
   const [showLoading, setShowLoading] = useState(true);
-  type MyUser = User & { user_metadata?: { full_name?: string; [key: string]: any } };
-  const [user, setUser] = useState<MyUser | null>(null);
+  type MyUser = User & {
+    user_metadata?: {
+      full_name?: string;
+      [key: string]: unknown; // ✅ Lint 통과!
+    };
+  };
+    const [user, setUser] = useState<MyUser | null>(null);
     const [saved, setSaved] = useState(false);
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);

@@ -12,8 +12,13 @@ interface Answer {
 }
 
 export default function MePage() {
-    type MyUser = User & { user_metadata?: { full_name?: string; [key: string]: any } };
-    const [user, setUser] = useState<MyUser | null>(null);
+    type MyUser = User & {
+        user_metadata?: {
+          full_name?: string;
+          [key: string]: unknown; // ✅ Lint 통과!
+        };
+      };
+          const [user, setUser] = useState<MyUser | null>(null);
       const [answers, setAnswers] = useState<Answer[]>([]);
   const [loading, setLoading] = useState(true);
 
