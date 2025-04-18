@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Play, Pause } from 'lucide-react';
-import BottomNav from '../../../components/BottomNav';
 
 export default function ScripturePage() {
   const [list, setList] = useState<string[]>([]);

@@ -3,7 +3,6 @@
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import ScrollHeader from '../../components/ScrollHeader'; // 경로는 맞게 수정!
-import BottomNav from '../../components/BottomNav'; // 경로는 폴더 구조에 따라 조절
 import MarbleOverlay from '../../components/Overlay';
 
 export default function Home() {

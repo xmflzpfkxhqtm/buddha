@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import BottomNav from '../../../components/BottomNav';
 import { useAskStore } from '../../stores/askStore';
 
 const models = [

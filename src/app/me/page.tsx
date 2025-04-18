@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import BottomNav from '../../../components/BottomNav';
 
 interface Answer {
   id: string;
