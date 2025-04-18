@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import Image from 'next/image';
 import MarbleOverlay from './Overlay'; // ✅ 오버레이 가져오기
 
@@ -7,6 +8,15 @@ export default function Loading({ fadeOut = false }: { fadeOut?: boolean }) {
   const message = fadeOut
     ? '부처님께서 말씀을 내리시는 중입니다.'
     : '마음의 소리에 귀를 기울이는 중입니다.\n당신의 물음이 조용히 울리고 있습니다.';
+
+  // ✅ 마운트 시 목탁 소리 재생
+  useEffect(() => {
+    const audio = new Audio('/sounds/moktak.wav');
+    audio.volume = 0.6; // (선택) 소리 크기 조절
+    audio.play().catch((e) => {
+      console.warn('목탁 소리 재생 실패:', e);
+    });
+  }, []);
 
   return (
     <div
