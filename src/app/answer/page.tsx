@@ -2,6 +2,7 @@
 
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useEffect, useState, Suspense, useRef } from 'react';
+import html2canvas from 'html2canvas';
 import Loading from '../../../components/Loading';
 import BottomNav from '../../../components/BottomNav'; 
 
@@ -18,14 +19,14 @@ function AnswerContent() {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const [showLoading, setShowLoading] = useState(true);
   const isApiCalled = useRef(false);
-  // const [usedModel, setUsedModel] = useState(model);
+  const answerRef = useRef(null); // ✅ 캡처용 ref
 
   useEffect(() => {
     if (!question || isApiCalled.current) return;
-    
+
     isApiCalled.current = true;
     setLoading(true);
-    
+
     const fetchAnswer = async () => {
       try {
         const response = await fetch('/api/ask', {
@@ -37,12 +38,9 @@ function AnswerContent() {
         if (!response.ok) throw new Error('응답 실패');
 
         const data = await response.json();
-        
+
         if (data && data.answer) {
           setFullAnswer(data.answer);
-          // if (data.model) {
-          //   setUsedModel(data.model);
-          // }
         } else {
           throw new Error('응답 데이터가 올바르지 않습니다');
         }
@@ -70,83 +68,90 @@ function AnswerContent() {
         setDisplayedAnswer((prev) => prev + nextChar);
       }
       index++;
-    
+
       if (index >= fullAnswer.length && intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
     }, 20);
-    
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [fullAnswer])
+  }, [fullAnswer]);
 
   useEffect(() => {
     if (fullAnswer) {
-      setFadeOut(true); // 🔄 문구 + 투명도 변경
-  
+      setFadeOut(true);
       const timeout = setTimeout(() => {
-        setShowLoading(false); // 🔥 로딩 컴포넌트 완전 제거
-      }, 1000); // transition-duration과 일치
-  
-      return () => clearTimeout(timeout); // cleanup
+        setShowLoading(false);
+      }, 1000);
+      return () => clearTimeout(timeout);
     }
   }, [fullAnswer]);
-  
 
-  // 모델 이름 매핑
-  // const getModelDisplayName = (modelId: string) => {
-  //   switch(modelId) {
-  //     case 'gpt4.1': return 'GPT-4.1';
-  //     case 'gpt4o': return 'GPT-4o';
-  //     case 'gpt-4.1-mini': return 'GPT-4.1 Mini';
-  //     case 'claude3.7': return 'Claude 3.7';
-  //     case 'gemini-2.5-pro': return 'Gemini 2.5 Pro';
-  //     case 'o4-mini': return 'O4 Mini';
-  //     case 'grok': return 'Grok 3';
-  //     default: return modelId;
-  //   }
-  // };
+  const handleEdit = () => {
+    router.push(`/ask?question=${encodeURIComponent(question)}&model=${model}`);
+  };
+
+  const handleSave = async () => {
+    if (!answerRef.current) return;
+    const canvas = await html2canvas(answerRef.current);
+    const dataUrl = canvas.toDataURL('image/png');
+
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = 'buddha-answer.png';
+    link.click();
+  };
 
   if (showLoading) return <Loading fadeOut={fadeOut} />;
 
   return (
     <main className="relative min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-white px-6 py-10">
+      
 
-      <div className="w-full z-1 mt-6">
+      {/* ✅ 캡처 대상 시작 */}
+      <div ref={answerRef} className="rounded-2xl py-6 px-2">
+      <div className="w-full z-1 mt-4">
         <h2 className="text-2xl text-red font-semibold text-start">
           부처님이라면 분명<br />이렇게 말씀하셨을 것입니다
         </h2>
       </div>
-
-      {/* <div className="w-full h-30 items-center flex flex-col z-1 mt-6 mb-10"> */}
-      
-        {/* <div className="bg-[#8A7350] text-white text-xs px-2 py-1 rounded-full">
-          {getModelDisplayName(usedModel)}
-        </div> */}
-      {/* </div> */}
-      <div className="w-full h-12 bg-red-light rounded-xl flex flex-row items-center mt-6 pl-1 justify-start">
-<p className="pl-2 text-white text-start font-semibold">🪷 이르시길</p></div>
-      <div className="max-w-md w-full pt-4">
-        <div className="p-4 rounded-xl shadow-xl border font-maruburi border-red mb-6 whitespace-pre-wrap text-base font-bold text-black min-h-[160px]">
-          {displayedAnswer}
-        </div>
         <div className="w-full h-12 bg-red-light rounded-xl flex flex-row items-center mt-6 pl-1 justify-start">
-<p className="pl-2 text-white text-start font-semibold">🪷 나의 물음</p></div>
-        <div className="p-4 rounded-xl shadow-xl border border-red whitespace-pre-wrap text-black mb-4 mt-4">
-          {question}
+          <p className="pl-2 text-white text-start font-semibold">🪷 이르시길</p>
+        </div>
+
+        <div className="max-w-md w-full pt-4">
+          <div className="p-4 rounded-xl shadow-xl border font-maruburi border-red mb-6 whitespace-pre-wrap text-base font-bold text-black min-h-[160px]">
+            {displayedAnswer}
+          </div>
+          <div className="w-full h-12 bg-red-light rounded-xl flex flex-row items-center mt-6 pl-1 justify-start">
+            <p className="pl-2 text-white text-start font-semibold">🪷 나의 물음</p>
+          </div>
+          <div className="p-4 rounded-xl whitespace-pre-wrap text-black mt-2">
+            "{question}"
+          </div>
         </div>
       </div>
+      {/* ✅ 캡처 대상 끝 */}
 
       {done && (
-        <button
-          onClick={() => router.push('/ask')}
-          className="mt-6 w-full px-6 py-3 mb-12 font-bold bg-red-light text-lg text-white rounded-xl hover:bg-red transition"
-        >
-          다시 하기
-        </button>
+        <div className="flex flex-row w-full space-x-4 mb-12 px-2">
+          <button
+            onClick={handleEdit}
+            className="w-full py-3 border border-red text-red-dark font-bold rounded-4xl hover:bg-red hover:text-white transition"
+          >
+            질문 수정하기
+          </button>
+
+          <button
+            onClick={handleSave}
+            className="w-full py-3 bg-red-light text-white font-bold rounded-4xl hover:bg-red transition"
+          >
+            저장하기
+          </button>
+        </div>
       )}
       <BottomNav />
     </main>
