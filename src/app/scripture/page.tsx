@@ -23,6 +23,7 @@ export default function ScripturePage() {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const indexRef = useRef(currentIndex);
+  const [bookmarkPending, setBookmarkPending] = useState<{ title: string; index: number } | null>(null);
 
   const { title, index, clearBookmark } = useBookmarkStore();
 
@@ -59,21 +60,30 @@ export default function ScripturePage() {
       });
   }, [selected]);
 
+
+  // 책갈피 값 감지
   useEffect(() => {
-    if (title && selected !== title) {
-      // 책갈피 경전이 현재 선택된 경전과 다르면 경전부터 바꿔줌
-      setSelected(title);
-    } else if (index !== null && displaySentences.length > 0) {
-      setCurrentIndex(index);
+    if (title && index !== null && selected !== title) {
+      setBookmarkPending({ title, index });
+      setSelected(title); // 경전 먼저 설정
+    }
+  }, [title, index, selected]);
+  
+  // 경전 로딩 완료 후, bookmarkPending 적용
+  useEffect(() => {
+    if (bookmarkPending && selected === bookmarkPending.title && displaySentences.length > 0) {
+      setCurrentIndex(bookmarkPending.index);
       setTimeout(() => {
-        sentenceRefs.current[index]?.scrollIntoView({
+        sentenceRefs.current[bookmarkPending.index]?.scrollIntoView({
           behavior: 'smooth',
           block: 'start',
         });
       }, 500);
       clearBookmark();
+      setBookmarkPending(null);
     }
-  }, [title, index, selected, displaySentences, clearBookmark]);
+  }, [bookmarkPending, selected, displaySentences, clearBookmark]);
+  
   
 
   useEffect(() => {
