@@ -60,7 +60,10 @@ export default function ScripturePage() {
   }, [selected]);
 
   useEffect(() => {
-    if (index !== null && displaySentences.length > 0) {
+    if (title && selected !== title) {
+      // 책갈피 경전이 현재 선택된 경전과 다르면 경전부터 바꿔줌
+      setSelected(title);
+    } else if (index !== null && displaySentences.length > 0) {
       setCurrentIndex(index);
       setTimeout(() => {
         sentenceRefs.current[index]?.scrollIntoView({
@@ -70,7 +73,8 @@ export default function ScripturePage() {
       }, 500);
       clearBookmark();
     }
-  }, [index, displaySentences, clearBookmark]);
+  }, [title, index, selected, displaySentences, clearBookmark]);
+  
 
   useEffect(() => {
     if (observerRef.current) observerRef.current.disconnect();
@@ -102,90 +106,112 @@ export default function ScripturePage() {
   }, [currentIndex, isSpeaking]);
 
   // 경전 바뀔 때 재생 멈춤
-useEffect(() => {
-  if (audioRef.current) {
-    audioRef.current.pause();
-    audioRef.current = null;
-  }
-  setIsSpeaking(false);
-}, [selected]);
-
-// 페이지 이동 시 재생 멈춤
-useEffect(() => {
-  return () => {
+  useEffect(() => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
     }
     setIsSpeaking(false);
-  };
-}, []);
+  }, [selected]);
 
+  // 페이지 이동 시 재생 멈춤
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      setIsSpeaking(false);
+    };
+  }, []);
 
-const handlePlay = () => {
-  if (isSpeaking) {
-    audioRef.current?.pause();
-    setIsSpeaking(false);
-    return;
-  }
-  if (!ttsSentences.length) return;
+  // TTS 중 스크롤 제한
+  useEffect(() => {
+    document.body.style.overflow = isSpeaking ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [isSpeaking]);
 
-  let index = indexRef.current;
-  setIsSpeaking(true);
-
-  const playSentence = () => {
-    if (index >= ttsSentences.length) {
+  const handlePlay = () => {
+    if (isSpeaking) {
+      audioRef.current?.pause();
       setIsSpeaking(false);
       return;
     }
+    if (!ttsSentences.length) return;
 
-    setCurrentIndex(index);
+    let index = currentIndex;
+    setIsSpeaking(true);
 
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
+    const playSentence = async () => {
+      if (index >= ttsSentences.length) {
+        setIsSpeaking(false);
+        return;
+      }
 
-    fetch('/api/tts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: ttsSentences[index] }),
-    })
-      .then(res => res.json())
-      .then(data => {
+      setCurrentIndex(index);
+      try {
+        const res = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: ttsSentences[index] }),
+        });
+        const data = await res.json();
+
         if (data.audioContent) {
           const audio = new Audio(`data:audio/mp3;base64,${data.audioContent}`);
           audioRef.current = audio;
 
-          audio.onended = () => {
-            setTimeout(() => {
-              index++;
-              playSentence();
-            }, 500);
+          audio.onended = async () => {
+            index++;
+            if (index < ttsSentences.length) {
+              const nextRes = await fetch('/api/tts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: ttsSentences[index] }),
+              });
+              const nextData = await nextRes.json();
+
+              if (nextData.audioContent) {
+                const nextAudio = new Audio(`data:audio/mp3;base64,${nextData.audioContent}`);
+                audioRef.current = nextAudio;
+                nextAudio.onended = () => {
+                  index++;
+                  setTimeout(playSentence, 300);
+                };
+                setCurrentIndex(index);
+                try {
+                  await nextAudio.play();
+                } catch (e) {
+                  console.error('오디오 재생 실패:', e);
+                  setIsSpeaking(false);
+                }
+              } else {
+                setIsSpeaking(false);
+              }
+            } else {
+              setIsSpeaking(false);
+            }
           };
 
-          audio.onerror = () => {
-            setTimeout(() => {
-              index++;
-              playSentence();
-            }, 500);
-          };
+          try {
+            await audio.play();
+          } catch (e) {
+            console.error('오디오 재생 실패:', e);
+            setIsSpeaking(false);
+          }
+        } else {
+          setIsSpeaking(false);
+        }
+      } catch (error) {
+        console.error('TTS 오류:', error);
+        setIsSpeaking(false);
+      }
+    };
 
-          audio.play();
-        } else setIsSpeaking(false);
-      })
-      .catch(() => {
-        setTimeout(() => {
-          index++;
-          playSentence();
-        }, 500);
-      });
+    playSentence();
   };
 
-  playSentence();
-};
   const cycleFontSize = () => setFontSize(prev => (prev === 'sm' ? 'base' : prev === 'base' ? 'lg' : 'sm'));
-
   const fontSizeClass = { sm: 'text-sm', base: 'text-base', lg: 'text-lg' }[fontSize];
 
   const handleSelect = (title: string) => {
