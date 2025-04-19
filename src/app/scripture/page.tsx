@@ -8,7 +8,6 @@ import { supabase } from '@/lib/supabaseClient';
 export default function ScripturePage() {
   const [list, setList] = useState<string[]>([]);
   const [selected, setSelected] = useState('');
-  const [_content, setContent] = useState('');
   const [displaySentences, setDisplaySentences] = useState<string[]>([]);
   const [ttsSentences, setTtsSentences] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -45,22 +44,24 @@ export default function ScripturePage() {
       });
   }, [title]);
 
-  useEffect(() => {
-    if (!selected) return;
-    fetch(`/api/scripture?title=${encodeURIComponent(selected)}`)
-      .then(res => res.json())
-      .then(data => {
-        const full = data.content || '경전을 불러올 수 없습니다.';
-        const display = full.match(/[^.!?\n]+[.!?\n]*/g) || [full];
-        const tts = display.map(s => s.replace(/\([^\)]*\)/g, ''));
+// 삭제된 부분: useState 선언 없음
 
-        setContent(full);
-        setDisplaySentences(display);
-        setTtsSentences(tts);
-        setCurrentIndex(0);
-        sentenceRefs.current = Array(display.length).fill(null);
-      });
-  }, [selected]);
+useEffect(() => {
+  if (!selected) return;
+  fetch(`/api/scripture?title=${encodeURIComponent(selected)}`)
+    .then(res => res.json())
+    .then(data => {
+      const full = data.content || '경전을 불러올 수 없습니다.';
+      const display = full.match(/[^.!?\n]+[.!?\n]*/g) || [full];
+      const tts = display.map(s => s.replace(/\([^\)]*\)/g, ''));
+
+      setDisplaySentences(display);
+      setTtsSentences(tts);
+      setCurrentIndex(0);
+      sentenceRefs.current = Array(display.length).fill(null);
+    });
+}, [selected]);
+
 
   useEffect(() => {
     if (index !== null && displaySentences.length > 0) {
