@@ -1,0 +1,16 @@
+{
+    "name": "연등",
+    "short_name": "연등",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#F5F1E6",
+    "theme_color": "#D92C2C",
+    "icons": [
+      {
+        "src": "/icon.png",
+        "sizes": "512x512",
+        "type": "image/png"
+      }
+    ]
+  }
+  
