@@ -18,33 +18,48 @@ export default function ScripturePage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [showMessage, setShowMessage] = useState(false);
+  const [bookmarkPending, setBookmarkPending] = useState<{ title: string; index: number } | null>(null);
 
   const sentenceRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const indexRef = useRef(currentIndex);
-  const [bookmarkPending, setBookmarkPending] = useState<{ title: string; index: number } | null>(null);
 
   const { title, index, clearBookmark } = useBookmarkStore();
 
+  // 유저 정보 로드
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (data.user?.id) setUserId(data.user.id);
     });
   }, []);
 
-  useEffect(() => { indexRef.current = currentIndex; }, [currentIndex]);
+  useEffect(() => {
+    indexRef.current = currentIndex;
+  }, [currentIndex]);
 
+  // 1. 경전 목록 불러오기
   useEffect(() => {
     fetch('/api/scripture/list')
       .then(res => res.json())
       .then(data => {
         setList(data.titles || []);
-        if (title) setSelected(title);
-        else if (data.titles.length > 0) setSelected(data.titles[0]);
       });
-  }, [title]);
+  }, []);
 
+  // 2. 경전 선택 로직 (목록 & 책갈피 타이틀 모두 준비된 후 실행)
+  useEffect(() => {
+    if (list.length === 0) return;
+
+    if (title && list.includes(title)) {
+      setBookmarkPending({ title, index: index ?? 0 });
+      setSelected(title); // 책갈피 타이틀 적용
+    } else if (!selected && list.length > 0) {
+      setSelected(list[0]); // 기본값
+    }
+  }, [list, title]);
+
+  // 3. 선택된 경전의 본문 불러오기
   useEffect(() => {
     if (!selected) return;
     fetch(`/api/scripture?title=${encodeURIComponent(selected)}`)
@@ -60,18 +75,13 @@ export default function ScripturePage() {
       });
   }, [selected]);
 
-
-  // 책갈피 값 감지
+  // 4. displaySentences 준비 후 index 적용 (책갈피)
   useEffect(() => {
-    if (title && index !== null && selected !== title) {
-      setBookmarkPending({ title, index });
-      setSelected(title); // 경전 먼저 설정
-    }
-  }, [title, index, selected]);
-  
-  // 경전 로딩 완료 후, bookmarkPending 적용
-  useEffect(() => {
-    if (bookmarkPending && selected === bookmarkPending.title && displaySentences.length > 0) {
+    if (
+      bookmarkPending &&
+      selected === bookmarkPending.title &&
+      displaySentences.length > 0
+    ) {
       setCurrentIndex(bookmarkPending.index);
       setTimeout(() => {
         sentenceRefs.current[bookmarkPending.index]?.scrollIntoView({
@@ -83,9 +93,8 @@ export default function ScripturePage() {
       setBookmarkPending(null);
     }
   }, [bookmarkPending, selected, displaySentences, clearBookmark]);
-  
-  
 
+  // 5. IntersectionObserver 설정
   useEffect(() => {
     if (observerRef.current) observerRef.current.disconnect();
 
@@ -106,6 +115,7 @@ export default function ScripturePage() {
     return () => observerRef.current?.disconnect();
   }, [selected, displaySentences, isSpeaking]);
 
+  // 6. 현재 인덱스 문장 자동 스크롤
   useEffect(() => {
     if (isSpeaking && sentenceRefs.current[currentIndex]) {
       sentenceRefs.current[currentIndex]?.scrollIntoView({
@@ -115,7 +125,7 @@ export default function ScripturePage() {
     }
   }, [currentIndex, isSpeaking]);
 
-  // 경전 바뀔 때 재생 멈춤
+  // 경전 바뀌면 재생 중지
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.pause();
@@ -124,7 +134,7 @@ export default function ScripturePage() {
     setIsSpeaking(false);
   }, [selected]);
 
-  // 페이지 이동 시 재생 멈춤
+  // 페이지 이탈 시 재생 중지
   useEffect(() => {
     return () => {
       if (audioRef.current) {
@@ -135,7 +145,7 @@ export default function ScripturePage() {
     };
   }, []);
 
-  // TTS 중 스크롤 제한
+  // TTS 중 스크롤 방지
   useEffect(() => {
     document.body.style.overflow = isSpeaking ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
@@ -251,7 +261,7 @@ export default function ScripturePage() {
     }
     setShowMessage(true);
   };
-
+  
   return (
     <main className="p-4 pb-[120px] max-w-[430px] mx-auto relative">
       {/* 상단 바 */}
