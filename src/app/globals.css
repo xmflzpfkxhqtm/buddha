@@ -129,3 +129,8 @@ body {
   text-rendering: optimizeLegibility;   /* 크롬/윈도우 */
 
 }
+
+img, svg {
+  shape-rendering: geometricPrecision;
+  image-rendering: crisp-edges;
+}
