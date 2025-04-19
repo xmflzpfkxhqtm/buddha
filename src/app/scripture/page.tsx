@@ -106,7 +106,7 @@ export default function ScripturePage() {
         const topIndex = Number(visible[0].target.getAttribute('data-index'));
         if (!isNaN(topIndex)) setCurrentIndex(topIndex);
       }
-    }, { threshold: 0.1, rootMargin: '0px 0px -80% 0px' });
+    }, { threshold: 0.1, rootMargin: '0px 0px -85% 0px' });
 
     setTimeout(() => {
       sentenceRefs.current.forEach(el => el && observerRef.current?.observe(el));

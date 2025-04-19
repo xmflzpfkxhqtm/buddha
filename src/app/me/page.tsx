@@ -1,193 +1,126 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import type { User } from '@supabase/supabase-js';
-import { useBookmarkStore } from '../../stores/useBookmarkStore';
-import { useRouter } from 'next/navigation';
-
-interface Answer {
-  id: string;
-  question: string;
-  answer: string;
-  created_at: string;
-}
-
-interface Bookmark {
-  id: string;
-  user_id: string;
-  title: string;
-  index: number;
-  created_at: string;
-  sentence?: string;
-}
 
 export default function MePage() {
-  type MyUser = User & {
-    user_metadata?: {
-      full_name?: string;
-      [key: string]: unknown;
-    };
-  };
-
-  const [user, setUser] = useState<MyUser | null>(null);
-  const [answers, setAnswers] = useState<Answer[]>([]);
-  const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [scriptureMap, setScriptureMap] = useState<Record<string, string[]>>({});
-
-  const { setBookmark } = useBookmarkStore();
   const router = useRouter();
+  const [user, setUser] = useState<any>(null);
+  const [bookmarkCount, setBookmarkCount] = useState(0);
+  const [answerCount, setAnswerCount] = useState(0);
+
+  const [weeklyQuestionCount, setWeeklyQuestionCount] = useState(0);
+  const [mostReadTitle, setMostReadTitle] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      const currentUser = data.user;
-      setUser(currentUser);
-      if (currentUser) {
-        fetchAnswers(currentUser.id);
-        fetchBookmarks(currentUser.id);
+    supabase.auth.getUser().then(async ({ data }) => {
+      const user = data.user;
+      setUser(user);
+
+      if (user) {
+        // 전체 수
+        const { data: bookmarks } = await supabase
+          .from('bookmarks')
+          .select('id')
+          .eq('user_id', user.id);
+        const { data: answers } = await supabase
+          .from('answers')
+          .select('id')
+          .eq('user_id', user.id);
+        setBookmarkCount(bookmarks?.length || 0);
+        setAnswerCount(answers?.length || 0);
+
+        // 이번 주 질문 수
+        const { count: questionCount } = await supabase
+          .from('answers')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .gte(
+            'created_at',
+            new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+          );
+        setWeeklyQuestionCount(questionCount || 0);
+
+        // 이번 주 가장 많이 본 경전
+        const { data: weeklyBookmarks } = await supabase
+          .from('bookmarks')
+          .select('title')
+          .eq('user_id', user.id)
+          .gte(
+            'created_at',
+            new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+          );
+
+        if (weeklyBookmarks) {
+          const countMap: Record<string, number> = {};
+          for (const b of weeklyBookmarks) {
+            countMap[b.title] = (countMap[b.title] || 0) + 1;
+          }
+          const mostViewed = Object.entries(countMap).sort((a, b) => b[1] - a[1])[0];
+          setMostReadTitle(mostViewed?.[0] || null);
+        }
       }
     });
   }, []);
-
-  const fetchAnswers = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('answers')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false, nullsFirst: false });
-
-    if (!error) setAnswers(data as Answer[]);
-  };
-
-  const fetchBookmarks = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('bookmarks')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false, nullsFirst: false }); // ← 수정됨
-  
-    if (!error && data) {
-      setBookmarks(data as Bookmark[]);
-  
-      const titles = [...new Set(data.map((bm: Bookmark) => bm.title))];
-      const contentMap: Record<string, string[]> = {};
-  
-      for (const title of titles) {
-        const res = await fetch(`/api/scripture?title=${encodeURIComponent(title)}`);
-        const json = await res.json();
-        const full = json.content || '';
-        const lines = full.match(/[^.!?\n]+[.!?\n]*/g) || [full];
-        contentMap[title] = lines;
-      }
-  
-      setScriptureMap(contentMap);
-    }
-    setLoading(false);
-  };
-  
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.reload();
   };
 
-  const handleBookmarkClick = (title: string, index: number) => {
-    setBookmark(title, index);
-    setTimeout(() => {
-      router.push('/scripture');
-    }, 0);
-  };
-
-  const handleDeleteBookmark = async (bookmarkId: string) => {
-    const { error } = await supabase.from('bookmarks').delete().eq('id', bookmarkId);
-    if (!error) {
-      setBookmarks(prev => prev.filter(bm => bm.id !== bookmarkId));
-    }
-  };
-
   return (
-    <main className="relative min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-[#F5F1E6] px-4 py-10">
+    <main className="min-h-screen max-w-[430px] mx-auto bg-[#F5F1E6] px-6 py-10 flex flex-col gap-6">
+      {/* 📊 이번 주 통계 */}
       {user && (
-        <div className="w-full flex flex-col items-center mb-6">
+        <div className="bg-white border shadow rounded-xl p-4 mb-2 text-sm text-gray-700">
+          <p className="font-semibold text-red mb-1">📊 이번 주 요약</p>
+          <p>📖 가장 많이 본 경전: <strong>{mostReadTitle || '없음'}</strong></p>
+          <p>🪷 질문 횟수: <strong>{weeklyQuestionCount}개</strong></p>
+        </div>
+      )}
+
+      {/* 사용자 정보 */}
+      {user && (
+        <div className="flex flex-col items-center mb-2">
           <p className="text-sm text-gray-700 font-semibold">{user.user_metadata?.full_name}</p>
-          <p className="text-xs text-gray-500 mb-2">{user.email}</p>
-          <button onClick={handleLogout} className="text-xs underline text-red-dark hover:text-red">
+          <p className="text-xs text-gray-500 mb-1">{user.email}</p>
+          <button
+            onClick={handleLogout}
+            className="text-xs underline text-red-dark hover:text-red"
+          >
             로그아웃
           </button>
         </div>
       )}
 
-      {loading ? (
-        <p className="text-gray-500">불러오는 중...</p>
-      ) : (
-        <>
-          <div className="w-full mb-10">
-            <h2 className="text-base font-bold text-left text-red mb-2">📌 저장한 책갈피</h2>
-            {bookmarks.length === 0 ? (
-              <p className="text-sm text-gray-500">아직 책갈피가 없습니다.</p>
-            ) : (
-              <ul className="space-y-3">
-                {bookmarks.map((bm) => (
-                  <li key={bm.id} className="bg-white rounded-xl border shadow-sm">
-                    <div
-  onClick={() => handleBookmarkClick(bm.title, bm.index)}
-  className="cursor-pointer w-full px-4 pt-3 pb-2 text-left"
->
-  <div className="flex justify-between items-start mb-1">
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="text-sm font-semibold text-red-dark">
-        📖 {bm.title.length > 30 ? bm.title.slice(0, 30) + '...' : bm.title}
-      </span>
-      <span className="text-sm text-gray-700 font-medium">{bm.index + 1}행</span>
-    </div>
-    <button
-      onClick={(e) => {
-        e.stopPropagation(); // 상위 onClick 막기
-        handleDeleteBookmark(bm.id);
-      }}
-      className="text-xs text-red-dark hover:text-red ml-2"
-    >
-      삭제
-    </button>
-  </div>
-  <p className="text-sm text-gray-700">
-    {scriptureMap[bm.title]?.[bm.index] || '내용을 불러올 수 없습니다.'}
-  </p>
-</div>
+      {/* 메뉴 카드 */}
+      <div
+        onClick={() => router.push('/me/bookmarks')}
+        className="cursor-pointer p-4 bg-white rounded-xl shadow border"
+      >
+        <p className="text-lg font-bold text-red-dark">📌 저장한 책갈피</p>
+        <p className="text-sm text-gray-600 mt-1">경전의 구절을 저장한 목록입니다.</p>
+        <p className="text-xs text-gray-500 mt-1">{bookmarkCount}개</p>
+      </div>
 
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+      <div
+        onClick={() => router.push('/me/answers')}
+        className="cursor-pointer p-4 bg-white rounded-xl shadow border"
+      >
+        <p className="text-lg font-bold text-red-dark">🪷 내가 저장한 말씀들</p>
+        <p className="text-sm text-gray-600 mt-1">당신의 질문과 부처님의 답변입니다.</p>
+        <p className="text-xs text-gray-500 mt-1">{answerCount}개</p>
+      </div>
 
-          <div className="w-full mb-6">
-            <h2 className="text-base font-bold text-left text-red mb-2">🪷 내가 저장한 말씀들</h2>
-            <p className="text-sm text-gray-600 mb-4 text-left">
-              당신의 마음에 남은 질문과 부처님의 답변입니다.
-            </p>
-          </div>
+      <div
+        onClick={() => router.push('/me/feedback')}
+        className="cursor-pointer p-4 bg-white rounded-xl shadow border"
+      >
+        <p className="text-lg font-bold text-blue-700">💬 피드백 보내기</p>
+        <p className="text-sm text-gray-600 mt-1">불편한 점이나 바라는 점을 알려주세요.</p>
+      </div>
 
-          <div className="w-full space-y-6">
-            {answers.map((item) => (
-              <div key={item.id} className="p-4 rounded-xl shadow-md border border-red bg-white">
-                <div className="mb-2">
-                  <p className="text-xs text-gray-500">🕰 {new Date(item.created_at).toLocaleString()}</p>
-                </div>
-                <div className="mb-3">
-                  <p className="font-bold text-red mb-1">🪷 부처님 말씀</p>
-                  <p className="whitespace-pre-wrap text-sm text-black">{item.answer}</p>
-                </div>
-                <div>
-                  <p className="font-bold text-red mb-1">📜 나의 질문</p>
-                  <p className="text-sm text-black">「{item.question}」</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
     </main>
   );
 }
