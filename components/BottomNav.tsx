@@ -30,24 +30,12 @@ export default function BottomNav() {
     {
       label: user ? '내정보' : '로그인',
       icon: UserIcon,
-      path: '/me',
-      action: async () => {
-        if (user) {
-          router.push('/me');
-        } else {
-          const { error } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-              redirectTo:
-                typeof window !== 'undefined'
-                  ? window.location.origin
-                  : 'https://buddha-dusky.vercel.app',
-            },
-          });
-          if (error) alert('로그인 실패');
-        }
+      path: user ? '/me' : '/login',
+      action: () => {
+        router.push(user ? '/me' : '/login');
       },
     },
+    
   ];
 
   return (
