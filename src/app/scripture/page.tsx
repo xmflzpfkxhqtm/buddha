@@ -86,7 +86,7 @@ export default function ScripturePage() {
         const topIndex = Number(visible[0].target.getAttribute('data-index'));
         if (!isNaN(topIndex)) setCurrentIndex(topIndex);
       }
-    }, { threshold: 0.1, rootMargin: '0px 0px -90% 0px' });
+    }, { threshold: 0.1, rootMargin: '0px 0px -80% 0px' });
 
     setTimeout(() => {
       sentenceRefs.current.forEach(el => el && observerRef.current?.observe(el));
@@ -226,11 +226,11 @@ useEffect(() => {
             key={i}
             data-index={i}
             ref={(el) => { sentenceRefs.current[i] = el; }}
-            className={`block scroll-mt-[64px] ${
+            className={`block scroll-mt-[128px] ${
               i === currentIndex
                 ? isSpeaking
                   ? 'bg-green-200'
-                  : 'bg-yellow-200'
+                  : 'bg-amber-200'
                 : ''
             }`}
           >

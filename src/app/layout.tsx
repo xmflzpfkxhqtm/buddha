@@ -33,7 +33,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#F5F1E6" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="부처님 손바닥" />
+        <meta name="apple-mobile-web-app-title" content="연등" />
         <link rel="apple-touch-icon" href="/icon.png" />
         {/* 👆👆👆 추가 부분 끝 */}
       </head>
