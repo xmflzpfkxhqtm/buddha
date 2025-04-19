@@ -53,7 +53,9 @@ useEffect(() => {
     .then(data => {
       const full = data.content || '경전을 불러올 수 없습니다.';
       const display = full.match(/[^.!?\n]+[.!?\n]*/g) || [full];
-      const tts = display.map(s => s.replace(/\([^\)]*\)/g, ''));
+
+      // 여기 수정 (s: string 타입 명시)
+      const tts = display.map((s: string) => s.replace(/\([^\)]*\)/g, ''));
 
       setDisplaySentences(display);
       setTtsSentences(tts);
@@ -63,18 +65,19 @@ useEffect(() => {
 }, [selected]);
 
 
-  useEffect(() => {
-    if (index !== null && displaySentences.length > 0) {
-      setCurrentIndex(index);
-      setTimeout(() => {
-        sentenceRefs.current[index]?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start',
-        });
-      }, 500);
-      clearBookmark();
-    }
-  }, [index, displaySentences]);
+
+useEffect(() => {
+  if (index !== null && displaySentences.length > 0) {
+    setCurrentIndex(index);
+    setTimeout(() => {
+      sentenceRefs.current[index]?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }, 500);
+    clearBookmark();
+  }
+}, [index, displaySentences, clearBookmark]); // ← clearBookmark 추가
 
   useEffect(() => {
     if (observerRef.current) observerRef.current.disconnect();
