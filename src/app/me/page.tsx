@@ -130,31 +130,32 @@ export default function MePage() {
               <ul className="space-y-3">
                 {bookmarks.map((bm) => (
                   <li key={bm.id} className="bg-white rounded-xl border shadow-sm">
-                    <button
-                      onClick={() => handleBookmarkClick(bm.title, bm.index)}
-                      className="w-full px-4 pt-3 pb-2 text-left"
-                    >
-                      <div className="flex justify-between items-start mb-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-sm font-semibold text-red-dark">
-                            📖 {bm.title.length > 30 ? bm.title.slice(0, 30) + '...' : bm.title}
-                          </span>
-                          <span className="text-sm text-gray-700 font-medium">{bm.index + 1}행</span>
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteBookmark(bm.id);
-                          }}
-                          className="text-xs text-red-dark hover:text-red ml-2"
-                        >
-                          삭제
-                        </button>
-                      </div>
-                      <p className="text-sm text-gray-700">
-                        {scriptureMap[bm.title]?.[bm.index] || '내용을 불러올 수 없습니다.'}
-                      </p>
-                    </button>
+                    <div
+  onClick={() => handleBookmarkClick(bm.title, bm.index)}
+  className="cursor-pointer w-full px-4 pt-3 pb-2 text-left"
+>
+  <div className="flex justify-between items-start mb-1">
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-sm font-semibold text-red-dark">
+        📖 {bm.title.length > 30 ? bm.title.slice(0, 30) + '...' : bm.title}
+      </span>
+      <span className="text-sm text-gray-700 font-medium">{bm.index + 1}행</span>
+    </div>
+    <button
+      onClick={(e) => {
+        e.stopPropagation(); // 상위 onClick 막기
+        handleDeleteBookmark(bm.id);
+      }}
+      className="text-xs text-red-dark hover:text-red ml-2"
+    >
+      삭제
+    </button>
+  </div>
+  <p className="text-sm text-gray-700">
+    {scriptureMap[bm.title]?.[bm.index] || '내용을 불러올 수 없습니다.'}
+  </p>
+</div>
+
                   </li>
                 ))}
               </ul>

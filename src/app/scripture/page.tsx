@@ -158,79 +158,66 @@ export default function ScripturePage() {
       return;
     }
     if (!ttsSentences.length) return;
-
+  
     let index = currentIndex;
     setIsSpeaking(true);
-
+  
+    const fetchTTS = async (text: string, retry = true): Promise<string | null> => {
+      try {
+        const res = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text }),
+        });
+        const data = await res.json();
+        if (data.audioContent) return data.audioContent;
+        if (retry) {
+          console.warn('TTS 재시도 중:', text);
+          return fetchTTS(text, false);
+        }
+        console.error('TTS 실패:', text);
+        return null;
+      } catch (e) {
+        console.error('TTS fetch 에러:', e);
+        return null;
+      }
+    };
+  
     const playSentence = async () => {
       if (index >= ttsSentences.length) {
         setIsSpeaking(false);
         return;
       }
-
+  
       setCurrentIndex(index);
+      console.log('재생 시작:', index, ttsSentences[index]);
+  
+      const audioBase64 = await fetchTTS(ttsSentences[index]);
+      if (!audioBase64) {
+        setIsSpeaking(false);
+        return;
+      }
+  
+      const audio = new Audio(`data:audio/mp3;base64,${audioBase64}`);
+      audioRef.current = audio;
+  
+      // ✅ onended에서는 다음 문장 재생만 큐에 넣는다 (async 없이!)
+      audio.onended = () => {
+        index++;
+        setTimeout(playSentence, 300);
+      };
+  
       try {
-        const res = await fetch('/api/tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: ttsSentences[index] }),
-        });
-        const data = await res.json();
-
-        if (data.audioContent) {
-          const audio = new Audio(`data:audio/mp3;base64,${data.audioContent}`);
-          audioRef.current = audio;
-
-          audio.onended = async () => {
-            index++;
-            if (index < ttsSentences.length) {
-              const nextRes = await fetch('/api/tts', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: ttsSentences[index] }),
-              });
-              const nextData = await nextRes.json();
-
-              if (nextData.audioContent) {
-                const nextAudio = new Audio(`data:audio/mp3;base64,${nextData.audioContent}`);
-                audioRef.current = nextAudio;
-                nextAudio.onended = () => {
-                  index++;
-                  setTimeout(playSentence, 300);
-                };
-                setCurrentIndex(index);
-                try {
-                  await nextAudio.play();
-                } catch (e) {
-                  console.error('오디오 재생 실패:', e);
-                  setIsSpeaking(false);
-                }
-              } else {
-                setIsSpeaking(false);
-              }
-            } else {
-              setIsSpeaking(false);
-            }
-          };
-
-          try {
-            await audio.play();
-          } catch (e) {
-            console.error('오디오 재생 실패:', e);
-            setIsSpeaking(false);
-          }
-        } else {
-          setIsSpeaking(false);
-        }
-      } catch (error) {
-        console.error('TTS 오류:', error);
+        await audio.play();
+      } catch (e) {
+        console.error('오디오 재생 실패:', e);
         setIsSpeaking(false);
       }
     };
-
+  
     playSentence();
   };
-
+  
   const cycleFontSize = () => setFontSize(prev => (prev === 'sm' ? 'base' : prev === 'base' ? 'lg' : 'sm'));
   const fontSizeClass = { sm: 'text-sm', base: 'text-base', lg: 'text-lg' }[fontSize];
 
