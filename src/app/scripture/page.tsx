@@ -16,6 +16,8 @@ export default function ScripturePage() {
   const [fontSize, setFontSize] = useState<'sm' | 'base' | 'lg'>('lg');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [message, setMessage] = useState('');
+  const [showMessage, setShowMessage] = useState(false);
 
   const sentenceRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -44,40 +46,34 @@ export default function ScripturePage() {
       });
   }, [title]);
 
-// 삭제된 부분: useState 선언 없음
+  useEffect(() => {
+    if (!selected) return;
+    fetch(`/api/scripture?title=${encodeURIComponent(selected)}`)
+      .then(res => res.json())
+      .then(data => {
+        const full = data.content || '경전을 불러올 수 없습니다.';
+        const display = full.match(/[^.!?\n]+[.!?\n]*/g) || [full];
+        const tts = display.map((s: string) => s.replace(/\([^\)]*\)/g, ''));
 
-useEffect(() => {
-  if (!selected) return;
-  fetch(`/api/scripture?title=${encodeURIComponent(selected)}`)
-    .then(res => res.json())
-    .then(data => {
-      const full = data.content || '경전을 불러올 수 없습니다.';
-      const display = full.match(/[^.!?\n]+[.!?\n]*/g) || [full];
-
-      // 여기 수정 (s: string 타입 명시)
-      const tts = display.map((s: string) => s.replace(/\([^\)]*\)/g, ''));
-
-      setDisplaySentences(display);
-      setTtsSentences(tts);
-      setCurrentIndex(0);
-      sentenceRefs.current = Array(display.length).fill(null);
-    });
-}, [selected]);
-
-
-
-useEffect(() => {
-  if (index !== null && displaySentences.length > 0) {
-    setCurrentIndex(index);
-    setTimeout(() => {
-      sentenceRefs.current[index]?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
+        setDisplaySentences(display);
+        setTtsSentences(tts);
+        setCurrentIndex(0);
+        sentenceRefs.current = Array(display.length).fill(null);
       });
-    }, 500);
-    clearBookmark();
-  }
-}, [index, displaySentences, clearBookmark]); // ← clearBookmark 추가
+  }, [selected]);
+
+  useEffect(() => {
+    if (index !== null && displaySentences.length > 0) {
+      setCurrentIndex(index);
+      setTimeout(() => {
+        sentenceRefs.current[index]?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+      }, 500);
+      clearBookmark();
+    }
+  }, [index, displaySentences, clearBookmark]);
 
   useEffect(() => {
     if (observerRef.current) observerRef.current.disconnect();
@@ -107,6 +103,27 @@ useEffect(() => {
       });
     }
   }, [currentIndex, isSpeaking]);
+
+  // 경전 바뀔 때 재생 멈춤
+useEffect(() => {
+  if (audioRef.current) {
+    audioRef.current.pause();
+    audioRef.current = null;
+  }
+  setIsSpeaking(false);
+}, [selected]);
+
+// 페이지 이동 시 재생 멈춤
+useEffect(() => {
+  return () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    setIsSpeaking(false);
+  };
+}, []);
+
 
   const handlePlay = () => {
     if (isSpeaking) {
@@ -157,70 +174,72 @@ useEffect(() => {
     window.scrollTo({ top: 0 });
   };
 
+  const handleBookmark = async () => {
+    if (!userId) {
+      setMessage('로그인 정보를 불러올 수 없습니다.');
+      setShowMessage(true);
+      return;
+    }
+    const { error } = await supabase.from('bookmarks').insert({
+      user_id: userId,
+      title: selected,
+      index: currentIndex,
+    });
+    if (!error) {
+      setMessage('책갈피가 저장되었습니다.\n내 정보에서 다시 확인하실 수 있습니다.');
+    } else if (error.code === '23505') {
+      setMessage('이미 저장한 구절입니다.');
+    } else {
+      setMessage('저장에 실패했습니다.');
+      console.error('북마크 저장 에러:', error);
+    }
+    setShowMessage(true);
+  };
+
   return (
     <main className="p-4 pb-[120px] max-w-[430px] mx-auto relative">
+      {/* 상단 바 */}
       <div className="sticky top-0 z-50 bg-white h-16 py-2">
         <div className="flex items-center justify-between gap-2">
-          <div onClick={() => setShowModal(true)} className="cursor-pointer flex items-center max-w-[240px]">
+          <div onClick={() => setShowModal(true)} className="cursor-pointer flex items-center max-w-[140px]">
             <span className="text-base font-semibold text-red-dark truncate">{selected}</span>
             <span className="ml-1 text-base text-red-light">⏷</span>
           </div>
-          <div className="flex items-center justify-end gap-2">
-            <button
-              onClick={async () => {
-                if (!userId) {
-                  alert('로그인 정보를 불러올 수 없습니다.');
-                  return;
-                }
-                const { error } = await supabase.from('bookmarks').insert({
-                  user_id: userId,
-                  title: selected,
-                  index: currentIndex,
-                });
-                if (!error) {
-                  alert('책갈피가 저장되었습니다!');
-                } else {
-                  alert('저장에 실패했습니다.');
-                  console.error('북마크 저장 에러:', error);
-                }
-              }}
-              className="fixed bottom-[150px] right-4 bg-yellow-400 text-white px-4 py-2 rounded-lg shadow z-50"
-            >
+          <span className="text-sm text-red-dark">{`${currentIndex + 1} / ${displaySentences.length}`}</span>
+          <div className="flex items-center gap-2">
+            <button onClick={handleBookmark} className="w-24 h-9 bg-red-light text-white rounded-lg font-semibold flex items-center justify-center">
               책갈피 저장
             </button>
-            <span className="w-24 h-9 bg-white text-red-dark rounded-lg flex items-center justify-end">
-              {`${currentIndex + 1} / ${displaySentences.length}`}
-            </span>
             <button onClick={cycleFontSize} className="w-9 h-9 bg-red-light text-white rounded-lg flex items-center justify-center">
               {fontSize === 'sm' && '가'}
               {fontSize === 'base' && <span className="text-lg">가</span>}
-              {fontSize === 'lg' && <span className="text-xl">가</span>}
+              {fontSize === 'lg' && <span className="text-xl font-semibold">가</span>}
             </button>
           </div>
         </div>
       </div>
 
+      {/* 본문 */}
       <div className={`whitespace-pre-wrap font-maruburi bg-white rounded-xl ${fontSizeClass}`}>
-  {displaySentences.map((s, i) => (
-    <span
-    key={i}
-    data-index={i}
-    ref={(el) => { sentenceRefs.current[i] = el; }} // ← 이 부분만 수정됨
-    className={`block scroll-mt-[64px] ${
-      i === currentIndex
-        ? isSpeaking
-          ? 'bg-green-200'
-          : 'bg-yellow-200'
-        : ''
-    }`}
-  >
-    {s}
-  </span>
-  
-  ))}
-</div>
+        {displaySentences.map((s, i) => (
+          <span
+            key={i}
+            data-index={i}
+            ref={(el) => { sentenceRefs.current[i] = el; }}
+            className={`block scroll-mt-[64px] ${
+              i === currentIndex
+                ? isSpeaking
+                  ? 'bg-green-200'
+                  : 'bg-yellow-200'
+                : ''
+            }`}
+          >
+            {s}
+          </span>
+        ))}
+      </div>
 
-
+      {/* 재생 버튼 */}
       <button
         onClick={handlePlay}
         className="fixed bottom-[84px] left-1/2 -translate-x-1/2 bg-red-light text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg z-50"
@@ -228,9 +247,10 @@ useEffect(() => {
         {isSpeaking ? <Pause size={32} /> : <Play size={32} />}
       </button>
 
+      {/* 경전 선택 모달 */}
       {showModal && (
         <div onClick={() => setShowModal(false)} className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[100] flex items-end justify-center">
-          <div onClick={e => e.stopPropagation()} className="bg-white rounded-t-2xl p-4 h-[80vh] overflow-y-auto w-full max-w-md animate-slide-up">
+          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-t-2xl p-4 h-[80vh] overflow-y-auto w-full max-w-md animate-slide-up">
             <input
               placeholder="경전 검색..."
               value={search}
@@ -247,6 +267,18 @@ useEffect(() => {
               ))}
             </ul>
             <button onClick={() => setShowModal(false)} className="mt-4 w-full py-2 bg-red-light text-white rounded-lg">닫기</button>
+          </div>
+        </div>
+      )}
+
+      {/* 메시지 모달 */}
+      {showMessage && (
+        <div onClick={() => setShowMessage(false)} className="fixed inset-0 z-[200] bg-black/30 backdrop-blur-sm flex items-center justify-center">
+          <div onClick={(e) => e.stopPropagation()} className="bg-white px-6 py-4 rounded-2xl shadow-lg text-center max-w-[80%]">
+            <p className="whitespace-pre-wrap text-sm text-gray-800">{message}</p>
+            <button onClick={() => setShowMessage(false)} className="mt-4 px-4 py-1 bg-red-light text-white rounded-xl text-sm">
+              확인
+            </button>
           </div>
         </div>
       )}
