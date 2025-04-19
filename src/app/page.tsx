@@ -47,11 +47,15 @@ export default function Home() {
             className="min-w-[240px] h-[360px] rounded-2xl overflow-hidden flex flex-col cursor-pointer hover:shadow-lg transition"
           >
             <div className="h-[280px] w-full">
-              <img
-                src="/askvip.png"
-                alt="부처님께 여쭙기"
-                className="w-full h-full object-cover rounded-2xl"
-              />
+            <div className="h-[280px] w-full relative rounded-2xl overflow-hidden">
+  <Image
+    src="/askvip.png"
+    alt="부처님께 여쭙기"
+    fill
+    className="object-cover"
+    priority
+  />
+</div>
             </div>
             <div className="flex-1 px-3 py-2">
               <p className="text-xs text-left text-white font-medium">
@@ -69,11 +73,15 @@ export default function Home() {
             className="min-w-[240px] h-[360px] rounded-2xl overflow-hidden flex flex-col cursor-pointer hover:shadow-lg transition"
           >
             <div className="h-[280px] w-full">
-              <img
-                src="/jumpingdoo.png"
-                alt="호날두께 여쭙기"
-                className="w-full h-full object-cover rounded-2xl"
-              />
+            <div className="h-[280px] w-full relative rounded-2xl overflow-hidden">
+  <Image
+    src="/jumpingdoo.png"
+    alt="호날두께 여쭙기"
+    fill
+    className="object-cover"
+    priority
+  />
+</div>
             </div>
             <div className="flex-1 px-3 py-2">
               <p className="text-xs text-left text-white font-medium">

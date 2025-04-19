@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabaseClient';
 export default function ScripturePage() {
   const [list, setList] = useState<string[]>([]);
   const [selected, setSelected] = useState('');
-  const [content, setContent] = useState('');
+  const [_content, setContent] = useState('');
   const [displaySentences, setDisplaySentences] = useState<string[]>([]);
   const [ttsSentences, setTtsSentences] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
