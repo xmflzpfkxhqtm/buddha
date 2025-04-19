@@ -203,19 +203,20 @@ useEffect(() => {
       <div className={`whitespace-pre-wrap font-maruburi bg-white rounded-xl ${fontSizeClass}`}>
   {displaySentences.map((s, i) => (
     <span
-      key={i}
-      data-index={i}
-      ref={el => sentenceRefs.current[i] = el}
-      className={`block scroll-mt-[64px] ${
-        i === currentIndex
-          ? isSpeaking
-            ? 'bg-green-200'
-            : 'bg-yellow-200'
-          : ''
-      }`}
-    >
-      {s}
-    </span>
+    key={i}
+    data-index={i}
+    ref={(el) => { sentenceRefs.current[i] = el; }} // ← 이 부분만 수정됨
+    className={`block scroll-mt-[64px] ${
+      i === currentIndex
+        ? isSpeaking
+          ? 'bg-green-200'
+          : 'bg-yellow-200'
+        : ''
+    }`}
+  >
+    {s}
+  </span>
+  
   ))}
 </div>
 
