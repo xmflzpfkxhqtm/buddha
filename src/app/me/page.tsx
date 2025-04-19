@@ -55,7 +55,7 @@ export default function MePage() {
       .from('answers')
       .select('*')
       .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false, nullsFirst: false });
 
     if (!error) setAnswers(data as Answer[]);
   };
@@ -65,14 +65,14 @@ export default function MePage() {
       .from('bookmarks')
       .select('*')
       .eq('user_id', userId)
-      .order('created_at', { ascending: false, nullsLast: true });
-
+      .order('created_at', { ascending: false, nullsFirst: false }); // ← 수정됨
+  
     if (!error && data) {
       setBookmarks(data as Bookmark[]);
-
+  
       const titles = [...new Set(data.map((bm: Bookmark) => bm.title))];
       const contentMap: Record<string, string[]> = {};
-
+  
       for (const title of titles) {
         const res = await fetch(`/api/scripture?title=${encodeURIComponent(title)}`);
         const json = await res.json();
@@ -80,11 +80,12 @@ export default function MePage() {
         const lines = full.match(/[^.!?\n]+[.!?\n]*/g) || [full];
         contentMap[title] = lines;
       }
-
+  
       setScriptureMap(contentMap);
     }
     setLoading(false);
   };
+  
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
