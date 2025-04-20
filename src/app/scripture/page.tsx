@@ -237,7 +237,8 @@ export default function ScripturePage() {
       {/* 본문 */}
       <div className={`whitespace-pre-wrap font-maruburi bg-white rounded-xl ${fontSizeClass}`}>
         {displaySentences.map((s, i) => (
-          <span key={i} data-index={i} ref={el => sentenceRefs.current[i] = el} className={`block scroll-mt-[128px] ${i === currentIndex ? 'bg-amber-200' : ''}`}>
+          <span key={i} data-index={i} ref={(el) => { sentenceRefs.current[i] = el }}
+          className={`block scroll-mt-[128px] ${i === currentIndex ? 'bg-amber-200' : ''}`}>
             {s}
           </span>
         ))}
