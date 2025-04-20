@@ -1,29 +1,22 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useAskStore } from '../../stores/askStore';
-import { useEffect, useState, useRef } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 import html2canvas from 'html2canvas';
 import { supabase } from '@/lib/supabaseClient';
-import Loading from '../../../components/Loading';
 import type { User } from '@supabase/supabase-js';
 
 export default function AnswerPage() {
   const router = useRouter();
-  const { question, selectedModel } = useAskStore();
+  const searchParams = useSearchParams();
+  const questionId = searchParams.get('questionId');
+
+  const [question, setQuestion] = useState('');
   const [fullAnswer, setFullAnswer] = useState('');
   const [displayedAnswer, setDisplayedAnswer] = useState('');
   const [done, setDone] = useState(false);
-  const [fadeOut, setFadeOut] = useState(false);
-  const [showLoading, setShowLoading] = useState(true);
-  type MyUser = User & {
-    user_metadata?: {
-      full_name?: string;
-      [key: string]: unknown; // ✅ Lint 통과!
-    };
-  };
-    const [user, setUser] = useState<MyUser | null>(null);
-    const [saved, setSaved] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [saved, setSaved] = useState(false);
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const answerRef = useRef(null);
@@ -33,38 +26,31 @@ export default function AnswerPage() {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
   }, []);
 
-  // GPT 호출
+  // Supabase에서 답변 가져오기
   useEffect(() => {
-    if (!question || !selectedModel) return;
+    if (!questionId) return;
 
-    const fetchAnswer = async () => {
-      try {
-        const response = await fetch('/api/ask', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question, model: selectedModel }),
-        });
+    const fetchFromSupabase = async () => {
+      const { data, error } = await supabase
+        .from('temp_answers')
+        .select('question, answer')
+        .eq('id', questionId)
+        .single();
 
-        if (!response.ok) throw new Error('응답 실패');
-
-        const data = await response.json();
-
-        if (data && data.answer) {
-          setFullAnswer(data.answer);
-        } else {
-          throw new Error('응답 데이터가 올바르지 않습니다');
-        }
-
-        setDone(true);
-      } catch (error) {
-        console.error('API 호출 실패:', error);
+      if (error || !data) {
+        console.error('답변 불러오기 실패:', error);
         setFullAnswer('부처님과의 연결이 원활하지 않습니다. 다시 시도해 주세요.');
         setDone(true);
+        return;
       }
+
+      setQuestion(data.question);
+      setFullAnswer(data.answer);
+      setDone(true);
     };
 
-    fetchAnswer();
-  }, [question, selectedModel]);
+    fetchFromSupabase();
+  }, [questionId]);
 
   // 타자 효과
   useEffect(() => {
@@ -89,17 +75,6 @@ export default function AnswerPage() {
     };
   }, [fullAnswer]);
 
-  // 로딩 페이드아웃
-  useEffect(() => {
-    if (fullAnswer) {
-      setFadeOut(true);
-      const timeout = setTimeout(() => {
-        setShowLoading(false);
-      }, 1000);
-      return () => clearTimeout(timeout);
-    }
-  }, [fullAnswer]);
-
   // 질문 수정
   const handleEdit = () => {
     router.push('/ask');
@@ -117,17 +92,13 @@ export default function AnswerPage() {
     link.click();
   };
 
-  // Supabase에 질문 + 답변 저장
+  // Supabase에 보관
   const handleSaveToSupabase = async () => {
     if (!user) {
       alert('로그인이 필요합니다!');
       return;
     }
-    console.log('Saving to Supabase:', {
-      user_id: user?.id,
-      question,
-      answer: fullAnswer,
-    });
+
     const { error } = await supabase.from('answers').insert([
       {
         user_id: user.id,
@@ -144,8 +115,6 @@ export default function AnswerPage() {
       alert('✅ 부처님의 답변이 보관되었습니다.');
     }
   };
-
-  if (showLoading) return <Loading fadeOut={fadeOut} />;
 
   return (
     <main className="relative min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-white px-6 py-10">
@@ -173,10 +142,8 @@ export default function AnswerPage() {
 
       {done && (
         <div className="w-full flex flex-col space-y-4 mt-8 px-2 mb-16">
-          {/* 1st row: 다시하기 */}
           <div className="flex flex-row space-x-4">
-
-          <button
+            <button
               onClick={handleCapture}
               className="w-full py-3 bg-red-light text-white font-bold rounded-4xl hover:bg-red transition"
             >
@@ -193,9 +160,8 @@ export default function AnswerPage() {
             >
               {saved ? '✅ 보관됨' : '보관하기'}
             </button>
-            </div>
+          </div>
 
-          {/* 2nd row: 캡쳐 + 저장 */}
           <button
             onClick={handleEdit}
             className="w-full py-3 border border-red text-red-dark font-bold rounded-4xl hover:bg-red hover:text-white transition"
@@ -204,8 +170,6 @@ export default function AnswerPage() {
           </button>
         </div>
       )}
-
-   
     </main>
   );
 }

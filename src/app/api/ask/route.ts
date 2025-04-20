@@ -3,6 +3,7 @@ import { generateEmbeddingBatch } from '@/utils/upstage';
 import { searchSimilarDocuments, DocumentResult } from '@/utils/supabase';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import Anthropic from "@anthropic-ai/sdk";
+import { supabase } from '@/lib/supabaseClient'; // 꼭 추가해줘
 
 // 모델 ID와 실제 API 모델 매핑
 const modelMapping = {
@@ -292,17 +293,38 @@ export async function POST(request: NextRequest) {
       relevantDocuments.map((doc: DocumentResult) => doc.metadata?.source).filter(Boolean)
     ));
     
-    return NextResponse.json({
-      success: true,
-      answer,
-      sources,
-      model: model,
-      similarity: relevantDocuments.map((doc: DocumentResult) => ({
-        score: isNaN(doc.similarity) ? 0 : Number(doc.similarity.toFixed(4)),
-        source: doc.metadata?.source
-      }))
-    });
+
+    // 서버에서 처리하게 수파베이스 작업중 ,..,,,
+    // return NextResponse.json({
+    //   success: true,
+    //   answer,
+    //   sources,
+    //   model: model,
+    //   similarity: relevantDocuments.map((doc: DocumentResult) => ({
+    //     score: isNaN(doc.similarity) ? 0 : Number(doc.similarity.toFixed(4)),
+    //     source: doc.metadata?.source
+    //   }))
+    // });
     
+
+    const { data: inserted, error: insertError } = await supabase
+  .from('temp_answers')
+  .insert([{ question, answer }])
+  .select()
+  .single();
+
+if (insertError || !inserted) {
+  console.error('❌ Supabase 저장 실패:', insertError);
+  return NextResponse.json(
+    { success: false, message: 'Supabase 저장에 실패했습니다.' },
+    { status: 500 }
+  );
+}
+
+return NextResponse.json({
+  success: true,
+  questionId: inserted.id, // 이걸 클라이언트에서 /answer?questionId=xxx 로 활용
+});
   } catch (error) {
     console.error('답변 생성 오류:', error);
     return NextResponse.json(

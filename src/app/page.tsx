@@ -16,26 +16,69 @@ export default function Home() {
   const [index, setIndex] = useState<number | null>(null);
   const [sentence, setSentence] = useState('');
   const [userName, setUserName] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true); // 👈 최소 로딩용 상태
 
   useEffect(() => {
-    const fetchTodayTeaching = async () => {
-      const res = await fetch('/api/today-teaching');
-      const data = await res.json();
-      setTitle(data.title);
-      setIndex(data.index);
-      setSentence(data.sentence);
-    };
+    const fetchAll = async () => {
+      const start = Date.now();
 
-    const fetchUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      const fullName = data.user?.user_metadata?.full_name;
+      const [teachingRes, userRes] = await Promise.all([
+        fetch('/api/today-teaching').then((res) => res.json()),
+        supabase.auth.getUser(),
+      ]);
+
+      const end = Date.now();
+      const elapsed = end - start;
+      const remaining = Math.max(3000 - elapsed, 0); // 👈 최소 1초 보장
+
+      setTitle(teachingRes.title);
+      setIndex(teachingRes.index);
+      setSentence(teachingRes.sentence);
+
+      const fullName = userRes.data.user?.user_metadata?.full_name;
       setUserName(fullName ?? null);
+
+      setTimeout(() => {
+        setIsLoading(false); // 👈 최소 1초 후에 로딩 해제
+      }, remaining);
     };
 
-    fetchTodayTeaching();
-    fetchUser();
+    fetchAll();
   }, []);
 
+  if (isLoading) {
+    return (
+      <div className="relative min-h-screen w-full max-w-[430px] mx-auto bg-gradient-to-b from-red to-redbrown flex flex-col items-center justify-center px-6 overflow-hidden">
+        {/* 배경 이미지 (투명도 + 혼합 모드) */}
+        <Image
+          src="/bg_loading.png"
+          alt="로딩 배경"
+          fill
+          className="absolute inset-0 object-cover opacity-40 mix-blend-luminosity pointer-events-none z-0"
+          priority
+        />
+  
+        {/* 연등 이미지 */}
+        <Image
+          src="/lotusbeige.png"
+          alt="로딩 중"
+          width={72}
+          height={72}
+          className="animate-float opacity-90 transition duration-1000 z-10"
+          priority
+        />
+  
+        {/* 로딩 문구 */}
+        <p className="mt-6 text-white text-lg font-maruburi animate-fade z-10">
+          숨을 깊이 들이쉬고, 마음을 비워보세요.
+        </p>
+        <p className="mt-2 text-sm text-pink-light font-maruburi animate-fade z-10">
+        </p>
+      </div>
+    );
+  }
+  
+  
   return (
     <>
       <MarbleOverlay />
