@@ -133,7 +133,7 @@ export default function AnswerClient() {
           <p className="pl-2 text-white text-start font-semibold">🪷 이르시길</p>
         </div>
         <div className="max-w-md w-full pt-4">
-          <div className="p-4 rounded-xl shadow-xl border font-maruburi border-red mb-6 whitespace-pre-wrap text-base font-bold text-black min-h-[160px]">
+          <div className="p-4 rounded-xl shadow-xl border font-maruburi border-red mb-6 whitespace-pre-wrap text-base text-black min-h-[160px]">
             {displayedAnswer}
           </div>
           <div className="w-full h-12 bg-red-light rounded-xl flex flex-row items-center mt-6 pl-1 justify-start">
