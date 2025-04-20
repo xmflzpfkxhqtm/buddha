@@ -1,7 +1,10 @@
-'use client';
+'use client'; // ✅ 항상 첫 줄에 위치해야 함
+
+export const dynamic = 'force-dynamic'; // ✅ 그 다음에 위치
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+
 import html2canvas from 'html2canvas';
 import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
