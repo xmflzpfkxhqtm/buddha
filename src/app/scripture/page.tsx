@@ -349,7 +349,7 @@ export default function ScripturePage() {
 )}
 
 
-            <button onClick={() => setShowModal(false)} className="mt-4 w-full py-2 bg-red-light text-white rounded-lg">닫기</button>
+            <button onClick={() => setShowModal(false)} className="mt-4 w-full py-2 border border-red text-red-dark rounded-lg">닫기</button>
           </div>
         </div>
       )}
