@@ -10,8 +10,10 @@ export default function BottomNav() {
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
+  const [hide, setHide] = useState(false); // 👈 최초 접속 시 숨김용
 
   useEffect(() => {
+    // 사용자 정보 가져오기
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user);
     });
@@ -22,6 +24,23 @@ export default function BottomNav() {
 
     return () => listener.subscription.unsubscribe();
   }, []);
+
+  // 👇 최초 접속 시 Home에서만 BottomNav 숨기기
+  useEffect(() => {
+    if (pathname === '/') {
+      const isFirstVisit = sessionStorage.getItem('isFirstVisit');
+      if (!isFirstVisit) {
+        setHide(true); // 하단바 숨김
+        sessionStorage.setItem('isFirstVisit', 'true');
+        // 3초 후 자동으로 다시 표시
+        setTimeout(() => setHide(false), 3000);
+      } else {
+        setHide(false); // 이미 방문한 경우 항상 보이기
+      }
+    } else {
+      setHide(false); // 다른 페이지에선 항상 보이기
+    }
+  }, [pathname]);
 
   const navItems = [
     { label: '홈', icon: Mountain, path: '/' },
@@ -35,8 +54,9 @@ export default function BottomNav() {
         router.push(user ? '/me' : '/login');
       },
     },
-    
   ];
+
+  if (hide) return null;
 
   return (
     <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] h-[72px] bg-white border-t border-red flex justify-around items-center z-50">

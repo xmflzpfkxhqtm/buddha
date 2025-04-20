@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from 'react';
 import html2canvas from 'html2canvas';
 import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
+import { useAskStore } from '@/stores/askStore'; // 🔺 상단 import에 추가
 
 export default function AnswerClient() {
   const router = useRouter();
@@ -20,6 +21,7 @@ export default function AnswerClient() {
   const [done, setDone] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [saved, setSaved] = useState(false);
+  const { setParentId } = useAskStore(); // ✅ 상태 훅 추가
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const answerRef = useRef(null);
@@ -144,35 +146,48 @@ export default function AnswerClient() {
       </div>
 
       {done && (
-        <div className="w-full flex flex-col space-y-4 mt-8 px-2 mb-16">
-          <div className="flex flex-row space-x-4">
-            <button
-              onClick={handleCapture}
-              className="w-full py-3 bg-red-light text-white font-bold rounded-4xl hover:bg-red transition"
-            >
-              캡처하기
-            </button>
-            <button
-              onClick={handleSaveToSupabase}
-              disabled={saved}
-              className={`w-full py-3 font-bold rounded-4xl transition ${
-                saved
-                  ? 'bg-red text-white cursor-not-allowed'
-                  : 'bg-red-light text-white hover:bg-red'
-              }`}
-            >
-              {saved ? '✅ 보관됨' : '보관하기'}
-            </button>
-          </div>
+  <div className="w-full flex flex-col space-y-4 mt-8 px-2 mb-16">
+    <div className="flex flex-row space-x-4">
+      <button
+        onClick={handleCapture}
+        className="w-full py-3 bg-red-light text-white font-bold rounded-4xl hover:bg-red transition"
+      >
+        캡처하기
+      </button>
+      <button
+        onClick={handleSaveToSupabase}
+        disabled={saved}
+        className={`w-full py-3 font-bold rounded-4xl transition ${
+          saved
+            ? 'bg-red text-white cursor-not-allowed'
+            : 'bg-red-light text-white hover:bg-red'
+        }`}
+      >
+        {saved ? '✅ 보관됨' : '보관하기'}
+      </button>
+    </div>
 
-          <button
-            onClick={handleEdit}
-            className="w-full py-3 border border-red text-red-dark font-bold rounded-4xl hover:bg-red hover:text-white transition"
-          >
-            다시 하기
-          </button>
-        </div>
-      )}
+    <button
+      onClick={handleEdit}
+      className="w-full py-3 border border-red text-red-dark font-bold rounded-4xl hover:bg-red hover:text-white transition"
+    >
+      다시 하기
+    </button>
+
+    {/* ✅ 추가 질문 버튼 */}
+    <button
+      onClick={() => {
+        setQuestion('');
+        setParentId(questionId);
+        router.push('/ask');
+      }}
+      className="w-full py-3 border border-red text-red-dark font-bold rounded-4xl hover:bg-red hover:text-white transition"
+    >
+      더 자세히 여쭙기
+    </button>
+  </div>
+)}
+
     </main>
   );
 }

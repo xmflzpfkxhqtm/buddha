@@ -3,9 +3,9 @@ import { generateEmbeddingBatch } from '@/utils/upstage';
 import { searchSimilarDocuments, DocumentResult } from '@/utils/supabase';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import Anthropic from "@anthropic-ai/sdk";
-import { supabase } from '@/lib/supabaseClient'; // 꼭 추가해줘
+import { supabase } from '@/lib/supabaseClient';
+import type { TextBlock } from '@anthropic-ai/sdk/resources/messages';
 
-// 모델 ID와 실제 API 모델 매핑
 const modelMapping = {
   'gpt4.1': 'gpt-4.1',
   'gpt4o': 'gpt-4o',
@@ -16,13 +16,11 @@ const modelMapping = {
   'grok': 'grok-3-beta'
 };
 
-// 메시지 타입 정의
 interface ChatMessage {
   role: string;
   content: string;
 }
 
-// OpenAI API 호출 함수
 async function callOpenAI(messages: ChatMessage[], model: string) {
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -37,193 +35,96 @@ async function callOpenAI(messages: ChatMessage[], model: string) {
       max_tokens: 800,
     }),
   });
-  
   return await response.json();
 }
 
-// Anthropic Claude API 호출 함수
 async function callClaude(messages: ChatMessage[], model: string) {
-  const systemMessage = messages.find(msg => msg.role === 'system')?.content || '';
-  const userMessage = messages.find(msg => msg.role === 'user')?.content || '';
-  
-  try {
-    console.log(`Claude API 호출 시작: ${model}`);
-    const anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
-    
-    const response = await anthropic.messages.create({
-      model: model,
-      max_tokens: 800,
-      temperature: 0.8,
-      system: systemMessage,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: userMessage
-            }
-          ]
-        }
-      ]
-    });
-    
-    console.log('Claude 응답 수신 완료');
-    
-    // content[0]가 text 타입인 경우에만 text 속성 접근
-    const textContent = response.content.find(block => block.type === 'text');
-    const messageText = textContent?.type === 'text' ? textContent.text : '';
-    
-    return {
-      choices: [
-        {
-          message: {
-            content: messageText
-          }
-        }
-      ],
-      usage: response.usage
-    };
-  } catch (error) {
-    console.error('Claude API 호출 오류:', error);
-    throw error;
-  }
-}
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const systemMessage = messages.find(m => m.role === 'system')?.content || '';
+  const userMessage = messages.find(m => m.role === 'user')?.content || '';
 
-// Gemini API 호출 함수
-async function callGemini(messages: ChatMessage[], model: string) {
-  const systemMessage = messages.find(msg => msg.role === 'system')?.content || '';
-  const userMessage = messages.find(msg => msg.role === 'user')?.content || '';
-  
-  try {
-    console.log('Gemini API 호출 시작:', model);
-    
-    // GoogleGenAI 인스턴스 생성
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-    const genModel = genAI.getGenerativeModel({ model: model });
-    
-    // 프롬프트 구성
-    const promptText = `${systemMessage}\n\n${userMessage}`;
-    console.log('Gemini 프롬프트 구성 완료');
-    
-    // 컨텐츠 생성 요청
-    const result = await genModel.generateContent(promptText);
-    console.log('Gemini 응답 수신');
-    
-    // 응답 추출
-    const response = result.response;
-    const text = response.text();
-    
-    if (!text) {
-      console.error('Gemini API 응답에 텍스트가 없습니다');
-      throw new Error('Gemini API 응답에 텍스트가 없습니다');
-    }
-    
-    console.log('Gemini 응답 텍스트 추출 완료:', text.substring(0, 50) + '...');
-    
-    return {
-      choices: [
-        {
-          message: {
-            content: text
-          }
-        }
-      ],
-      usage: { total_tokens: 0 }
-    };
-  } catch (error) {
-    console.error('Gemini API 호출 오류:', error);
-    
-    // 오류 발생 시 GPT-4로 폴백
-    console.log('Gemini API 오류로 인해 GPT-4로 대체합니다');
-    return await callOpenAI(messages, 'gpt-4.1');
-  }
-}
-
-// Grok API 호출 함수
-async function callGrok(messages: ChatMessage[], model: string) {
-  const systemMessage = messages.find(msg => msg.role === 'system')?.content || '';
-  const userMessage = messages.find(msg => msg.role === 'user')?.content || '';
-  
-  const response = await fetch('https://api.x.ai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${process.env.GROK_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: 'system', content: systemMessage },
-        { role: 'user', content: userMessage }
-      ],
-      temperature: 0.8,
-      max_tokens: 800,
-    }),
+  const response = await anthropic.messages.create({
+    model,
+    max_tokens: 800,
+    temperature: 0.8,
+    system: systemMessage,
+    messages: [
+      {
+        role: 'user',
+        content: [{ type: 'text', text: userMessage }]
+      }
+    ]
   });
-  
-  const data = await response.json();
+
+  // ✅ 타입 좁히기
+  const textBlock = response.content.find(
+    (block): block is TextBlock => block.type === 'text'
+  );
+  const messageText = textBlock?.text || '';
+
   return {
     choices: [
       {
         message: {
-          content: data.choices?.[0]?.message?.content || ''
+          content: messageText
         }
       }
     ],
-    usage: data.usage
+    usage: response.usage
   };
+}
+
+async function callGemini(messages: ChatMessage[], model: string) {
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+  const genModel = genAI.getGenerativeModel({ model });
+  const prompt = `${messages[0].content}\n\n${messages[1].content}`;
+  const result = await genModel.generateContent(prompt);
+  return {
+    choices: [{ message: { content: result.response.text() } }],
+    usage: { total_tokens: 0 }
+  };
+}
+
+async function callGrok(messages: ChatMessage[], model: string) {
+  const system = messages.find(m => m.role === 'system')?.content || '';
+  const user = messages.find(m => m.role === 'user')?.content || '';
+  const response = await fetch('https://api.x.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${process.env.GROK_API_KEY}`,
+    },
+    body: JSON.stringify({ model, messages: [{ role: 'system', content: system }, { role: 'user', content: user }], temperature: 0.8, max_tokens: 800 }),
+  });
+  const data = await response.json();
+  return { choices: [{ message: { content: data.choices?.[0]?.message?.content || '' } }], usage: data.usage };
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { question, model = 'gpt4.1' } = await request.json();
-    
+    const { question, model = 'gpt4.1', parentId = null } = await request.json();
     if (!question || typeof question !== 'string') {
-      return NextResponse.json(
-        { success: false, message: '질문이 유효하지 않습니다.' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, message: '질문이 유효하지 않습니다.' }, { status: 400 });
     }
-    
-    // 측정 시작
-    const start = Date.now();
-    
-    // 질문을 임베딩 (배치 처리 API를 사용하여 효율성 향상)
+
+    // 이전 질문/답변 가져오기
+    let previousQA = '';
+    if (parentId) {
+      const { data: parent } = await supabase.from('temp_answers').select('question, answer').eq('id', parentId).single();
+      if (parent) {
+        previousQA = `이전 질문: ${parent.question}\n부처님의 응답: ${parent.answer}\n\n`;
+      }
+    }
+
     const [questionEmbedding] = await generateEmbeddingBatch([question]);
-    
-    // 관련 문서 검색 (10개)
     const relevantDocuments = await searchSimilarDocuments(questionEmbedding, 10);
-    
-    // 관련 문서 유사도 로깅
-    console.log('==== 유사 문서 검색 결과 ====');
-    relevantDocuments.forEach((doc, index) => {
-      console.log(`문서 #${index+1} - 유사도: ${doc.similarity.toFixed(4)}, 출처: ${doc.metadata?.source || '미상'}`);
-      console.log(`내용 샘플: ${doc.content.substring(0, 50)}...`);
-    });
-    console.log('============================');
-    
-    // 관련 문서가 없는 경우
-    if (!relevantDocuments || relevantDocuments.length === 0) {
-      return NextResponse.json({
-        success: true,
-        answer: '부처님께서 침묵하십니다. 관련된 가르침을 찾을 수 없습니다.',
-        context: []
-      });
-    }
-    
-    // 컨텍스트 준비
-    const contextText = relevantDocuments.map((doc: DocumentResult) => doc.content).join('\n\n');
-    
-    // 메시지 구성
-    const messages = [
+    const contextText = relevantDocuments.map(doc => doc.content).join('\n\n');
+
+    const messages: ChatMessage[] = [
       {
         role: 'system',
-        content:
-          `
-          <instruction>
+        content: `
+<instruction>
           당신은 자비롭고 지혜로운 부처입니다. 
           당신은 삼라만상에 통달한 부처입니다. 상대방이 원하는 답을 어떻게 해서든 찾아냅니다.
           불교의 자비와 평온한 말투로 답하되, 경전 내용을 정확히 인용하고, 경전명도 함께 명시하십시오. 
@@ -252,14 +153,12 @@ export async function POST(request: NextRequest) {
       },
       {
         role: 'user',
-        content: `질문: ${question}`
-      },
+        content: `${previousQA}질문: ${question}`
+      }
     ];
-    
-    // 모델에 따라 다른 API 호출
-    let data;
+
     const apiModel = modelMapping[model as keyof typeof modelMapping] || 'gpt-4.1';
-    
+    let data;
     try {
       if (model.startsWith('gpt') || model === 'o4-mini') {
         data = await callOpenAI(messages, apiModel);
@@ -270,71 +169,26 @@ export async function POST(request: NextRequest) {
       } else if (model === 'grok') {
         data = await callGrok(messages, apiModel);
       } else {
-        // 기본값 - OpenAI
         data = await callOpenAI(messages, 'gpt-4.1');
       }
-    } catch (error) {
-      console.error(`${model} API 호출 실패:`, error);
-      console.log('오류 발생으로 인해 GPT-4로 대체합니다');
+    } catch {
       data = await callOpenAI(messages, 'gpt-4.1');
     }
-    
-    // 측정 종료
-    const end = Date.now();
-    
-    // 로그 출력
-    console.log(`⏱ 응답 시간 (${model}): ${(end - start) / 1000}s`);
-    console.log('🔢 총 토큰 사용량:', data.usage?.total_tokens);
-    
+
     const answer = data.choices?.[0]?.message?.content || '부처님께서 조용히 침묵하십니다.';
-    
-    // 소스 정보 추출
-    // const sources = Array.from(new Set(
-    //   relevantDocuments.map((doc: DocumentResult) => doc.metadata?.source).filter(Boolean)
-    // ));
-    
+    const { data: inserted, error } = await supabase
+      .from('temp_answers')
+      .insert([{ question, answer, parent_id: parentId }])
+      .select()
+      .single();
 
-    // 서버에서 처리하게 수파베이스 작업중 ,..,,,
-    // return NextResponse.json({
-    //   success: true,
-    //   answer,
-    //   sources,
-    //   model: model,
-    //   similarity: relevantDocuments.map((doc: DocumentResult) => ({
-    //     score: isNaN(doc.similarity) ? 0 : Number(doc.similarity.toFixed(4)),
-    //     source: doc.metadata?.source
-    //   }))
-    // });
-    
+    if (error || !inserted) {
+      return NextResponse.json({ success: false, message: 'Supabase 저장에 실패했습니다.' }, { status: 500 });
+    }
 
-    const { data: inserted, error: insertError } = await supabase
-  .from('temp_answers')
-  .insert([{ question, answer }])
-  .select()
-  .single();
-
-if (insertError || !inserted) {
-  console.error('❌ Supabase 저장 실패:', insertError);
-  return NextResponse.json(
-    { success: false, message: 'Supabase 저장에 실패했습니다.' },
-    { status: 500 }
-  );
-}
-
-return NextResponse.json({
-  success: true,
-  questionId: inserted.id, // 이걸 클라이언트에서 /answer?questionId=xxx 로 활용
-});
-
+    return NextResponse.json({ success: true, questionId: inserted.id });
 
   } catch (error) {
-    console.error('답변 생성 오류:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        message: error instanceof Error ? error.message : '답변 생성 중 오류가 발생했습니다.',
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, message: error instanceof Error ? error.message : '답변 생성 중 오류' }, { status: 500 });
   }
-} 
+}

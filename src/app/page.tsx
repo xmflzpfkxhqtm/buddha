@@ -40,12 +40,19 @@ export default function Home() {
 
       setTimeout(() => {
         setIsLoading(false); // 👈 최소 1초 후에 로딩 해제
+        sessionStorage.setItem('hideBottomNav', 'false'); // ✅ 로딩 끝났으니 BottomNav 보여줌
       }, remaining);
     };
-
-    fetchAll();
+    if (typeof window !== 'undefined' && !sessionStorage.getItem('visited')) {
+      sessionStorage.setItem('visited', 'true');            // 최초 방문 기록
+      sessionStorage.setItem('hideBottomNav', 'true');      // BottomNav 숨김
+      fetchAll();                                           // ✅ 최초에만 호출
+    } else {
+      setIsLoading(false);                                  // 로딩 없이 바로 렌더
+      sessionStorage.setItem('hideBottomNav', 'false');     // BottomNav 표시
+    }
   }, []);
-
+  
   if (isLoading) {
     return (
       <div className="relative min-h-screen w-full max-w-[430px] mx-auto bg-gradient-to-b from-red to-redbrown flex flex-col items-center justify-center px-6 overflow-hidden">

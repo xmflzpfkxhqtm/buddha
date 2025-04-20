@@ -14,18 +14,23 @@ export default function MePage() {
   const [weeklyQuestionCount, setWeeklyQuestionCount] = useState(0);
   const [mostReadTitle, setMostReadTitle] = useState<string | null>(null);
 
+  const [userName, setUserName] = useState<string | null>(null);
+
   useEffect(() => {
     const checkAuthAndFetchData = async () => {
       const { data } = await supabase.auth.getUser();
       const user = data.user;
 
-      // ✅ 로그인 안 된 경우 로그인 페이지로 이동
       if (!user) {
         router.replace('/login');
         return;
       }
 
       setUser(user);
+
+      // ✅ 이름 추출
+      const fullName = user.user_metadata?.full_name;
+      setUserName(fullName ?? null);
 
       const { data: bookmarks } = await supabase
         .from('bookmarks')
@@ -76,10 +81,13 @@ export default function MePage() {
   };
 
   return (
-    <main className="min-h-screen max-w-[430px] mx-auto bg-[#F5F1E6] px-6 py-10 flex flex-col gap-6">
+    <main className="min-h-screen max-w-[430px] mx-auto bg-white px-6 py-10 flex flex-col gap-6">
      
+      {/* 메뉴 리스트 */}      {/* ✅ 성불 인사말 */}
+      {userName && (
+        <p className="text-lg text-red font-semibold mx-4 mb-2">{userName}님, 성불하십쇼 🙏</p>
+      )}
 
-      {/* 메뉴 리스트 */}
       <ul className="rounded-xl">
         {/* ➕ 프로필 */}
         <li
