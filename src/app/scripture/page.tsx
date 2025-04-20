@@ -11,6 +11,19 @@ interface GlobalSearchResult {
   text: string;
 }
 
+// ✅ fallback 지원 함수 추가
+const resolveActualTitle = (title: string, list: string[]): string | null => {
+  if (list.includes(title)) return title;
+
+  if (title.endsWith('_GPT4.1번역')) {
+    const fallback = title.replace('_GPT4.1번역', '_1권_GPT4.1번역');
+    if (list.includes(fallback)) return fallback;
+  }
+
+  const candidate = list.find((t) => t.startsWith(title));
+  return candidate || null;
+};
+
 export default function ScripturePage() {
   const [list, setList] = useState<string[]>([]);
   const [selected, setSelected] = useState('');
@@ -22,11 +35,7 @@ export default function ScripturePage() {
   const [modalTab, setModalTab] = useState<'title' | 'content' | 'global'>('title');
   const [globalResults, setGlobalResults] = useState<GlobalSearchResult[]>([]);
   const [fontSize, setFontSize] = useState<'sm' | 'base' | 'lg'>('lg');
-  const fontSizeClass = {
-    sm: 'text-sm',
-    base: 'text-base',
-    lg: 'text-lg',
-  }[fontSize];  
+  const fontSizeClass = { sm: 'text-sm', base: 'text-base', lg: 'text-lg' }[fontSize];
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
@@ -60,28 +69,51 @@ export default function ScripturePage() {
   useEffect(() => {
     if (list.length === 0) return;
 
-    if (title && list.includes(title)) {
+    if (title && list.length > 0 && selected !== title) {
       setBookmarkPending({ title, index: index ?? 0 });
       setSelected(title);
-    } else if (!selected && list.length > 0) {
-      setSelected(list[0]);
+    } else if (!title && !selected && list.length > 0) {
+      const defaultTitle = '금강반야바라밀경_1권_GPT4.1번역';
+      const resolved = resolveActualTitle(defaultTitle, list);
+      setSelected(resolved ?? list[0]);
     }
-  }, [list, title]);
+      }, [list, title, index, selected]);
 
+  // ✅ selected가 변경되었을 때 로딩 (fallback 포함)
   useEffect(() => {
-    if (!selected) return;
-    fetch(`/api/scripture?title=${encodeURIComponent(selected)}`)
-      .then(res => res.json())
-      .then(data => {
-        const full = data.content || '';
+    if (!selected || list.length === 0) return;
+
+    const loadScripture = async () => {
+      const actual = resolveActualTitle(selected, list);
+
+      if (!actual) {
+        console.warn('❌ 해당 경전을 찾을 수 없습니다:', selected);
+        setDisplaySentences(['해당 경전을 불러올 수 없습니다.']);
+        setTtsSentences([]);
+        return;
+      }
+
+      const res = await fetch(`/api/scripture?title=${encodeURIComponent(actual)}`);
+      const data = await res.json();
+
+      if (data?.content) {
+        const full = data.content;
         const display = full.match(/[^.!?\n]+[.!?\n]*/g) || [full];
         const tts = display.map((s: string) => s.replace(/\([^\)]*\)/g, ''));
+
         setDisplaySentences(display);
         setTtsSentences(tts);
         setCurrentIndex(0);
+        setSelected(actual); // ✅ fallback 적용
         sentenceRefs.current = Array(display.length).fill(null);
-      });
-  }, [selected]);
+      } else {
+        setDisplaySentences(['해당 경전을 불러올 수 없습니다.']);
+        setTtsSentences([]);
+      }
+    };
+
+    loadScripture();
+  }, [selected, list]);
 
   useEffect(() => {
     if (
@@ -187,32 +219,31 @@ export default function ScripturePage() {
     setShowMessage(true);
   };
 
-  const cycleFontSize = () => setFontSize(prev =>
-    prev === 'sm' ? 'base' : prev === 'base' ? 'lg' : 'sm'
-  );
+  const cycleFontSize = () =>
+    setFontSize(prev => (prev === 'sm' ? 'base' : prev === 'base' ? 'lg' : 'sm'));
 
   const handleGlobalSearch = async () => {
     setIsSearching(true);
     setGlobalResults([]);
-  
+
     const results: GlobalSearchResult[] = [];
-  
+
     for (const title of list) {
       const res = await fetch(`/api/scripture?title=${encodeURIComponent(title)}`);
       const json = await res.json();
       const lines = json.content.match(/[^.!?\n]+[.!?\n]*/g) || [json.content || ''];
-  
+
       lines.forEach((line: string, idx: number) => {
         if (line.includes(search)) {
           results.push({ title, index: idx, text: line });
         }
       });
     }
-  
+
     setGlobalResults(results);
     setIsSearching(false);
   };
-  
+
 
   return (
     

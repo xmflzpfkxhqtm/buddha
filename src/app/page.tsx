@@ -19,40 +19,59 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true); // 👈 최소 로딩용 상태
 
   useEffect(() => {
+    const visited = sessionStorage.getItem('visited');
+    const isFirstVisit = !visited;
+  
+    // ✅ isLoading 초기값: 첫 방문이면 true, 아니면 false
+    setIsLoading(isFirstVisit);
+  
+    if (isFirstVisit) {
+      sessionStorage.setItem('visited', 'true');
+      sessionStorage.setItem('hideBottomNav', 'true');
+    } else {
+      sessionStorage.setItem('hideBottomNav', 'false');
+    }
+  
     const fetchAll = async () => {
       const start = Date.now();
+  
+      console.log('✅ fetchAll 실행됨');
 
       const [teachingRes, userRes] = await Promise.all([
         fetch('/api/today-teaching').then((res) => res.json()),
         supabase.auth.getUser(),
       ]);
-
-      const end = Date.now();
-      const elapsed = end - start;
-      const remaining = Math.max(3000 - elapsed, 0); // 👈 최소 1초 보장
-
+      
+      console.log('✅ API 응답:', teachingRes);
+      
+  
       setTitle(teachingRes.title);
       setIndex(teachingRes.index);
       setSentence(teachingRes.sentence);
-
+      console.log('✅ title:', teachingRes.title);
+      console.log('✅ index:', teachingRes.index);
+      console.log('✅ sentence:', teachingRes.sentence);
+      
       const fullName = userRes.data.user?.user_metadata?.full_name;
       setUserName(fullName ?? null);
-
-      setTimeout(() => {
-        setIsLoading(false); // 👈 최소 1초 후에 로딩 해제
-        sessionStorage.setItem('hideBottomNav', 'false'); // ✅ 로딩 끝났으니 BottomNav 보여줌
-      }, remaining);
+  
+      const end = Date.now();
+      const elapsed = end - start;
+      const remaining = Math.max(3000 - elapsed, 0); // ✅ 첫 방문 때만 쓰일 최소 로딩 시간
+  
+      // ✅ 첫 방문이면 약간 기다렸다 로딩 해제
+      if (isFirstVisit) {
+        setTimeout(() => {
+          setIsLoading(false);
+          sessionStorage.setItem('hideBottomNav', 'false');
+        }, remaining);
+      }
     };
-    if (typeof window !== 'undefined' && !sessionStorage.getItem('visited')) {
-      sessionStorage.setItem('visited', 'true');            // 최초 방문 기록
-      sessionStorage.setItem('hideBottomNav', 'true');      // BottomNav 숨김
-      fetchAll();                                           // ✅ 최초에만 호출
-    } else {
-      setIsLoading(false);                                  // 로딩 없이 바로 렌더
-      sessionStorage.setItem('hideBottomNav', 'false');     // BottomNav 표시
-    }
+  
+    fetchAll(); // ✅ 무조건 API 호출
   }, []);
   
+    
   if (isLoading) {
     return (
       <div className="relative min-h-screen w-full max-w-[430px] mx-auto bg-gradient-to-b from-red to-redbrown flex flex-col items-center justify-center px-6 overflow-hidden">
@@ -119,13 +138,15 @@ export default function Home() {
 </p>
           </div>
 
-          {/* 오늘의 법문 배너 */}
-          {title && index !== null && (
-            <div
-              onClick={() => {
-                setBookmark(title, index);
-                router.push('/scripture');
-              }}
+          {typeof title === 'string' &&
+ title.length > 0 &&
+ typeof index === 'number' &&
+ !isNaN(index) && (
+  <div
+    onClick={() => {
+      setBookmark(title, index);
+      router.push('/scripture');
+    }}
               className="w-full h-16 bg-red-light border-[0.5px] border-pink-light rounded-xl flex flex-row items-center pl-1 mt-4 justify-start cursor-pointer"
             >
               <Image

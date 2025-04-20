@@ -153,14 +153,8 @@ export default function MePage() {
           <ChevronRight size={16} className="text-gray-400" />
         </li>
       </ul>
-       {/* 📊 이번 주 통계 */}
-       {user && (
-        <div className="rounded-xl p-4 text-sm text-gray-700">
-          <p className="font-semibold text-red mb-2">📊 이번 주 요약</p>
-          <p>📖 가장 많이 본 경전: <strong>{mostReadTitle || '없음'}</strong></p>
-          <p>🪷 질문 횟수: <strong>{weeklyQuestionCount}개</strong></p>
-        </div>
-      )}
+
+
     </main>
   );
 }
