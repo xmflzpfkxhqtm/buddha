@@ -128,7 +128,7 @@ export default function ScripturePage() {
     let index = currentIndex;
     setIsSpeaking(true);
 
-    const fetchTTS = async (text: string, retry = true): Promise<string | null> => {
+    const fetchTTS = async (text: string): Promise<string | null> => {
       try {
         const res = await fetch('/api/tts', {
           method: 'POST',
