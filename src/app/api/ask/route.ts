@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateEmbeddingBatch } from '@/utils/upstage';
-import { searchSimilarDocuments, DocumentResult } from '@/utils/supabase';
+import { searchSimilarDocuments } from '@/utils/supabase';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import Anthropic from "@anthropic-ai/sdk";
 import { supabase } from '@/lib/supabaseClient';
