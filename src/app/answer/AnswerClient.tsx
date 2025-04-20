@@ -164,7 +164,6 @@ export default function AnswerClient() {
                     onClick={() => {
                         // 두 가지 시도: 단권 vs 다권
                         const singleVolumeTitle = `${title}_GPT4.1번역`;
-                        const multiVolumeTitle = `${title}_1권_GPT4.1번역`;
                       
                         // 일단 단권으로 북마크하고 scripture 페이지에서 존재 여부 판단
                         // → 필요한 경우 scripture 페이지에서 파일 fallback 로직 처리 가능

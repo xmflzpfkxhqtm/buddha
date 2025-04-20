@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Play, Pause } from 'lucide-react';
 import { useBookmarkStore } from '../../stores/useBookmarkStore';
 import { supabase } from '@/lib/supabaseClient';
+import Image from 'next/image';
 
 interface GlobalSearchResult {
   title: string;
@@ -397,8 +398,13 @@ export default function ScripturePage() {
 
 {isSearching && (
   <div className="fixed inset-0 bg-black/30 backdrop-blur-xs z-[150] flex flex-col items-center justify-center">
-    <img src="/lotusbeige.png" alt="로딩" className="w-16 h-16 animate-float mb-4" />
-    <p className="text-red text-xl font-semibold">전체 검색 중입니다...</p>
+<Image
+  src="/lotusbeige.png"
+  alt="로딩"
+  width={64}
+  height={64}
+  className="animate-float mb-4"
+/>    <p className="text-red text-xl font-semibold">전체 검색 중입니다...</p>
   </div>
 )}
 
