@@ -67,7 +67,7 @@ export default function AskPage() {
   return (
     <>
       <main className="relative min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-white px-6 py-10">
-        <div className="w-full z-1 pt-12">
+        <div className="w-full z-1 pt-8">
           <h2 className="text-4xl text-red font-semibold text-start">
             부처님의 지혜에<br />귀를 기울여 보세요
           </h2>

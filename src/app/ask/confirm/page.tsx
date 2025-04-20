@@ -91,7 +91,7 @@ export default function ConfirmPage() {
   return (
     <>
       <main className="relative min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-white px-6 py-10">
-        <div className="w-full z-1 pt-12">
+        <div className="w-full z-1 pt-8">
           <h2 className="text-3xl text-red font-semibold text-start mb-4">
             부처님께 여쭈기 전,
             <br />마음을 다시 한번 바라보세요

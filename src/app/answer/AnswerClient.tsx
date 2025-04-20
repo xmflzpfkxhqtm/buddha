@@ -111,15 +111,21 @@ export default function AnswerClient() {
       alert('로그인이 필요합니다!');
       return;
     }
-
-    const { error } = await supabase.from('answers').insert([
-      {
-        user_id: user.id,
-        question,
-        answer: fullAnswer,
-      },
-    ]);
-
+  
+    if (!questionId) {
+      alert('질문 ID가 없습니다.');
+      return;
+    }
+  
+    const { error } = await supabase
+      .from('temp_answers')
+      .update({
+        is_saved: true,
+        saved_at: new Date().toISOString(),
+        user_id: user.id, // ✅ 요거 꼭 필요!
+      })
+      .eq('id', questionId);
+  
     if (error) {
       console.error('저장 실패:', error);
       alert('저장 실패! 다시 시도해주세요.');
@@ -128,7 +134,7 @@ export default function AnswerClient() {
       alert('✅ 부처님의 답변이 보관되었습니다.');
     }
   };
-
+    
   return (
     <main className="relative min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-white px-6 py-10">
       <div ref={answerRef} className="rounded-2xl py-6 px-2">

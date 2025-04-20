@@ -3,7 +3,6 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import type { User } from '@supabase/supabase-js';
 import { ChevronRight } from 'lucide-react';
 
 export default function MePage() {
