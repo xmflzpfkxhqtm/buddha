@@ -3,7 +3,6 @@
 import { useRouter } from 'next/navigation';
 import { useAskStore } from '../../../stores/askStore';
 import { useState } from 'react';
-import { useEffect } from 'react';
 import Loading from '../../../../components/Loading';
 
 export default function ConfirmPage() {

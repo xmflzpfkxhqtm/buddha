@@ -289,9 +289,9 @@ export async function POST(request: NextRequest) {
     const answer = data.choices?.[0]?.message?.content || '부처님께서 조용히 침묵하십니다.';
     
     // 소스 정보 추출
-    const sources = Array.from(new Set(
-      relevantDocuments.map((doc: DocumentResult) => doc.metadata?.source).filter(Boolean)
-    ));
+    // const sources = Array.from(new Set(
+    //   relevantDocuments.map((doc: DocumentResult) => doc.metadata?.source).filter(Boolean)
+    // ));
     
 
     // 서버에서 처리하게 수파베이스 작업중 ,..,,,
@@ -325,6 +325,8 @@ return NextResponse.json({
   success: true,
   questionId: inserted.id, // 이걸 클라이언트에서 /answer?questionId=xxx 로 활용
 });
+
+
   } catch (error) {
     console.error('답변 생성 오류:', error);
     return NextResponse.json(

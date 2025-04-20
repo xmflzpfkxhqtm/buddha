@@ -1,26 +1,11 @@
-@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 @import "tailwindcss";
+
+/* 👉 불필요한 CDN import 제거됨
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 @import url('https://hangeul.pstatic.net/hangeul_static/css/maru-buri.css');
+*/
 
-:root {
-  --background: #F8F5EE;
-  --foreground: #2E2B28;
-  --font-main: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', sans-serif;
-
-}
-
-@keyframes sway {
-  0% { transform: rotate(0deg) translateX(0); }
-  25% { transform: rotate(2deg) translateX(2px); }
-  50% { transform: rotate(0deg) translateX(0); }
-  75% { transform: rotate(-2deg) translateX(-2px); }
-  100% { transform: rotate(0deg) translateX(0); }
-}
-
-.animate-sway {
-  animation: sway 4s ease-in-out infinite;
-}
-
+/* 💬 FONT FACE (woff2 직접 로딩 방식) */
 @font-face {
   font-family: 'Pretendard';
   src: url('/fonts/Pretendard-Regular.woff2') format('woff2');
@@ -53,7 +38,6 @@
   font-style: normal;
   font-display: swap;
 }
-
 @font-face {
   font-family: 'MaruBuri';
   src: url('/fonts/MaruBuri-Bold.woff') format('woff');
@@ -66,6 +50,40 @@
   font-family: 'MaruBuri', sans-serif;
 }
 
+/* ✅ Tailwind font-sans에 연결 */
+:root {
+  --background: #F8F5EE;
+  --foreground: #2E2B28;
+  --font-main: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', sans-serif;
+}
+
+/* 애니메이션 */
+@keyframes sway {
+  0% { transform: rotate(0deg) translateX(0); }
+  25% { transform: rotate(2deg) translateX(2px); }
+  50% { transform: rotate(0deg) translateX(0); }
+  75% { transform: rotate(-2deg) translateX(-2px); }
+  100% { transform: rotate(0deg) translateX(0); }
+}
+
+.animate-sway {
+  animation: sway 4s ease-in-out infinite;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade {
+  animation: fade 0.6s ease-out;
+}
+
 @layer utilities {
   @keyframes fadeIn {
     from { opacity: 0 }
@@ -75,7 +93,7 @@
   .animate-fadeIn {
     animation: fadeIn 1.5s ease-in-out both;
   }
-  
+
   @keyframes float {
     0%, 100% {
       transform: translateY(0);
@@ -88,21 +106,22 @@
   .animate-float {
     animation: float 2.5s ease-in-out infinite;
   }
-
 }
 
+/* 스크롤바 제거 */
 .no-scrollbar {
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 .no-scrollbar::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
+  display: none;
 }
 
+/* Tailwind 변수 연동 */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-main); /* ✅ Tailwind의 font-sans와 연동 */
+  --font-sans: var(--font-main);
   --font-mono: var(--font-geist-mono);
   --color-brown: #6D4D41;
   --color-red: #6e1517;
@@ -112,24 +131,24 @@
   --color-white: #f8f5ee;
   --color-beige: #f8f8db;
   --color-black: #2E2B28;
-  --color-orange-light: #F29F05;   
-  --color-orange:       #F27405;  
-  --color-orange-dark:  #F25C05;
+  --color-orange-light: #F29F05;
+  --color-orange: #F27405;
+  --color-orange-dark: #F25C05;
   --color-grey: #C1C1C1;
   --color-pink-light: #E1BABA;
-
 }
 
+/* 기본 텍스트 스타일 */
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: var(--font-main); /* ✅ 폴백까지 포함된 CSS 표준 */
-  -webkit-font-smoothing: antialiased;  /* macOS */
-  -moz-osx-font-smoothing: grayscale;   /* macOS */
-  text-rendering: optimizeLegibility;   /* 크롬/윈도우 */
-
+  font-family: var(--font-main);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
+/* 이미지 최적화 */
 img, svg {
   shape-rendering: geometricPrecision;
   image-rendering: crisp-edges;
