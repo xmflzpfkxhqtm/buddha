@@ -13,6 +13,7 @@
     "@google/generative-ai": "^0.24.0",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/supabase-js": "^2.49.4",
+    "@tailwindcss/line-clamp": "^0.4.4",
     "axios": "^1.8.4",
     "framer-motion": "^12.7.4",
     "html2canvas": "^1.4.1",

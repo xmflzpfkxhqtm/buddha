@@ -6,6 +6,7 @@ import ScrollHeader from '../../components/ScrollHeader';
 import MarbleOverlay from '../../components/Overlay';
 import { useEffect, useState } from 'react';
 import { useBookmarkStore } from '@/stores/useBookmarkStore';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function Home() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function Home() {
   const [title, setTitle] = useState('');
   const [index, setIndex] = useState<number | null>(null);
   const [sentence, setSentence] = useState('');
+  const [userName, setUserName] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchTodayTeaching = async () => {
@@ -21,10 +23,17 @@ export default function Home() {
       const data = await res.json();
       setTitle(data.title);
       setIndex(data.index);
-      setSentence(data.sentence); // ✅ 바로 문장 사용
+      setSentence(data.sentence);
+    };
+
+    const fetchUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      const fullName = data.user?.user_metadata?.full_name;
+      setUserName(fullName ?? null);
     };
 
     fetchTodayTeaching();
+    fetchUser();
   }, []);
 
   return (
@@ -55,9 +64,9 @@ export default function Home() {
 
           {/* 어서오세요 문구 */}
           <div className="w-full rounded-xl flex flex-col items-start pl-1 justify-start">
-            <p className="text-2xl font-semibold text-white text-center mt-12">
-              어서오세요, 불자님
-            </p>
+          <p className="text-2xl font-semibold text-white text-center mt-12">
+  어서오세요, {!!userName?.trim() ? `${userName}님` : '불자님'}
+</p>
           </div>
 
           {/* 오늘의 법문 배너 */}
@@ -78,7 +87,7 @@ export default function Home() {
               />
               <div className="flex flex-col">
                 <p className="mb-0 text-sm font-medium text-white text-start">
-                  오늘의 법문 {title} 
+                  오늘의 법문 {title}
                 </p>
                 <p className="mt-0 text-sm font-base text-pink-light text-start line-clamp-1">
                   {sentence || '내용을 불러오는 중입니다.'}
@@ -108,9 +117,7 @@ export default function Home() {
                   />
                 </div>
                 <div className="flex-1 px-3 py-2">
-                  <p className="text-xs text-left text-white font-medium">
-                    부처님께 여쭙기
-                  </p>
+                  <p className="text-xs text-left text-white font-medium">부처님께 여쭙기</p>
                   <p className="text-xs text-left text-pink-light font-medium">
                     나의 고민에 대해 부처님이라면 어떤 말씀을 하실까요? 인공지능이 부처님의 지혜로 안내합니다
                   </p>
@@ -132,9 +139,7 @@ export default function Home() {
                   />
                 </div>
                 <div className="flex-1 px-3 py-2">
-                  <p className="text-xs text-left text-white font-medium">
-                    호날두께 여쭙기
-                  </p>
+                  <p className="text-xs text-left text-white font-medium">호날두께 여쭙기</p>
                   <p className="text-xs text-left text-pink-light font-medium">
                     나의 고민에 대해 호날두라면 어떤 말씀을 하실까요? 인공지능이 호날두의 지혜로 안내합니다
                   </p>
@@ -148,6 +153,7 @@ export default function Home() {
           <p className="text-xs font-medium text-white text-center mt-6 mb-24">
             &ldquo;연등&rdquo;은 누구나 수행하고 위로받을 수 있는 작은 법당입니다.
           </p>
+          
         </main>
       </div>
     </>
