@@ -30,6 +30,7 @@ export default function AskPage() {
 
   const [previousQA, setPreviousQA] = useState<{ question: string; answer: string } | null>(null);
   const [confirmCancelModal, setConfirmCancelModal] = useState(false); // ✅ 모달 상태
+  const [showGuideModal, setShowGuideModal] = useState(false);
 
   useEffect(() => {
     const fetchPrevious = async () => {
@@ -146,7 +147,7 @@ export default function AskPage() {
         </button>
 
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => setShowGuideModal(true)}
           className="text-sm text-black underline mt-4 mb-12"
         >
           어떻게 사용하는 건가요?
@@ -181,6 +182,35 @@ export default function AskPage() {
           </div>
         </div>
       )}
+
+{showGuideModal && (
+  <div
+    onClick={() => setShowGuideModal(false)}
+    className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center"
+  >
+    <div
+      onClick={(e) => e.stopPropagation()}
+      className="bg-white rounded-xl p-6 w-[90%] max-w-[360px] text-start shadow-xl"
+    >
+      <h3 className="text-lg font-bold text-red mb-4">사용 방법 안내</h3>
+      <ul className="space-y-2 text-sm leading-relaxed text-gray-800">
+        <li>🪷 마음속 고민이나 질문을 자유롭게 입력하세요.</li>
+        <li>❓ 물음이 상세할수록 더 깊은 답변을 들으실 수 있습니다.</li>
+        <li>📜 부처님의 말씀과 함께 인용된 경전도 함께 확인할 수 있습니다.</li>
+        <li>➕ ‘문답을 이어갑니다’로 후속 질문도 가능합니다.</li>
+        <li>🔒 다른 이용자에게 나의 질문은 절대 공개되지 않습니다.</li>
+      </ul>
+
+      <button
+        onClick={() => setShowGuideModal(false)}
+        className="w-full mt-6 py-2 bg-red-light text-white rounded-lg hover:bg-red transition"
+      >
+        닫기
+      </button>
+    </div>
+  </div>
+)}
+
     </>
   );
 }

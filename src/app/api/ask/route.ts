@@ -32,7 +32,7 @@ async function callOpenAI(messages: ChatMessage[], model: string) {
       model,
       messages,
       temperature: 0.8,
-      max_tokens: 800,
+      max_tokens: 1500,
     }),
   });
   return await response.json();
@@ -45,7 +45,7 @@ async function callClaude(messages: ChatMessage[], model: string) {
 
   const response = await anthropic.messages.create({
     model,
-    max_tokens: 800,
+    max_tokens: 1500,
     temperature: 0.8,
     system: systemMessage,
     messages: [
@@ -94,7 +94,7 @@ async function callGrok(messages: ChatMessage[], model: string) {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${process.env.GROK_API_KEY}`,
     },
-    body: JSON.stringify({ model, messages: [{ role: 'system', content: system }, { role: 'user', content: user }], temperature: 0.8, max_tokens: 800 }),
+    body: JSON.stringify({ model, messages: [{ role: 'system', content: system }, { role: 'user', content: user }], temperature: 0.8, max_tokens: 1500 }),
   });
   const data = await response.json();
   return { choices: [{ message: { content: data.choices?.[0]?.message?.content || '' } }], usage: data.usage };

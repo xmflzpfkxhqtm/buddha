@@ -96,7 +96,7 @@ export default function Home() {
   
         {/* 로딩 문구 */}
         <p className="mt-6 text-white text-lg font-maruburi animate-fade z-10">
-          숨을 깊이 들이쉬고, 마음을 비워보세요.
+        마음을 바라봅니다
         </p>
         <p className="mt-2 text-sm text-pink-light font-maruburi animate-fade z-10">
         </p>
@@ -113,7 +113,10 @@ export default function Home() {
           <ScrollHeader />
 
           {/* 상단 홍보 배너 */}
-          <div className="w-full h-16 bg-red-light border-[0.5px] border-pink-light rounded-xl flex flex-row items-center pl-1 mt-8 justify-start">
+          <div
+  onClick={() => router.push('/ask')}
+  className="w-full h-16 bg-red-light border-[0.5px] border-pink-light rounded-xl flex flex-row items-center pl-1 mt-8 justify-start cursor-pointer"
+>
             <Image
               src="/lotusbeige.png"
               alt="lotus"
@@ -147,7 +150,7 @@ export default function Home() {
       setBookmark(title, index);
       router.push('/scripture');
     }}
-              className="w-full h-16 bg-red-light border-[0.5px] border-pink-light rounded-xl flex flex-row items-center pl-1 mt-4 justify-start cursor-pointer"
+              className="w-full bg-red-light border-[0.5px] border-pink-light rounded-xl flex flex-row items-center pl-1 pr-4 py-2 mt-4 justify-start cursor-pointer"
             >
               <Image
                 src="/lotusbeige.png"
@@ -158,9 +161,9 @@ export default function Home() {
               />
               <div className="flex flex-col">
                 <p className="mb-0 text-sm font-medium text-white text-start">
-                  오늘의 법문 {title}
+                  오늘의 법문: {title}
                 </p>
-                <p className="mt-0 text-sm font-base text-pink-light text-start line-clamp-1">
+                <p className="mt-0 text-sm font-base text-pink-light text-start">
                   {sentence || '내용을 불러오는 중입니다.'}
                 </p>
               </div>

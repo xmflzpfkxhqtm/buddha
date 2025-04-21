@@ -1,28 +1,39 @@
 'use client';
 
-import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useSoundStore } from '@/stores/useSoundStore'
+import { Volume2, VolumeX } from 'lucide-react'
+import Image from 'next/image'
+import { useEffect, useState } from 'react'
 
 export default function ScrollHeader() {
-  const [shouldSway, setShouldSway] = useState(false);
+  const [shouldSway, setShouldSway] = useState(false)
+  const { soundEnabled, toggleSound } = useSoundStore()
 
   useEffect(() => {
     const handleTouch = () => {
-      setShouldSway(true);
-      setTimeout(() => setShouldSway(false), 2000); // 2초 동안 흔들림
-    };
+      setShouldSway(true)
+      setTimeout(() => setShouldSway(false), 2000)
+    }
 
-    window.addEventListener('touchstart', handleTouch);
-    window.addEventListener('scroll', handleTouch);
+    window.addEventListener('touchstart', handleTouch)
+    window.addEventListener('scroll', handleTouch)
 
     return () => {
-      window.removeEventListener('touchstart', handleTouch);
-      window.removeEventListener('scroll', handleTouch);
-    };
-  }, []);
+      window.removeEventListener('touchstart', handleTouch)
+      window.removeEventListener('scroll', handleTouch)
+    }
+  }, [])
 
   return (
     <header className="w-full max-w-[430px] h-[128px] mx-auto mb-4 relative">
+      {/* 우측 상단 사운드 버튼 */}
+      <button
+        onClick={toggleSound}
+        className="absolute top-4 right-0 z-20 text-beige hover:text-red"
+      >
+        {soundEnabled ? <Volume2 size={24} /> : <VolumeX size={24} />}
+      </button>
+
       <div className="w-full h-full flex items-end justify-center">
         <Image
           src="/logo.png"
@@ -36,5 +47,5 @@ export default function ScrollHeader() {
         연등
       </h1>
     </header>
-  );
+  )
 }

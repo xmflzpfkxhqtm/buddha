@@ -29,12 +29,15 @@ export default function MePage() {
         .from('bookmarks')
         .select('id')
         .eq('user_id', user.id);
-      const { data: answers } = await supabase
-        .from('answers')
-        .select('id')
-        .eq('user_id', user.id);
+        const { count: savedAnswerCount } = await supabase
+        .from('temp_answers')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('is_saved', true);
+      
+      setAnswerCount(savedAnswerCount || 0);
+      
       setBookmarkCount(bookmarks?.length || 0);
-      setAnswerCount(answers?.length || 0);
     };
 
     checkAuthAndFetchData();

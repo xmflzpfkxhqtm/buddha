@@ -8,20 +8,29 @@ import html2canvas from 'html2canvas';
 import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 import { useAskStore } from '@/stores/askStore';
-import { useBookmarkStore } from '@/stores/useBookmarkStore'; // ✅ 추가
+import { useBookmarkStore } from '@/stores/useBookmarkStore';
 
-// ✅ 인용 경전 추출 함수
-function extractScriptureTitles(answer: string): string[] {
-  const pattern = /『(.+?)』/g;
-  const matches = new Set<string>();
-  let match;
-
-  while ((match = pattern.exec(answer)) !== null) {
-    matches.add(match[1]);
+// ✅ 실제 경전명과 매칭되는 인용구만 필터링
+function filterKnownScriptures(answer: string, knownTitles: string[]): string[] {
+    const pattern = /『(.+?)』/g;
+    const matches = new Set<string>();
+    let match;
+  
+    // "대방광불화엄경_1권_GPT4.1번역" → "대방광불화엄경"
+    const baseTitles = knownTitles.map((t) =>
+      t.replace(/_.*$/, '').replace(/\s/g, '').normalize('NFC')
+    );
+  
+    while ((match = pattern.exec(answer)) !== null) {
+      const raw = match[1].trim().replace(/\s/g, '').normalize('NFC');
+      if (baseTitles.includes(raw)) {
+        matches.add(raw);
+      }
+    }
+  
+    return Array.from(matches);
   }
-
-  return Array.from(matches);
-}
+  
 
 export default function AnswerClient() {
   const router = useRouter();
@@ -30,14 +39,13 @@ export default function AnswerClient() {
 
   const [question, setQuestion] = useState('');
   const [fullAnswer, setFullAnswer] = useState('');
-  const [displayedAnswer, setDisplayedAnswer] = useState('');
+  const [scriptureTitles, setScriptureTitles] = useState<string[]>([]);
   const [done, setDone] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [saved, setSaved] = useState(false);
   const { setParentId } = useAskStore();
-  const { setBookmark } = useBookmarkStore(); // ✅ 추가
+  const { setBookmark } = useBookmarkStore();
 
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const answerRef = useRef(null);
 
   useEffect(() => {
@@ -66,30 +74,19 @@ export default function AnswerClient() {
       setDone(true);
     };
 
-    fetchFromSupabase();
-  }, [questionId]);
-
-  useEffect(() => {
-    if (!fullAnswer) return;
-
-    let index = 0;
-    intervalRef.current = setInterval(() => {
-      const nextChar = fullAnswer.charAt(index);
-      if (nextChar) {
-        setDisplayedAnswer((prev) => prev + nextChar);
+    const fetchScriptureList = async () => {
+      try {
+        const res = await fetch('/api/scripture/list');
+        const json = await res.json();
+        setScriptureTitles(json.titles || []);
+      } catch (e) {
+        console.error('경전 리스트 불러오기 실패:', e);
       }
-      index++;
-
-      if (index >= fullAnswer.length && intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    }, 20);
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [fullAnswer]);
+
+    fetchFromSupabase();
+    fetchScriptureList();
+  }, [questionId]);
 
   const handleEdit = () => {
     router.push('/ask');
@@ -111,21 +108,21 @@ export default function AnswerClient() {
       alert('로그인이 필요합니다!');
       return;
     }
-  
+
     if (!questionId) {
       alert('질문 ID가 없습니다.');
       return;
     }
-  
+
     const { error } = await supabase
       .from('temp_answers')
       .update({
         is_saved: true,
         saved_at: new Date().toISOString(),
-        user_id: user.id, // ✅ 요거 꼭 필요!
+        user_id: user.id,
       })
       .eq('id', questionId);
-  
+
     if (error) {
       console.error('저장 실패:', error);
       alert('저장 실패! 다시 시도해주세요.');
@@ -134,7 +131,9 @@ export default function AnswerClient() {
       alert('✅ 부처님의 답변이 보관되었습니다.');
     }
   };
-    
+
+  const validScriptureTitles = filterKnownScriptures(fullAnswer, scriptureTitles);
+
   return (
     <main className="relative min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-white px-6 py-10">
       <div ref={answerRef} className="rounded-2xl py-6 px-2">
@@ -148,10 +147,8 @@ export default function AnswerClient() {
         </div>
         <div className="max-w-md w-full pt-4">
           <div className="p-4 rounded-xl shadow-xl border font-maruburi border-red mb-6 whitespace-pre-wrap text-base text-black min-h-[160px]">
-            {displayedAnswer}
+            {fullAnswer}
           </div>
-
-     
 
           <div className="w-full h-12 bg-red-light rounded-xl flex flex-row items-center mt-6 pl-1 justify-start">
             <p className="pl-2 text-white text-start font-semibold">🪷 나의 물음</p>
@@ -159,28 +156,25 @@ export default function AnswerClient() {
           <div className="px-4 py-2 rounded-xl font-base whitespace-pre-wrap text-black mt-2">
             「{question}」
           </div>
-               {/* ✅ 인용 경전 리스트 표시 */}
-               {extractScriptureTitles(fullAnswer).length > 0 && (
+
+          {validScriptureTitles.length > 0 && (
             <div className="w-full mt-4">
               <div className="text-sm text-red-dark font-semibold mb-2">📖 인용된 경전</div>
               <ul className="space-y-2">
-                {extractScriptureTitles(fullAnswer).map((title, idx) => (
-                  <li
-                    key={idx}
-                    onClick={() => {
-                        // 두 가지 시도: 단권 vs 다권
-                        const singleVolumeTitle = `${title}_GPT4.1번역`;
-                      
-                        // 일단 단권으로 북마크하고 scripture 페이지에서 존재 여부 판단
-                        // → 필요한 경우 scripture 페이지에서 파일 fallback 로직 처리 가능
-                        setBookmark(singleVolumeTitle, 0); // index는 항상 0
-                        router.push('/scripture');
-                      }}
-                                          className="cursor-pointer text-red-dark hover:underline text-sm"
-                  >
-                    {title} 열람 →
-                  </li>
-                ))}
+              {validScriptureTitles.map((title, idx) => (
+  <li
+    key={idx}
+    onClick={() => {
+      const formattedTitle = `${title}_GPT4.1번역`;
+      setBookmark(formattedTitle, 0);
+      router.push('/scripture');
+    }}
+    className="cursor-pointer text-red-dark hover:underline text-sm"
+  >
+    {title} 열람 →
+  </li>
+))}
+
               </ul>
             </div>
           )}
@@ -192,7 +186,7 @@ export default function AnswerClient() {
           <div className="flex flex-row space-x-4">
             <button
               onClick={handleCapture}
-              className="w-full py-3 bg-red-light text-white font-bold rounded-4xl hover:bg-red transition"
+              className="w-full py-3 bg-white text-red-dark border boder-bg-red font-bold rounded-4xl hover:bg-red transition hover:text-white"
             >
               캡처하기
             </button>
@@ -202,18 +196,18 @@ export default function AnswerClient() {
               className={`w-full py-3 font-bold rounded-4xl transition ${
                 saved
                   ? 'bg-red text-white cursor-not-allowed'
-                  : 'bg-red-light text-white hover:bg-red'
+                  : 'bg-white text-red-dark border border-red hover:text-white hover:bg-red'
               }`}
             >
-              {saved ? '✅ 보관됨' : '보관하기'}
+              {saved ? '✔︎ 보관됨' : '보관하기'}
             </button>
           </div>
 
           <button
             onClick={handleEdit}
-            className="w-full py-3 border border-red text-red-dark font-bold rounded-4xl hover:bg-red hover:text-white transition"
+            className="w-full py-3 border bg-red-light border-red text-white font-bold rounded-4xl hover:bg-red hover:text-red=darl transition"
           >
-            다시 하기
+            새로운 문답을 시작합니다
           </button>
 
           <button
@@ -222,9 +216,9 @@ export default function AnswerClient() {
               setParentId(questionId);
               router.push('/ask');
             }}
-            className="w-full py-3 border border-red text-red-dark font-bold rounded-4xl hover:bg-red hover:text-white transition"
+            className="w-full py-3 border bg-red-light border-red text-white font-bold rounded-4xl hover:bg-red hover:text-red=darl transition"
           >
-            더 자세히 여쭙기
+            문답을 이어갑니다
           </button>
         </div>
       )}

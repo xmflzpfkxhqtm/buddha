@@ -19,6 +19,7 @@ export default function BookmarkPage() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [scriptureMap, setScriptureMap] = useState<Record<string, string[]>>({});
   const [currentPage, setCurrentPage] = useState(1);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null); // ✅ 삭제 모달 상태
 
   const { setBookmark } = useBookmarkStore();
   const router = useRouter();
@@ -76,18 +77,38 @@ export default function BookmarkPage() {
         <>
           <ul className="space-y-3 mb-6">
             {paginatedBookmarks.map((bm) => (
-              <li
-                key={bm.id}
-                onClick={() => handleClick(bm.title, bm.index)}
-                className="bg-white p-4 rounded-xl shadow cursor-pointer border"
+            <li
+            key={bm.id}
+            onClick={() => handleClick(bm.title, bm.index)}
+            className="bg-white p-4 rounded-xl shadow cursor-pointer border"
+          >
+            {/* 1행: 제목 + 행 + 날짜 */}
+            <div className="flex justify-between items-center mb-1">
+              <p className="font-semibold text-red-dark text-sm  truncate">
+                📖 {bm.title} – {bm.index + 1}행
+              </p>
+              <span className="text-sm text-gray-400 whitespace-nowrap">
+                {new Date(bm.created_at).toLocaleDateString()}
+              </span>
+            </div>
+          
+            {/* 2행: 내용 + 삭제 버튼 */}
+            <div className="flex justify-between items-start">
+              <p className="text-sm text-gray-700 w-[85%]">
+                {scriptureMap[bm.title]?.[bm.index] || '내용을 불러올 수 없습니다.'}
+              </p>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDeleteTargetId(bm.id);
+                }}
+                className="text-sm text-red hover:underline whitespace-nowrap"
               >
-                <p className="font-semibold text-red-dark mb-1">
-                  📖 {bm.title} – {bm.index + 1}행
-                </p>
-                <p className="text-sm text-gray-700">
-                  {scriptureMap[bm.title]?.[bm.index] || '내용을 불러올 수 없습니다.'}
-                </p>
-              </li>
+                삭제
+              </button>
+            </div>
+          </li>
+          
             ))}
           </ul>
 
@@ -120,6 +141,46 @@ export default function BookmarkPage() {
             </button>
           </div>
         </>
+      )}
+
+      {/* ✅ 삭제 확인 모달 */}
+      {deleteTargetId && (
+        <div
+          onClick={() => setDeleteTargetId(null)}
+          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-xl p-6 w-[90%] max-w-[360px] text-center shadow-xl"
+          >
+            <p className="text-lg font-semibold text-red mb-4">정말 책갈피를 삭제할까요?</p>
+            <div className="flex justify-center gap-4 mt-4">
+              <button
+                onClick={() => setDeleteTargetId(null)}
+                className="px-4 py-2 border rounded-lg text-sm text-gray-600"
+              >
+                아니오
+              </button>
+              <button
+                onClick={async () => {
+                  const { error } = await supabase
+                    .from('bookmarks')
+                    .delete()
+                    .eq('id', deleteTargetId);
+                  if (!error) {
+                    setBookmarks((prev) => prev.filter((bm) => bm.id !== deleteTargetId));
+                    setDeleteTargetId(null);
+                  } else {
+                    alert('삭제에 실패했습니다.');
+                  }
+                }}
+                className="px-4 py-2 bg-red-light text-white rounded-lg text-sm"
+              >
+                예, 삭제합니다
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );

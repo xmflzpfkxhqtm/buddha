@@ -2,31 +2,33 @@
 
 import { useEffect } from 'react';
 import Image from 'next/image';
-import MarbleOverlay from './Overlay'; // ✅ 오버레이 가져오기
+import MarbleOverlay from './Overlay';
+import { useSoundStore } from '@/stores/useSoundStore'; // ✅ 추가
 
 export default function Loading({ fadeOut = false }: { fadeOut?: boolean }) {
   const message = fadeOut
     ? '부처님께서 말씀을 내리시는 중입니다.'
     : '마음의 소리에 귀를 기울이는 중입니다.\n당신의 물음이 조용히 울리고 있습니다.';
 
-  // ✅ 마운트 시 목탁 소리 재생
+  const { soundEnabled } = useSoundStore(); // ✅ 소리 설정 가져오기
+
   useEffect(() => {
-    const audio = new Audio('/sounds/moktak.wav');
-    audio.volume = 0.6; // (선택) 소리 크기 조절
-    audio.play().catch((e) => {
-      console.warn('목탁 소리 재생 실패:', e);
-    });
-  }, []);
+    if (soundEnabled) {
+      const audio = new Audio('/sounds/moktak.wav');
+      audio.volume = 0.6;
+      audio.play().catch((e) => {
+        console.warn('목탁 소리 재생 실패:', e);
+      });
+    }
+  }, [soundEnabled]); // ✅ 상태 반영
 
   return (
     <div
       className={`relative flex flex-col justify-center text-base items-center h-screen bg-red text-white
         transition-opacity duration-1500 ${fadeOut ? 'opacity-0' : 'opacity-100'}`}
     >
-      {/* ✅ 연등 효과 등 위에 깔기 */}
       <MarbleOverlay />
 
-      {/* ✅ 로딩 내용은 위로 */}
       <div className="text-5xl animate-float mb-4 z-10">
         <Image
           src="/lotusbeige.png"
@@ -36,6 +38,7 @@ export default function Loading({ fadeOut = false }: { fadeOut?: boolean }) {
           className="object-contain border-beige mx-2"
         />
       </div>
+
       <p className="text-base font-semibold text-center tracking-wide animate-fadeIn px-6 whitespace-pre-line z-10">
         {message}
       </p>

@@ -59,7 +59,7 @@ export default function BottomNav() {
   if (hide) return null;
 
   return (
-    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] h-[72px] bg-white border-t border-red flex justify-around items-center z-50">
+    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] h-[72px] bg-white border-t border-red flex justify-around items-center z-30">
       {navItems.map((item) => {
         const isActive = pathname === item.path;
         const Icon = item.icon;

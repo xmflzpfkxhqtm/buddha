@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAskStore } from '@/stores/askStore';
-import { useRouter } from 'next/navigation'; // ✅ 상단 추가
+import { useRouter } from 'next/navigation';
 
 interface TempAnswer {
   id: string;
@@ -15,12 +15,14 @@ interface TempAnswer {
 const ITEMS_PER_PAGE = 6;
 
 export default function AnswerPage() {
-    const [answers, setAnswers] = useState<TempAnswer[]>([]);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [selectedItem, setSelectedItem] = useState<TempAnswer | null>(null);
-    const { setParentId } = useAskStore();
-    const router = useRouter(); // ✅ 여기 추가
-    const totalPages = Math.ceil(answers.length / ITEMS_PER_PAGE);
+  const [answers, setAnswers] = useState<TempAnswer[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedItem, setSelectedItem] = useState<TempAnswer | null>(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const { setParentId } = useAskStore();
+  const router = useRouter();
+
+  const totalPages = Math.ceil(answers.length / ITEMS_PER_PAGE);
   const paginatedAnswers = answers.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
@@ -34,8 +36,8 @@ export default function AnswerPage() {
           .from('temp_answers')
           .select('*')
           .eq('user_id', user.id)
-          .eq('is_saved', true) // ✅ 저장된 질문만
-          .order('saved_at', { ascending: false }); // ✅ 저장된 시점 기준 정렬
+          .eq('is_saved', true)
+          .order('saved_at', { ascending: false });
 
         if (answerData) {
           setAnswers(answerData);
@@ -63,13 +65,22 @@ export default function AnswerPage() {
                 onClick={() => setSelectedItem(item)}
                 className="p-4 h-[300px] rounded-xl shadow border bg-white flex flex-col cursor-pointer"
               >
-                <p className="text-[10px] text-right text-gray-400 mb-1">
-                  {new Date(item.created_at).toLocaleDateString()}
-                </p>
-                <p className="text-xs text-red font-semibold mb-1 line-clamp-1">📜 나의 질문</p>
-                <p className="text-[13px] text-gray-800 mb-2 line-clamp-2">「{item.question}」</p>
-                <p className="text-xs text-red font-semibold mb-1 line-clamp-1">🪷 부처님 말씀</p>
-                <p className="text-[13px] text-gray-900 line-clamp-8">{item.answer}</p>
+                <div className="flex justify-between items-center text-sm text-gray-400 mb-4">
+                  <span>{new Date(item.created_at).toLocaleDateString()}</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteTargetId(item.id);
+                    }}
+                    className="text-red hover:underline"
+                  >
+                    삭제
+                  </button>
+                </div>
+                <p className="text-sm text-red font-semibold mb-1 line-clamp-1">📜 나의 질문</p>
+                <p className="text-sm text-gray-800 mb-2 line-clamp-2">「{item.question}」</p>
+                <p className="text-sm text-red font-semibold mb-1 line-clamp-1">🪷 부처님 말씀</p>
+                <p className="text-sm text-gray-900 line-clamp-6">{item.answer}</p>
               </li>
             ))}
           </ul>
@@ -104,50 +115,88 @@ export default function AnswerPage() {
         </>
       )}
 
-{selectedItem && (
-  <div
-    className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center px-4"
-    onClick={() => setSelectedItem(null)}
-  >
-    <div
-      className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[80vh] overflow-y-auto p-6 relative"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <button
-        onClick={() => setSelectedItem(null)}
-        className="absolute top-3 right-4 text-gray-400 hover:text-black text-xl"
-      >
-        ×
-      </button>
+      {selectedItem && (
+        <div
+          className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center px-4"
+          onClick={() => setSelectedItem(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[80vh] overflow-y-auto p-6 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setSelectedItem(null)}
+              className="absolute top-3 right-4 text-gray-400 hover:text-black text-xl"
+            >
+              ×
+            </button>
 
-      <p className="text-xs text-gray-500 text-right mb-2">
-        {new Date(selectedItem.created_at).toLocaleDateString()}
-      </p>
+            <p className="text-xs text-gray-500 text-right mb-2">
+              {new Date(selectedItem.created_at).toLocaleDateString()}
+            </p>
 
-      <p className="text-sm font-semibold text-red mb-1">📜 나의 질문</p>
-      <p className="text-[13px] text-gray-800 mb-4 whitespace-pre-line">
-        「{selectedItem.question}」
-      </p>
+            <p className="text-sm font-semibold text-red mb-1">📜 나의 질문</p>
+            <p className="text-[13px] text-gray-800 mb-4 whitespace-pre-line">
+              「{selectedItem.question}」
+            </p>
 
-      <p className="text-sm font-semibold text-red mb-1">🪷 부처님 말씀</p>
-      <p className="text-[13px] text-gray-900 whitespace-pre-line">
-        {selectedItem.answer}
-      </p>
+            <p className="text-sm font-semibold text-red mb-1">🪷 부처님 말씀</p>
+            <p className="text-[13px] text-gray-900 whitespace-pre-line">
+              {selectedItem.answer}
+            </p>
 
-      <button
-        onClick={() => {
-          setParentId(selectedItem.id);
-          setSelectedItem(null);
-          router.push('/ask');
-        }}
-        className="w-full mt-4 py-3 border border-red text-red-dark font-bold rounded-4xl hover:bg-red hover:text-white transition"
-      >
-        더 여쭙기
-      </button>
-    </div>
-  </div>
-)}
+            <button
+              onClick={() => {
+                setParentId(selectedItem.id);
+                setSelectedItem(null);
+                router.push('/ask');
+              }}
+              className="w-full my-6 py-3 border bg-red-light border-red text-white font-bold rounded-4xl hover:bg-red hover:text-red=darl transition"
+            >
+              문답을 이어갑니다
+            </button>
+          </div>
+        </div>
+      )}
 
+      {deleteTargetId && (
+        <div
+          onClick={() => setDeleteTargetId(null)}
+          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-xl p-6 w-[90%] max-w-[360px] text-center shadow-xl"
+          >
+            <p className="text-lg font-semibold text-red mb-4">정말 삭제하시겠습니까?</p>
+            <div className="flex justify-center gap-4 mt-4">
+              <button
+                onClick={() => setDeleteTargetId(null)}
+                className="px-4 py-2 border rounded-lg text-sm text-gray-600"
+              >
+                아니오
+              </button>
+              <button
+                onClick={async () => {
+                  const { error } = await supabase
+                    .from('temp_answers')
+                    .update({ is_saved: false })
+                    .eq('id', deleteTargetId);
+                  if (!error) {
+                    setAnswers((prev) => prev.filter((a) => a.id !== deleteTargetId));
+                    setDeleteTargetId(null);
+                  } else {
+                    alert('삭제에 실패했습니다.');
+                  }
+                }}
+                className="px-4 py-2 bg-red-light text-white rounded-lg text-sm"
+              >
+                예, 삭제합니다
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
