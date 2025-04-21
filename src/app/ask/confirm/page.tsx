@@ -119,7 +119,9 @@ export default function ConfirmPage() {
         <div className="min-h-[12rem] w-full bg-[#FFFDF8] border border-red-light rounded-xl p-4 text-base text-gray-700 whitespace-pre-wrap mb-4">
           {question}
         </div>
-
+        <p className="text-center text-gray-600 text-sm mb-4">
+        “응무소주 이생기심 — 머무름 없이 마음을 일으키십시오.”
+</p>
         <div className="flex flex-row w-full space-x-6 mb-12">
           <button
             onClick={handleBack}
