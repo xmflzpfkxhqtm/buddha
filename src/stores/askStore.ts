@@ -3,23 +3,27 @@ import { create } from 'zustand';
 type AskStore = {
   question: string;
   selectedModel: string;
+  selectedLength: string;
   showModal: boolean;
-  parentId: string | null; // ✅ follow-up 기능용 추가
+  parentId: string | null;
 
   setQuestion: (q: string) => void;
   setSelectedModel: (m: string) => void;
+  setSelectedLength: (l: string) => void;
   setShowModal: (s: boolean) => void;
-  setParentId: (id: string | null) => void; // ✅ follow-up 기능용 추가
+  setParentId: (id: string | null) => void;
 };
 
 export const useAskStore = create<AskStore>((set) => ({
   question: '',
   selectedModel: 'gpt4.1',
+  selectedLength: 'medium',
   showModal: false,
-  parentId: null, // ✅ 초기값
+  parentId: null,
 
   setQuestion: (q) => set({ question: q }),
   setSelectedModel: (m) => set({ selectedModel: m }),
+  setSelectedLength: (l) => set({ selectedLength: l }),
   setShowModal: (s) => set({ showModal: s }),
-  setParentId: (id) => set({ parentId: id }), // ✅ 설정 함수
+  setParentId: (id) => set({ parentId: id }),
 }));

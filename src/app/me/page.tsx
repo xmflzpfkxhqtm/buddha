@@ -113,6 +113,17 @@ export default function MePage() {
           </div>
           <ChevronRight size={16} className="text-gray-400" />
         </li>
+        <li
+  onClick={() => router.push('/me/settings')}
+  className="cursor-pointer px-4 py-4 flex items-center justify-between hover:bg-beige"
+>
+  <div>
+    <p className="font-semibold text-gray-800">⚙️ 설정</p>
+    <p className="text-sm text-gray-600">알림, 소리 등 앱 환경을 조정합니다.</p>
+  </div>
+  <ChevronRight size={16} className="text-gray-400" />
+</li>
+
       </ul>
     </main>
   );

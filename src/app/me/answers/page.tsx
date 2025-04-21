@@ -121,7 +121,7 @@ export default function AnswerPage() {
           onClick={() => setSelectedItem(null)}
         >
           <div
-            className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[80vh] overflow-y-auto p-6 relative"
+            className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[75vh] overflow-y-auto p-6 relative"
             onClick={(e) => e.stopPropagation()}
           >
             <button

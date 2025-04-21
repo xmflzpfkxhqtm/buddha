@@ -16,6 +16,11 @@ const models = [
   { id: 'grok', name: 'Grok 3', description: '유머와 창의성' },
 ];
 
+const lengths = [
+  { id: 'short', name: '짧은 답변', description: '간결하지만 깊은 통찰이 담긴 응답을 빠르게 받아보세요.' },
+  { id: 'long', name: '긴 답변', description: '깊이 있는 가르침과 함께 긴 여운을 남겨드립니다.' },
+];
+
 export default function AskPage() {
   const router = useRouter();
   const {
@@ -23,12 +28,14 @@ export default function AskPage() {
     setQuestion,
     selectedModel,
     setSelectedModel,
+    selectedLength,
+    setSelectedLength,
     parentId,
     setParentId,
   } = useAskStore();
 
   const [previousQA, setPreviousQA] = useState<{ question: string; answer: string } | null>(null);
-  const [confirmCancelModal, setConfirmCancelModal] = useState(false); // ✅ 모달 상태
+  const [confirmCancelModal, setConfirmCancelModal] = useState(false);
   const [showGuideModal, setShowGuideModal] = useState(false);
 
   useEffect(() => {
@@ -58,10 +65,9 @@ export default function AskPage() {
   const confirmCancel = () => {
     setParentId(null);
     setQuestion('');
-    setPreviousQA(null); // ✅ 이거 추가
+    setPreviousQA(null);
     setConfirmCancelModal(false);
-    router.replace('/ask'); // ✅ 이걸로 바꿔줘
-    
+    router.replace('/ask');
   };
 
   return (
@@ -135,6 +141,26 @@ export default function AskPage() {
               ))}
             </div>
           </div>
+
+          <div className="mt-6 mb-6">
+            <p className="font-bold text-sm mb-2">답변 길이 선택</p>
+            <div className="grid grid-cols-2 gap-2">
+              {lengths.map((length) => (
+                <div
+                  key={length.id}
+                  onClick={() => setSelectedLength(length.id)}
+                  className={`p-3 rounded-lg border text-center cursor-pointer transition ${
+                    selectedLength === length.id
+                      ? 'border border-red bg-red-light text-white'
+                      : 'border border-red bg-white text-black'
+                  }`}
+                >
+                  <div className="font-bold text-sm">{length.name}</div>
+                  <div className="text-xs mt-1">{length.description}</div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         <button
@@ -182,34 +208,32 @@ export default function AskPage() {
         </div>
       )}
 
-{showGuideModal && (
-  <div
-    onClick={() => setShowGuideModal(false)}
-    className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center"
-  >
-    <div
-      onClick={(e) => e.stopPropagation()}
-      className="bg-white rounded-xl p-6 w-[90%] max-w-[360px] text-start shadow-xl"
-    >
-      <h3 className="text-lg font-bold text-red mb-4">사용 방법 안내</h3>
-      <ul className="space-y-2 text-sm leading-relaxed text-gray-800">
-        <li>🪷 마음속 고민이나 질문을 자유롭게 입력하세요.</li>
-        <li>❓ 물음이 상세할수록 더 깊은 답변을 들으실 수 있습니다.</li>
-        <li>📜 부처님의 말씀과 함께 인용된 경전도 함께 확인할 수 있습니다.</li>
-        <li>➕ ‘문답을 이어갑니다’로 후속 질문도 가능합니다.</li>
-        <li>🔒 다른 이용자에게 나의 질문은 절대 공개되지 않습니다.</li>
-      </ul>
-
-      <button
-        onClick={() => setShowGuideModal(false)}
-        className="w-full mt-6 py-2 bg-red-light text-white rounded-lg hover:bg-red transition"
-      >
-        닫기
-      </button>
-    </div>
-  </div>
-)}
-
+      {showGuideModal && (
+        <div
+          onClick={() => setShowGuideModal(false)}
+          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-xl p-6 w-[90%] max-w-[360px] text-start shadow-xl"
+          >
+            <h3 className="text-lg font-bold text-red mb-4">사용 방법 안내</h3>
+            <ul className="space-y-2 text-sm leading-relaxed text-gray-800">
+              <li>🪷 마음속 고민이나 질문을 자유롭게 입력하세요.</li>
+              <li>❓ 물음이 상세할수록 더 깊은 답변을 들으실 수 있습니다.</li>
+              <li>📜 부처님의 말씀과 함께 인용된 경전도 함께 확인할 수 있습니다.</li>
+              <li>➕ ‘문답을 이어갑니다’로 후속 질문도 가능합니다.</li>
+              <li>🔒 다른 이용자에게 나의 질문은 절대 공개되지 않습니다.</li>
+            </ul>
+            <button
+              onClick={() => setShowGuideModal(false)}
+              className="w-full mt-6 py-2 bg-red-light text-white rounded-lg hover:bg-red transition"
+            >
+              닫기
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

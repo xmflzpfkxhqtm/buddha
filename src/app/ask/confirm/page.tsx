@@ -8,7 +8,7 @@ import Loading from '../../../../components/Loading';
 
 export default function ConfirmPage() {
   const router = useRouter();
-  const { question, setQuestion, parentId, setParentId } = useAskStore();
+  const { question, setQuestion, parentId, setParentId, selectedLength } = useAskStore();
 
   const [isLoading, setIsLoading] = useState(false);
   const [fadeOut, setFadeOut] = useState(false);
@@ -44,9 +44,9 @@ export default function ConfirmPage() {
       const response = await fetch('/api/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question, parentId }),
+        body: JSON.stringify({ question, parentId, length: selectedLength }),
       });
-
+      
       const data = await response.json();
       await minimumTimePromise;
 

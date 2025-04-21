@@ -16,12 +16,17 @@ const modelMapping = {
   'grok': 'grok-3-beta'
 };
 
+const lengthSetting = {
+  short: { charLimit: '300자 내외로', maxTokens: 600 },
+  long: { charLimit: '1500자 내외로', maxTokens: 1500 },
+};
+
 interface ChatMessage {
   role: string;
   content: string;
 }
 
-async function callOpenAI(messages: ChatMessage[], model: string) {
+async function callOpenAI(messages: ChatMessage[], model: string, maxTokens: number) {
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -32,20 +37,20 @@ async function callOpenAI(messages: ChatMessage[], model: string) {
       model,
       messages,
       temperature: 0.8,
-      max_tokens: 1500,
+      max_tokens: maxTokens,
     }),
   });
   return await response.json();
 }
 
-async function callClaude(messages: ChatMessage[], model: string) {
+async function callClaude(messages: ChatMessage[], model: string, maxTokens: number) {
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const systemMessage = messages.find(m => m.role === 'system')?.content || '';
   const userMessage = messages.find(m => m.role === 'user')?.content || '';
 
   const response = await anthropic.messages.create({
     model,
-    max_tokens: 1500,
+    max_tokens: maxTokens,
     temperature: 0.8,
     system: systemMessage,
     messages: [
@@ -56,7 +61,6 @@ async function callClaude(messages: ChatMessage[], model: string) {
     ]
   });
 
-  // ✅ 타입 좁히기
   const textBlock = response.content.find(
     (block): block is TextBlock => block.type === 'text'
   );
@@ -85,7 +89,7 @@ async function callGemini(messages: ChatMessage[], model: string) {
   };
 }
 
-async function callGrok(messages: ChatMessage[], model: string) {
+async function callGrok(messages: ChatMessage[], model: string, maxTokens: number) {
   const system = messages.find(m => m.role === 'system')?.content || '';
   const user = messages.find(m => m.role === 'user')?.content || '';
   const response = await fetch('https://api.x.ai/v1/chat/completions', {
@@ -94,20 +98,30 @@ async function callGrok(messages: ChatMessage[], model: string) {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${process.env.GROK_API_KEY}`,
     },
-    body: JSON.stringify({ model, messages: [{ role: 'system', content: system }, { role: 'user', content: user }], temperature: 0.8, max_tokens: 1500 }),
+    body: JSON.stringify({
+      model,
+      messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
+      temperature: 0.8,
+      max_tokens: maxTokens,
+    }),
   });
   const data = await response.json();
-  return { choices: [{ message: { content: data.choices?.[0]?.message?.content || '' } }], usage: data.usage };
+  return {
+    choices: [{ message: { content: data.choices?.[0]?.message?.content || '' } }],
+    usage: data.usage
+  };
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { question, model = 'gpt4.1', parentId = null } = await request.json();
+    const { question, model = 'gpt4.1', length = 'long', parentId = null } = await request.json();
+
     if (!question || typeof question !== 'string') {
       return NextResponse.json({ success: false, message: '질문이 유효하지 않습니다.' }, { status: 400 });
     }
 
-    // 이전 질문/답변 가져오기
+    const { charLimit, maxTokens } = lengthSetting[length as keyof typeof lengthSetting] || lengthSetting.long;
+
     let previousQA = '';
     if (parentId) {
       const { data: parent } = await supabase.from('temp_answers').select('question, answer').eq('id', parentId).single();
@@ -136,20 +150,20 @@ export async function POST(request: NextRequest) {
           사용자의 질문이 특정 인물, 사건, 기록에 대한 것일 경우, 가능한 한 당신의 지식 범위 내에서 자세히 답변하십시오. 
           최신 정보가 없더라도 과거 기록이나 이미지에 기반한 일반적인 설명, 추론을 시도하십시오.
           지나치게 냉정하지 않도록 온화한 위로를 함께 전하며, 질문자의 심리나 상황을 고려해 지혜로운 조언을 주십시오.
-          </instruction>
+</instruction>
 
-          <context>
+<context>
           관련 불교 경전 내용: 
           ${contextText}
-          </context>
+</context>
 
-          <response>
+<response>
           고풍스럽고 격조 있는 존댓말을 사용하여 답변하십시오.
           문장은 "~합니다", "~입니다" 체로 마무리합니다.
-          한글 1000자 내외로 작성하십시오.
+          한글 ${charLimit} 작성하십시오.
           필요하다면 마지막에 질문자에게 화두를 던지며 끝맺으십시오.
-          </response>
-          `
+</response>
+        `
       },
       {
         role: 'user',
@@ -159,20 +173,21 @@ export async function POST(request: NextRequest) {
 
     const apiModel = modelMapping[model as keyof typeof modelMapping] || 'gpt-4.1';
     let data;
+
     try {
       if (model.startsWith('gpt') || model === 'o4-mini') {
-        data = await callOpenAI(messages, apiModel);
+        data = await callOpenAI(messages, apiModel, maxTokens);
       } else if (model.startsWith('claude')) {
-        data = await callClaude(messages, apiModel);
+        data = await callClaude(messages, apiModel, maxTokens);
       } else if (model.startsWith('gemini')) {
-        data = await callGemini(messages, apiModel);
+        data = await callGemini(messages, apiModel); // Gemini는 maxTokens 안 씀
       } else if (model === 'grok') {
-        data = await callGrok(messages, apiModel);
+        data = await callGrok(messages, apiModel, maxTokens);
       } else {
-        data = await callOpenAI(messages, 'gpt-4.1');
+        data = await callOpenAI(messages, 'gpt-4.1', maxTokens);
       }
     } catch {
-      data = await callOpenAI(messages, 'gpt-4.1');
+      data = await callOpenAI(messages, 'gpt-4.1', maxTokens);
     }
 
     const answer = data.choices?.[0]?.message?.content || '부처님께서 조용히 침묵하십니다.';
@@ -189,6 +204,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, questionId: inserted.id });
 
   } catch (error) {
-    return NextResponse.json({ success: false, message: error instanceof Error ? error.message : '답변 생성 중 오류' }, { status: 500 });
+    return NextResponse.json({
+      success: false,
+      message: error instanceof Error ? error.message : '답변 생성 중 오류',
+    }, { status: 500 });
   }
 }
