@@ -17,8 +17,8 @@ const models = [
 ];
 
 const lengths = [
-  { id: 'short', name: '짧은 답변', description: '간결하지만 깊은 통찰이 담긴 응답을 빠르게 받아보세요.' },
-  { id: 'long', name: '긴 답변', description: '깊이 있는 가르침과 함께 긴 여운을 남겨드립니다.' },
+  { id: 'short', name: '짧은 답변', description: '간결하지만 깊은 통찰이 담긴 가르침을 빠르게 받아보세요.' },
+  { id: 'long', name: '긴 답변', description: '깊이 있는 가르침과 함께 긴 여운을 남습니다.' },
 ];
 
 export default function AskPage() {
