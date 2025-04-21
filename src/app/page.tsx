@@ -125,10 +125,10 @@ export default function Home() {
               className="object-contain border-beige mx-2"
             />
             <div className="flex flex-col">
-              <p className="mb-0 text-sm font-medium text-white text-start">
+              <p className="mb-0 text-base font-medium text-white text-start">
                 「부처님께 여쭙기」 기능이 출시되었습니다
               </p>
-              <p className="mt-0 text-sm font-base text-pink-light text-start">
+              <p className="mt-0 text-base font-base text-pink-light text-start">
                 클릭하여 자세히 알아보세요
               </p>
             </div>
@@ -136,7 +136,7 @@ export default function Home() {
 
           {/* 어서오세요 문구 */}
           <div className="w-full rounded-xl flex flex-col items-start pl-1 justify-start">
-          <p className="text-2xl font-semibold text-white text-center mt-12">
+          <p className="text-2xl font-semibold text-white text-center mt-4">
   어서오세요, {!!userName?.trim() ? `${userName}님` : '불자님'}
 </p>
           </div>
@@ -150,7 +150,7 @@ export default function Home() {
       setBookmark(title, index);
       router.push('/scripture');
     }}
-              className="w-full bg-red-light border-[0.5px] border-pink-light rounded-xl flex flex-row items-center pl-1 pr-4 py-2 mt-4 justify-start cursor-pointer"
+              className="w-full bg-red-light rounded-xl flex flex-row items-center pl-1 pr-4 py-2 mt-4 justify-start cursor-pointer"
             >
               <Image
                 src="/lotusbeige.png"
@@ -160,10 +160,10 @@ export default function Home() {
                 className="object-contain border-beige mx-2"
               />
               <div className="flex flex-col">
-                <p className="mb-0 text-sm font-medium text-white text-start">
+                <p className="mb-0 text-base font-medium text-white text-start">
                   오늘의 법문: {title}
                 </p>
-                <p className="mt-0 text-sm font-base text-pink-light text-start">
+                <p className="mt-0 text-base font-base text-pink-light text-start">
                   {sentence || '내용을 불러오는 중입니다.'}
                 </p>
               </div>
@@ -171,19 +171,19 @@ export default function Home() {
           )}
 
           {/* 오늘의 수행 영역 */}
-          <div className="w-full overflow-x-auto no-scrollbar bg-red-light rounded-xl mt-4 py-4">
-            <p className="text font-semibold text-white text-left pl-6">
+          <div className="w-full overflow-x-auto no-scrollbar rounded-xl mt-2 py-4">
+            <p className="text-lg font-semibold text-white text-left">
               오늘의 수행은 🪷
             </p>
-            <div className="flex space-x-4 overflow-x-auto no-scrollbar px-4 mt-4 py-2">
+            <div className="flex space-x-4 overflow-x-auto no-scrollbar mt-4 py-2">
               {/* 카드 1 */}
               <div
                 onClick={() => router.push('/ask')}
-                className="min-w-[240px] h-[360px] rounded-2xl overflow-hidden flex flex-col cursor-pointer hover:shadow-lg transition"
+                className="min-w-[320px] h-[240px] rounded-2xl overflow-hidden flex flex-col cursor-pointer hover:shadow-lg transition"
               >
                 <div className="h-[280px] w-full relative rounded-2xl overflow-hidden">
                   <Image
-                    src="/askvip.png"
+                    src="/banner_1.png"
                     alt="부처님께 여쭙기"
                     fill
                     className="object-cover"
@@ -191,17 +191,19 @@ export default function Home() {
                   />
                 </div>
                 <div className="flex-1 px-3 py-2">
-                  <p className="text-xs text-left text-white font-medium">부처님께 여쭙기</p>
-                  <p className="text-xs text-left text-pink-light font-medium">
+                  <p className="text-base text-left text-white font-medium">부처님께 여쭙기</p>
+                  <p className="text-base text-left text-pink-light font-medium">
                     나의 고민에 대해 부처님이라면 어떤 말씀을 하실까요? 인공지능이 부처님의 지혜로 안내합니다
                   </p>
                 </div>
               </div>
+              </div>
+              <div className="flex space-x-4 overflow-x-auto no-scrollbar mt-4 py-2">
 
               {/* 카드 2 */}
               <div
                 onClick={() => router.push('/scripture')}
-                className="min-w-[240px] h-[360px] rounded-2xl overflow-hidden flex flex-col cursor-pointer hover:shadow-lg transition"
+                className="min-w-[320px] h-[240px] rounded-2xl overflow-hidden flex flex-col cursor-pointer hover:shadow-lg transition"
               >
                 <div className="h-[280px] w-full relative rounded-2xl overflow-hidden">
                   <Image
@@ -213,8 +215,8 @@ export default function Home() {
                   />
                 </div>
                 <div className="flex-1 px-3 py-2">
-                  <p className="text-xs text-left text-white font-medium">호날두께 여쭙기</p>
-                  <p className="text-xs text-left text-pink-light font-medium">
+                  <p className="text-base text-left text-white font-medium">호날두께 여쭙기</p>
+                  <p className="text-base text-left text-pink-light font-medium">
                     나의 고민에 대해 호날두라면 어떤 말씀을 하실까요? 인공지능이 호날두의 지혜로 안내합니다
                   </p>
                 </div>
@@ -224,7 +226,7 @@ export default function Home() {
 
           <div className="w-full h-[0.5px] opacity-50 bg-[#E0DBCF] mt-6" />
 
-          <p className="text-xs font-medium text-white text-center mt-6 mb-24">
+          <p className="text-sm font-medium text-white text-center mt-6 mb-24">
             &ldquo;연등&rdquo;은 누구나 수행하고 위로받을 수 있는 작은 법당입니다.
           </p>
           
