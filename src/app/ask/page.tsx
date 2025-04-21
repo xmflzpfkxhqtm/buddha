@@ -23,7 +23,6 @@ export default function AskPage() {
     setQuestion,
     selectedModel,
     setSelectedModel,
-    setShowModal,
     parentId,
     setParentId,
   } = useAskStore();
