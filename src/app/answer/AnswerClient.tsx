@@ -4,12 +4,10 @@ export const dynamic = 'force-dynamic';
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import html2canvas from 'html2canvas';
 import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 import { useAskStore } from '@/stores/askStore';
 import { useBookmarkStore } from '@/stores/useBookmarkStore';
-import Image from 'next/image';
 
 // ✅ 실제 경전명과 매칭되는 인용구만 필터링
 function filterKnownScriptures(answer: string, knownTitles: string[]): string[] {
@@ -104,7 +102,7 @@ export default function AnswerClient() {
           text: '이런 답변을 받았어요.',
           url,
         });
-      } catch (e) {
+      } catch {
         // 사용자가 공유를 취소했거나, 예외 발생 시
       }
     } else {
