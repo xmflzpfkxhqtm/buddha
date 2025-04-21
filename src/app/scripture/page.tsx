@@ -5,6 +5,8 @@ import { Play, Pause } from 'lucide-react';
 import { useBookmarkStore } from '../../stores/useBookmarkStore';
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+
 
 interface GlobalSearchResult {
   title: string;
@@ -26,11 +28,15 @@ const resolveActualTitle = (title: string, list: string[]): string | null => {
 };
 
 export default function ScripturePage() {
+
+  const router = useRouter();
   const [list, setList] = useState<string[]>([]);
   const [selected, setSelected] = useState('');
   const [displaySentences, setDisplaySentences] = useState<string[]>([]);
   const [ttsSentences, setTtsSentences] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [bookmarkedIndexes, setBookmarkedIndexes] = useState<number[]>([]);
+  const isBookmarked = bookmarkedIndexes.includes(currentIndex);
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState('');
   const [modalTab, setModalTab] = useState<'title' | 'content' | 'global'>('title');
@@ -66,6 +72,25 @@ export default function ScripturePage() {
       .then(res => res.json())
       .then(data => setList(data.titles || []));
   }, []);
+
+  useEffect(() => {
+    if (!userId || !selected) return;
+  
+    const fetchBookmarks = async () => {
+      const { data, error } = await supabase
+        .from('bookmarks')
+        .select('index')
+        .eq('user_id', userId)
+        .eq('title', selected);
+  
+      if (!error && data) {
+        setBookmarkedIndexes(data.map((d) => d.index));
+      }
+    };
+  
+    fetchBookmarks();
+  }, [userId, selected]);
+  
 
   useEffect(() => {
     if (list.length === 0) return;
@@ -211,15 +236,40 @@ export default function ScripturePage() {
       setShowMessage(true);
       return;
     }
+  
+    if (isBookmarked) {
+      // 삭제
+      const { error } = await supabase
+        .from('bookmarks')
+        .delete()
+        .eq('user_id', userId)
+        .eq('title', selected)
+        .eq('index', currentIndex);
+  
+      if (!error) {
+        setBookmarkedIndexes((prev) => prev.filter(i => i !== currentIndex));
+      }
+  
+      setMessage(error ? '삭제 실패' : '❌ 책갈피가 삭제되었습니다.');
+      setShowMessage(true);
+      return;
+    }
+  
+    // 저장 로직
     const { error } = await supabase.from('bookmarks').insert({
       user_id: userId,
       title: selected,
       index: currentIndex,
     });
+  
+    if (!error) {
+      setBookmarkedIndexes((prev) => [...prev, currentIndex]);
+    }
+  
     setMessage(error ? '저장 실패' : '✅ 책갈피가 저장되었습니다.');
     setShowMessage(true);
   };
-
+    
   const cycleFontSize = () =>
     setFontSize(prev => (prev === 'sm' ? 'base' : prev === 'base' ? 'lg' : 'sm'));
 
@@ -258,7 +308,12 @@ export default function ScripturePage() {
           </div>
           <span className="text-sm text-red-dark">{`${currentIndex + 1} / ${displaySentences.length}`}</span>
           <div className="flex items-center gap-2">
-            <button onClick={handleBookmark} className="w-24 h-9 bg-red-light text-white rounded-lg font-semibold">책갈피 저장</button>
+          <button
+  onClick={handleBookmark}
+  className="w-24 h-9 bg-red-light text-white rounded-lg font-semibold"
+>
+  {isBookmarked ? '책갈피 삭제' : '책갈피 저장'}
+</button>
             <button onClick={cycleFontSize} className="w-9 h-9 bg-red-light text-white rounded-lg">
               {fontSize === 'sm' ? '가' : fontSize === 'base' ? <span className="text-lg">가</span> : <span className="text-xl font-semibold">가</span>}
             </button>
@@ -270,8 +325,8 @@ export default function ScripturePage() {
       <div className={`whitespace-pre-wrap font-maruburi bg-white rounded-xl ${fontSizeClass}`}>
         {displaySentences.map((s, i) => (
           <span key={i} data-index={i} ref={(el) => { sentenceRefs.current[i] = el }}
-          className={`block scroll-mt-[128px] ${i === currentIndex ? 'bg-amber-200' : ''}`}>
-            {s}
+          className={`block scroll-mt-[128px] ${i === currentIndex ? 'bg-amber-200' : ''} ${bookmarkedIndexes.includes(i) ? 'underline' : ''}`}>
+                      {s}
           </span>
         ))}
       </div>
@@ -388,13 +443,23 @@ export default function ScripturePage() {
 
       {/* 메시지 */}
       {showMessage && (
-        <div onClick={() => setShowMessage(false)} className="fixed inset-0 z-[200] bg-black/30 backdrop-blur-sm flex items-center justify-center">
-          <div className="bg-white px-6 py-4 rounded-2xl shadow-lg text-center max-w-[80%]">
-            <p className="whitespace-pre-wrap text-sm text-gray-800">{message}</p>
-            <button onClick={() => setShowMessage(false)} className="mt-4 px-4 py-1 bg-red-light text-white rounded-xl text-sm">확인</button>
-          </div>
-        </div>
-      )}
+  <div onClick={() => setShowMessage(false)} className="fixed inset-0 z-[200] bg-black/30 backdrop-blur-sm flex items-center justify-center">
+    <div className="bg-white px-6 py-4 rounded-2xl shadow-lg text-center max-w-[80%]">
+      <p className="whitespace-pre-wrap text-sm text-gray-800">{message}</p>
+      <button
+        onClick={() => {
+          setShowMessage(false);
+          if (message === '로그인 정보를 불러올 수 없습니다.') {
+            router.push('/login'); // 로그인 페이지로 이동
+          }
+        }}
+        className="mt-4 px-4 py-1 bg-red-light text-white rounded-xl text-sm"
+      >
+        확인
+      </button>
+    </div>
+  </div>
+)}
 
 {isSearching && (
   <div className="fixed inset-0 bg-black/30 backdrop-blur-xs z-[150] flex flex-col items-center justify-center">

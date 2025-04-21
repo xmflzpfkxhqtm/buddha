@@ -13,7 +13,7 @@ interface Bookmark {
   created_at: string;
 }
 
-const ITEMS_PER_PAGE = 6;
+const ITEMS_PER_PAGE = 5;
 
 export default function BookmarkPage() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
@@ -72,7 +72,7 @@ export default function BookmarkPage() {
       <h1 className="text-xl font-bold text-red-dark mb-4">📌 저장한 책갈피</h1>
 
       {bookmarks.length === 0 ? (
-        <p className="text-sm text-gray-500">아직 책갈피가 없습니다.</p>
+        <p className="text-base text-gray-500">아직 책갈피가 없습니다.</p>
       ) : (
         <>
           <ul className="space-y-3 mb-6">
@@ -84,17 +84,17 @@ export default function BookmarkPage() {
           >
             {/* 1행: 제목 + 행 + 날짜 */}
             <div className="flex justify-between items-center mb-1">
-              <p className="font-semibold text-red-dark text-sm  truncate">
+              <p className="font-semibold text-red-dark text-base  truncate">
                 📖 {bm.title} – {bm.index + 1}행
               </p>
-              <span className="text-sm text-gray-400 whitespace-nowrap">
+              <span className="text-base ml-4 text-gray-400 whitespace-nowrap">
                 {new Date(bm.created_at).toLocaleDateString()}
               </span>
             </div>
           
             {/* 2행: 내용 + 삭제 버튼 */}
             <div className="flex justify-between items-start">
-              <p className="text-sm text-gray-700 w-[85%]">
+              <p className="text-base text-gray-700 w-[85%]">
                 {scriptureMap[bm.title]?.[bm.index] || '내용을 불러올 수 없습니다.'}
               </p>
               <button
@@ -102,7 +102,7 @@ export default function BookmarkPage() {
                   e.stopPropagation();
                   setDeleteTargetId(bm.id);
                 }}
-                className="text-sm text-red hover:underline whitespace-nowrap"
+                className="text-base text-red hover:underline whitespace-nowrap"
               >
                 삭제
               </button>
@@ -117,7 +117,7 @@ export default function BookmarkPage() {
             <button
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className="text-sm px-2 py-1 rounded border bg-white disabled:text-gray-300"
+              className="text-base px-2 py-1 rounded border bg-white disabled:text-gray-300"
             >
               ◀
             </button>
@@ -125,8 +125,8 @@ export default function BookmarkPage() {
               <button
                 key={page}
                 onClick={() => handlePageChange(page)}
-                className={`text-sm px-3 py-1 rounded border ${
-                  page === currentPage ? 'bg-red-dark text-white' : 'bg-white text-gray-700'
+                className={`text-base px-3 py-1 rounded border ${
+                  page === currentPage ? 'bg-red text-white' : 'bg-white text-gray-700'
                 }`}
               >
                 {page}
@@ -135,7 +135,7 @@ export default function BookmarkPage() {
             <button
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="text-sm px-2 py-1 rounded border bg-white disabled:text-gray-300"
+              className="text-base px-2 py-1 rounded border bg-white disabled:text-gray-300"
             >
               ▶
             </button>
@@ -157,7 +157,7 @@ export default function BookmarkPage() {
             <div className="flex justify-center gap-4 mt-4">
               <button
                 onClick={() => setDeleteTargetId(null)}
-                className="px-4 py-2 border rounded-lg text-sm text-gray-600"
+                className="px-4 py-2 border rounded-lg text-base text-gray-600"
               >
                 아니오
               </button>
@@ -174,7 +174,7 @@ export default function BookmarkPage() {
                     alert('삭제에 실패했습니다.');
                   }
                 }}
-                className="px-4 py-2 bg-red-light text-white rounded-lg text-sm"
+                className="px-4 py-2 bg-red-light text-white rounded-lg text-base"
               >
                 예, 삭제합니다
               </button>

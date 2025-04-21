@@ -77,10 +77,10 @@ export default function AnswerPage() {
                     삭제
                   </button>
                 </div>
-                <p className="text-sm text-red font-semibold mb-1 line-clamp-1">📜 나의 질문</p>
-                <p className="text-sm text-gray-800 mb-2 line-clamp-2">「{item.question}」</p>
-                <p className="text-sm text-red font-semibold mb-1 line-clamp-1">🪷 부처님 말씀</p>
-                <p className="text-sm text-gray-900 line-clamp-6">{item.answer}</p>
+                <p className="text-base text-red font-semibold mb-1 line-clamp-1">📜 나의 질문</p>
+                <p className="text-base text-gray-800 mb-2 line-clamp-2">「{item.question}」</p>
+                <p className="text-base text-red font-semibold mb-1 line-clamp-1">🪷 부처님 말씀</p>
+                <p className="text-base text-gray-900 line-clamp-5">{item.answer}</p>
               </li>
             ))}
           </ul>
@@ -97,8 +97,8 @@ export default function AnswerPage() {
               <button
                 key={page}
                 onClick={() => handlePageChange(page)}
-                className={`text-sm px-3 py-1 rounded border ${
-                  page === currentPage ? 'bg-red-dark text-white' : 'bg-white text-gray-700'
+                className={`text-base px-3 py-1 rounded border ${
+                  page === currentPage ? 'bg-red text-white' : 'bg-white text-gray-700'
                 }`}
               >
                 {page}
@@ -107,7 +107,7 @@ export default function AnswerPage() {
             <button
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="text-sm px-2 py-1 rounded border bg-white disabled:text-gray-300"
+              className="text-base px-2 py-1 rounded border bg-white disabled:text-gray-300"
             >
               ▶
             </button>
@@ -131,17 +131,17 @@ export default function AnswerPage() {
               ×
             </button>
 
-            <p className="text-xs text-gray-500 text-right mb-2">
+            <p className="text-sm text-gray-500 text-right mb-2">
               {new Date(selectedItem.created_at).toLocaleDateString()}
             </p>
 
-            <p className="text-sm font-semibold text-red mb-1">📜 나의 질문</p>
-            <p className="text-[13px] text-gray-800 mb-4 whitespace-pre-line">
+            <p className="text-base font-semibold text-red mb-1">📜 나의 질문</p>
+            <p className="text-base text-gray-800 mb-4 whitespace-pre-line">
               「{selectedItem.question}」
             </p>
 
-            <p className="text-sm font-semibold text-red mb-1">🪷 부처님 말씀</p>
-            <p className="text-[13px] text-gray-900 whitespace-pre-line">
+            <p className="text-base font-semibold text-red mb-1">🪷 부처님 말씀</p>
+            <p className="text-base text-gray-900 whitespace-pre-line">
               {selectedItem.answer}
             </p>
 

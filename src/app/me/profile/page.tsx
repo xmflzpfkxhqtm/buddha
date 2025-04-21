@@ -155,7 +155,7 @@ export default function ProfilePage() {
         <button
           onClick={handleSave}
           disabled={isSaving}
-          className="w-full mt-2 bg-red-dark hover:bg-red text-white py-2 px-4 rounded-lg text-sm font-semibold"
+          className="w-full mt-2 bg-red-light hover:bg-red text-white py-2 px-4 rounded-lg text-sm font-semibold"
         >
           {isSaving ? '저장 중...' : '저장하기'}
         </button>
