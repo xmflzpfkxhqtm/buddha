@@ -8,7 +8,7 @@ import type { User } from '@supabase/supabase-js';
 export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
-  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [notification, setNotification] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -18,19 +18,27 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const fetchUser = async () => {
-      const { data } = await supabase.auth.getUser();
+      const { data: authData } = await supabase.auth.getUser();
       const session = await supabase.auth.getSession();
 
-      if (data.user) {
-        setUser(data.user);
-        setName(data.user.user_metadata?.full_name || '');
-        setBirthDate(data.user.user_metadata?.birth_date || '');
-        setNotification(data.user.user_metadata?.notification ?? true);
-      }
+      if (!authData.user) return;
+      setUser(authData.user);
+
+      // users 테이블에서 정보 불러오기
+      const { data: profile } = await supabase
+        .from('users')
+        .select('username, birth_date, notification')
+        .eq('id', authData.user.id)
+        .single();
+
+      // ✅ username이 없으면 auth metadata fallback
+      setUsername(profile?.username || authData.user.user_metadata?.full_name || '');
+      setBirthDate(profile?.birth_date || '');
+      setNotification(profile?.notification ?? true);
 
       const loginProvider = session.data?.session?.provider_token
         ? session.data.session.user?.app_metadata?.provider
-        : data.user?.app_metadata?.provider;
+        : authData.user?.app_metadata?.provider;
 
       setProvider(loginProvider || 'email');
     };
@@ -41,7 +49,7 @@ export default function ProfilePage() {
   const handleSave = async () => {
     if (!user) return;
 
-    if (!name.trim()) {
+    if (!username.trim()) {
       setFormError('이름을 입력해주세요.');
       return;
     }
@@ -55,38 +63,21 @@ export default function ProfilePage() {
     setSaveMessage('');
     setIsSaving(true);
 
-    // ✅ 1. auth.user_metadata 업데이트
-    const { error: authError } = await supabase.auth.updateUser({
-      data: {
-        full_name: name.trim(),
-        birth_date: birthDate, 
-        notification,
-        email: user.email,
-      },
-    });
-
-    if (authError) {
-      setSaveMessage('❌ auth 업데이트 중 오류가 발생했습니다.');
-      setIsSaving(false);
-      return;
-    }
-
-    // ✅ 2. users 테이블 업데이트 (upsert)
+    // ✅ users 테이블 업데이트 (auth는 건드리지 않음)
     const { error: tableError } = await supabase.from('users').upsert({
       id: user.id,
-      full_name: name.trim(),
-      birth_date: birthDate, 
+      username: username.trim(),
+      birth_date: birthDate,
       notification,
       email: user.email,
     });
 
     if (tableError) {
-      setSaveMessage('❌ 사용자 테이블 업데이트 중 오류가 발생했습니다.');
+      setSaveMessage('❌ 사용자 정보 저장 중 오류가 발생했습니다.');
       setIsSaving(false);
       return;
     }
 
-    // ✅ 성공 처리
     setSaveMessage('✅ 저장되었습니다.');
     setTimeout(() => {
       router.push('/me');
@@ -115,13 +106,13 @@ export default function ProfilePage() {
           <p className="text-sm text-red-600 font-medium mb-4">{formError}</p>
         )}
 
-        {/* 이름 */}
+        {/* 이름 (username) */}
         <div className="mb-4">
           <label className="block text-sm font-semibold text-gray-700 mb-1">이름</label>
           <input
             type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
             placeholder="이름을 입력하세요"
           />
