@@ -191,6 +191,13 @@ export async function POST(request: NextRequest) {
     }
 
     const answer = data.choices?.[0]?.message?.content || '부처님께서 조용히 침묵하십니다.';
+    console.log('📊 사용 토큰 정보:', {
+      model,
+      usage: data.usage,
+      question,
+      length,
+    });
+    
     const { data: inserted, error } = await supabase
       .from('temp_answers')
       .insert([{ question, answer, parent_id: parentId }])
