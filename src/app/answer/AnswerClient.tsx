@@ -98,8 +98,8 @@ export default function AnswerClient() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: '부처님의 답변',
-          text: '이런 답변을 받았어요.',
+          title: '마음속 부처님과 나눈 이야기',
+          text: "내 질문에 돌아온 부처님의 가르침입니다. 오늘 마음에 닿은 말씀을 함께 나눕니다.",
           url,
         });
       } catch {
