@@ -52,9 +52,18 @@ export default function Home() {
       console.log('✅ index:', teachingRes.index);
       console.log('✅ sentence:', teachingRes.sentence);
       
-      const fullName = userRes.data.user?.user_metadata?.full_name;
-      setUserName(fullName ?? null);
-  
+      const user = userRes.data.user;
+
+      if (user) {
+        const { data: profile } = await supabase
+          .from('users')
+          .select('username')
+          .eq('id', user.id)
+          .single();
+      
+        setUserName(profile?.username ?? user.user_metadata?.full_name ?? null);
+      }
+        
       const end = Date.now();
       const elapsed = end - start;
       const remaining = Math.max(3000 - elapsed, 0); // ✅ 첫 방문 때만 쓰일 최소 로딩 시간
