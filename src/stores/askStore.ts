@@ -17,7 +17,7 @@ type AskStore = {
 export const useAskStore = create<AskStore>((set) => ({
   question: '',
   selectedModel: 'gpt4.1',
-  selectedLength: 'medium',
+  selectedLength: 'short',
   showModal: false,
   parentId: null,
 
