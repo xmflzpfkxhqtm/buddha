@@ -38,9 +38,9 @@ export default function ScrollHeader() {
         <Image
           src="/logo.png"
           alt="로고"
-          width={96}
-          height={96}
-          className={`object-contain rounded-3xl border-1 border-beige z-10 ${shouldSway ? 'animate-sway' : ''}`}
+          width={80}
+          height={80}
+          className={`object-contain rounded-3xl z-10 ${shouldSway ? 'animate-sway' : ''}`}
         />
       </div>
       <h1 className="absolute bottom-3 left-1/2 -translate-x-1/2 text-xl font-bold text-[#4B3B2A] drop-shadow">

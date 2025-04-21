@@ -18,7 +18,7 @@ const models = [
 
 const lengths = [
   { id: 'short', name: '짧은 답변', description: '간결하지만 깊은 통찰이 담긴 가르침을 빠르게 받아보세요.' },
-  { id: 'long', name: '긴 답변', description: '깊이 있는 가르침이 마음 속에 함께 고요하고 긴 여운을 남깁니다.' },
+  { id: 'long', name: '긴 답변', description: '깊이 있는 가르침이 마음 속에 함께 긴 여운을 남깁니다.' },
 ];
 
 export default function AskPage() {
@@ -100,7 +100,7 @@ export default function AskPage() {
         <div className="w-full h-16 bg-red-light rounded-xl flex flex-row items-center mt-6 pl-1 justify-start">
           <Image src="/lotusbeige.png" alt="lotus" width={48} height={48} className="object-contain border-beige mx-2" />
           <div className="flex flex-col">
-            <p className="text-sm font-base text-white text-start">
+            <p className="text-base font-base text-white text-start">
               한 자 한 자 마음을 담아 적어보세요.<br />
               말씀이 깊을수록, 깨달음도 또렷해집니다.
             </p>
@@ -123,7 +123,7 @@ export default function AskPage() {
           </button>
 
           <div className="mt-12 mb-6">
-            <p className="font-bold text-sm mb-2">부처님의 지혜를 빌려올 원천을 선택하세요(QA용)</p>
+            <p className="font-bold text-base mb-2">부처님의 지혜를 빌려올 원천을 선택하세요(QA용)</p>
             <div className="grid grid-cols-2 gap-2">
               {models.map((model) => (
                 <div
@@ -135,8 +135,8 @@ export default function AskPage() {
                       : 'border border-red bg-white text-black'
                   }`}
                 >
-                  <div className="font-bold text-sm">{model.name}</div>
-                  <div className="text-xs mt-1">{model.description}</div>
+                  <div className="font-bold">{model.name}</div>
+                  <div className="text-sm mt-1">{model.description}</div>
                 </div>
               ))}
             </div>
@@ -155,8 +155,8 @@ export default function AskPage() {
                       : 'border border-red bg-white text-black'
                   }`}
                 >
-                  <div className="font-bold text-sm">{length.name}</div>
-                  <div className="text-xs mt-1">{length.description}</div>
+                  <div className="font-bold">{length.name}</div>
+                  <div className="text-sm mt-1">{length.description}</div>
                 </div>
               ))}
             </div>

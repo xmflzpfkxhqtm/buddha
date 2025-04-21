@@ -115,7 +115,7 @@ export default function Home() {
           {/* 상단 홍보 배너 */}
           <div
   onClick={() => router.push('/ask')}
-  className="w-full h-16 bg-red-light border-[0.5px] border-pink-light rounded-xl flex flex-row items-center pl-1 mt-8 justify-start cursor-pointer"
+  className="w-full h-16 bg-redbrown border border-red-light rounded-xl flex flex-row items-center pl-1 mt-4 justify-start cursor-pointer"
 >
             <Image
               src="/lotusbeige.png"
@@ -136,7 +136,7 @@ export default function Home() {
 
           {/* 어서오세요 문구 */}
           <div className="w-full rounded-xl flex flex-col items-start pl-1 justify-start">
-          <p className="text-2xl font-semibold text-white text-center mt-4">
+          <p className="font-semibold text-white text-center mt-4">
   어서오세요, {!!userName?.trim() ? `${userName}님` : '불자님'}
 </p>
           </div>
@@ -150,7 +150,7 @@ export default function Home() {
       setBookmark(title, index);
       router.push('/scripture');
     }}
-              className="w-full bg-red-light rounded-xl flex flex-row items-center pl-1 pr-4 py-2 mt-4 justify-start cursor-pointer"
+              className="w-full rounded-xl bg-redbrown border border-red-light flex flex-row items-center pl-1 pr-4 py-2 mt-4 justify-start cursor-pointer"
             >
               <Image
                 src="/lotusbeige.png"
@@ -172,10 +172,10 @@ export default function Home() {
 
           {/* 오늘의 수행 영역 */}
           <div className="w-full overflow-x-auto no-scrollbar rounded-xl mt-2 py-4">
-            <p className="text-lg font-semibold text-white text-left">
+            <p className="font-semibold text-white text-left">
               오늘의 수행은 🪷
             </p>
-            <div className="flex space-x-4 overflow-x-auto no-scrollbar mt-4 py-2">
+            <div className="flex space-x-4 overflow-x-auto no-scrollbar mt-4 py-2 border-b border-red-light">
               {/* 카드 1 */}
               <div
                 onClick={() => router.push('/ask')}
@@ -207,7 +207,7 @@ export default function Home() {
               >
                 <div className="h-[280px] w-full relative rounded-2xl overflow-hidden">
                   <Image
-                    src="/jumpingdoo.png"
+                    src="/banner_2.jpg"
                     alt="호날두께 여쭙기"
                     fill
                     className="object-cover"
