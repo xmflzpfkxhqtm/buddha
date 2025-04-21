@@ -138,6 +138,12 @@
   --color-pink-light: #E1BABA;
 }
 
+html {
+  font-size: 16px; /* 기존 16px보다 약간 큼 */
+  line-height: 1.7; /* 줄간격 */
+}
+
+
 /* 기본 텍스트 스타일 */
 body {
   background-color: var(--background);

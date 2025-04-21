@@ -18,7 +18,7 @@ const models = [
 
 const lengths = [
   { id: 'short', name: '짧은 답변', description: '간결하지만 깊은 통찰이 담긴 가르침을 빠르게 받아보세요.' },
-  { id: 'long', name: '긴 답변', description: '깊이 있는 가르침과 함께 긴 여운을 남습니다.' },
+  { id: 'long', name: '긴 답변', description: '깊이 있는 가르침이 마음 속에 함께 고요하고 긴 여운을 남깁니다.' },
 ];
 
 export default function AskPage() {
@@ -149,7 +149,7 @@ export default function AskPage() {
                 <div
                   key={length.id}
                   onClick={() => setSelectedLength(length.id)}
-                  className={`p-3 rounded-lg border text-center cursor-pointer transition ${
+                  className={`p-3 rounded-lg border text-left cursor-pointer transition ${
                     selectedLength === length.id
                       ? 'border border-red bg-red-light text-white'
                       : 'border border-red bg-white text-black'
