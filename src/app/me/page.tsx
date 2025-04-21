@@ -22,9 +22,14 @@ export default function MePage() {
       }
 
       // ✅ 이름 추출
-      const fullName = user.user_metadata?.full_name;
-      setUserName(fullName ?? null);
-
+      const { data: profile } = await supabase
+      .from('users')
+      .select('username')
+      .eq('id', user.id)
+      .single();
+    
+    setUserName(profile?.username ?? user.user_metadata?.full_name ?? null);
+    
       const { data: bookmarks } = await supabase
         .from('bookmarks')
         .select('id')
