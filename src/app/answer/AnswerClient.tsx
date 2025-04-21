@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 import { useAskStore } from '@/stores/askStore';
 import { useBookmarkStore } from '@/stores/useBookmarkStore';
+import Image from 'next/image';
 
 // ✅ 실제 경전명과 매칭되는 인용구만 필터링
 function filterKnownScriptures(answer: string, knownTitles: string[]): string[] {
@@ -36,6 +37,7 @@ export default function AnswerClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const questionId = searchParams.get('questionId');
+  const [showCopiedModal, setShowCopiedModal] = useState(false);
 
   const [question, setQuestion] = useState('');
   const [fullAnswer, setFullAnswer] = useState('');
@@ -92,17 +94,30 @@ export default function AnswerClient() {
     router.push('/ask');
   };
 
-  const handleCapture = async () => {
-    if (!answerRef.current) return;
-    const canvas = await html2canvas(answerRef.current);
-    const dataUrl = canvas.toDataURL('image/png');
-
-    const link = document.createElement('a');
-    link.href = dataUrl;
-    link.download = 'buddha-answer.png';
-    link.click();
+  const handleShare = async () => {
+    const url = window.location.href;
+  
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: '부처님의 답변',
+          text: '이런 답변을 받았어요.',
+          url,
+        });
+      } catch (e) {
+        // 사용자가 공유를 취소했거나, 예외 발생 시
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(url);
+        setShowCopiedModal(true);
+        setTimeout(() => setShowCopiedModal(false), 2000);
+      } catch {
+        alert('클립보드 복사에 실패했습니다.');
+      }
+    }
   };
-
+        
   const handleSaveToSupabase = async () => {
     if (!user) {
       alert('로그인이 필요합니다!');
@@ -136,7 +151,7 @@ export default function AnswerClient() {
 
   return (
     <main className="relative min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-white px-6 py-10">
-      <div ref={answerRef} className="rounded-2xl py-6 px-2">
+      <div ref={answerRef} className="rounded-2xl px-2">
         <div className="w-full z-1 mt-4">
           <h2 className="text-2xl text-red font-semibold text-start">
             부처님이라면 분명<br />이렇게 말씀하셨을 것입니다
@@ -153,12 +168,12 @@ export default function AnswerClient() {
           <div className="w-full h-12 bg-red-light rounded-xl flex flex-row items-center mt-6 pl-1 justify-start">
             <p className="pl-2 text-white text-start font-semibold">🪷 나의 물음</p>
           </div>
-          <div className="px-4 py-2 rounded-xl font-base whitespace-pre-wrap text-black mt-2">
-            「{question}」
+          <div className="p-4 rounded-xl mt-4 shadow-xl border border-red mb-6 whitespace-pre-wrap text-base text-black min-h-[160px]">
+            {question}
           </div>
 
           {validScriptureTitles.length > 0 && (
-            <div className="w-full mt-4">
+            <div className="w-full my-12">
               <div className="text-sm text-red-dark font-semibold mb-2">📖 인용된 경전</div>
               <ul className="space-y-2">
               {validScriptureTitles.map((title, idx) => (
@@ -182,14 +197,14 @@ export default function AnswerClient() {
       </div>
 
       {done && (
-        <div className="w-full flex flex-col space-y-4 mt-8 px-2 mb-16">
+        <div className="w-full flex flex-col space-y-4 mt-12 px-2 mb-12">
           <div className="flex flex-row space-x-4">
-            <button
-              onClick={handleCapture}
-              className="w-full py-3 bg-white text-red-dark border boder-bg-red font-bold rounded-4xl hover:bg-red transition hover:text-white"
-            >
-              캡처하기
-            </button>
+          <button
+  onClick={handleShare}
+  className="w-full py-3 bg-white text-red-dark border border-red font-bold rounded-4xl hover:bg-red transition hover:text-white"
+>
+  공유하기
+</button>
             <button
               onClick={handleSaveToSupabase}
               disabled={saved}
@@ -221,7 +236,18 @@ export default function AnswerClient() {
             문답을 이어갑니다
           </button>
         </div>
-      )}
+        
+        
+   
+)}
+      
+      {showCopiedModal && (
+  <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-sm px-4 py-2 rounded-full shadow-md z-50 transition">
+    ✅ 주소가 복사되었습니다
+  </div>
+)}
+
     </main>
+    
   );
 }
