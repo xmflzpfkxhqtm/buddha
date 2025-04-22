@@ -242,10 +242,17 @@ export default function AskPage() {
                 setSelectedItem(null);
                 router.push('/ask');
               }}
-              className="w-full my-6 py-3 border bg-red-light border-red text-white font-bold rounded-4xl hover:bg-red hover:text-red-dark transition"
+              className="w-full mt-4 py-3 border bg-red-light border-red text-white font-bold rounded-4xl hover:bg-red hover:text-white transition"
             >
               문답을 이어갑니다
             </button>
+            <button
+              onClick={() => setSelectedItem(null)}
+              className="w-full mt-4 py-3 border border-red-light text-gray-700 font-bold rounded-4xl hover:bg-red hover:text-white transition"
+            >
+              닫기
+            </button>
+
           </div>
         </div>
       )}
