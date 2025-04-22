@@ -21,6 +21,13 @@ const lengths = [
   { id: 'long', name: '긴 답변', description: '깊이 있는 가르침이 마음 속에 함께 긴 여운을 남깁니다.' },
 ];
 
+type TempAnswer = {
+  id: string;
+  question: string;
+  answer: string;
+  created_at: string;
+};
+
 export default function AskPage() {
   const router = useRouter();
   const {
@@ -38,31 +45,20 @@ export default function AskPage() {
   const [confirmCancelModal, setConfirmCancelModal] = useState(false);
   const [showGuideModal, setShowGuideModal] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
-  type TempAnswer = {
-    id: string;
-    question: string;
-    answer: string;
-    created_at: string;
-  };
-  
   const [savedAnswers, setSavedAnswers] = useState<TempAnswer[]>([]);
   const [user, setUser] = useState<{ id: string } | null>(null);
-  
+  const [selectedItem, setSelectedItem] = useState<TempAnswer | null>(null);
+
   useEffect(() => {
     const fetchPrevious = async () => {
       if (!parentId) return;
-      const { data } = await supabase
-        .from('temp_answers')
-        .select('question, answer')
-        .eq('id', parentId)
-        .single();
+      const { data } = await supabase.from('temp_answers').select('question, answer').eq('id', parentId).single();
       if (data) setPreviousQA(data);
     };
 
     const fetchUserAndSaved = async () => {
       const { data: userData } = await supabase.auth.getUser();
       setUser(userData.user);
-
       if (userData.user) {
         const { data: answers } = await supabase
           .from('temp_answers')
@@ -84,10 +80,7 @@ export default function AskPage() {
     router.push('/ask/confirm');
   };
 
-  const handleCancelFollowup = () => {
-    setConfirmCancelModal(true);
-  };
-
+  const handleCancelFollowup = () => setConfirmCancelModal(true);
   const confirmCancel = () => {
     setParentId(null);
     setQuestion('');
@@ -98,7 +91,7 @@ export default function AskPage() {
 
   return (
     <>
-      <main className="relative min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-white px-6 py-10">
+          <main className="relative min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-white px-6 py-10">
        
        
        
@@ -173,48 +166,89 @@ export default function AskPage() {
   </div>
 
   {showSaved && (
-  <div className="overflow-x-auto no-scrollbar">
-    <div className="flex space-x-4">
-      {user ? (
-        savedAnswers.length > 0 ? (
-          savedAnswers.map((item) => (
-            <div key={item.id} className="min-w-[300px] bg-[#FFFDF8] p-4 rounded-xl border shadow">
-              <p className="text-sm text-gray-400 mb-2">{new Date(item.created_at).toLocaleDateString()}</p>
-              <p className="text-sm font-semibold text-red mb-1">📜 나의 질문</p>
-              <p className="text-sm text-gray-800 line-clamp-2 mb-2">{item.question}</p>
-              <p className="text-sm font-semibold text-red mb-1">🪷 부처님 말씀</p>
-              <p className="text-sm text-gray-900 line-clamp-4">{item.answer}</p>
-            </div>
-          ))
-        ) : (
-          <div className="text-sm text-gray-500">저장된 문답이 없습니다.</div>
-        )
-      ) : (
-        <div className="min-w-[300px] py-4 rounded-xl shadow text-start text-sm text-gray-700">
-          <span> 
-            <button
-              onClick={() => router.push('/login')}
-              className="text-red underline hover:text-red-dark"
-            >
-              로그인
-            </button>
-            하고 저장된 문답을 확인해보세요.
-          </span>
+        <div className="overflow-x-auto no-scrollbar">
+          <div className="flex space-x-4">
+            {user ? (
+              savedAnswers.length > 0 ? (
+                savedAnswers.map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => setSelectedItem(item)}
+                    className="min-w-[300px] bg-[#FFFDF8] p-4 rounded-xl border shadow cursor-pointer"
+                  >
+                    <p className="text-sm text-gray-400 mb-2">{new Date(item.created_at).toLocaleDateString()}</p>
+                    <p className="text-sm font-semibold text-red mb-1">📜 나의 질문</p>
+                    <p className="text-sm text-gray-800 line-clamp-2 mb-2">{item.question}</p>
+                    <p className="text-sm font-semibold text-red mb-1">🪷 부처님 말씀</p>
+                    <p className="text-sm text-gray-900 line-clamp-4">{item.answer}</p>
+                  </div>
+                ))
+              ) : (
+                <div className="text-sm text-gray-500">저장된 문답이 없습니다.</div>
+              )
+            ) : (
+              <div className="min-w-[300px] py-4 rounded-xl shadow text-start text-sm text-gray-700">
+                <span>
+                  <button
+                    onClick={() => router.push('/login')}
+                    className="text-red underline hover:text-red-dark"
+                  >
+                    로그인
+                  </button>
+                  하고 저장된 문답을 확인해보세요.
+                </span>
+              </div>
+            )}
+
+            {user && savedAnswers.length >= 5 && (
+              <div
+                onClick={() => router.push('/me/answers')}
+                className="min-w-[120px] flex justify-center items-center text-red border border-dashed border-red rounded-xl text-sm cursor-pointer hover:bg-red-light hover:text-white"
+              >
+                더 보기 →
+              </div>
+            )}
+          </div>
         </div>
       )}
-      {user && savedAnswers.length >= 5 && (
+
+      {selectedItem && (
         <div
-          onClick={() => router.push('/me/answers')}
-          className="min-w-[120px] flex justify-center items-center text-red border border-dashed border-red rounded-xl text-sm cursor-pointer hover:bg-red-light hover:text-white"
+          className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center px-4"
+          onClick={() => setSelectedItem(null)}
         >
-          더 보기 →
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[75vh] overflow-y-auto p-6 relative"
+          >
+            <button
+              onClick={() => setSelectedItem(null)}
+              className="absolute top-3 right-4 text-gray-400 hover:text-black text-xl"
+            >×</button>
+            <p className="text-sm text-gray-500 text-right mb-2">
+              {new Date(selectedItem.created_at).toLocaleDateString()}
+            </p>
+            <p className="text-base font-semibold text-red mb-1">📜 나의 질문</p>
+            <p className="text-base text-gray-800 mb-4 whitespace-pre-line">
+              「{selectedItem.question}」
+            </p>
+            <p className="text-base font-semibold text-red mb-1">🪷 부처님 말씀</p>
+            <p className="text-base text-gray-900 whitespace-pre-line">
+              {selectedItem.answer}
+            </p>
+            <button
+              onClick={() => {
+                setParentId(selectedItem.id);
+                setSelectedItem(null);
+                router.push('/ask');
+              }}
+              className="w-full my-6 py-3 border bg-red-light border-red text-white font-bold rounded-4xl hover:bg-red hover:text-red-dark transition"
+            >
+              문답을 이어갑니다
+            </button>
+          </div>
         </div>
       )}
-    </div>
-  </div>
-)}
-
-
 
 
 
