@@ -363,7 +363,7 @@ export default function ScripturePage() {
                 <button
                   key={tab}
                   onClick={() => setModalTab(tab)}
-                  className={`flex-1 py-2 ${modalTab === tab ? 'bg-red-light text-white' : 'bg-gray-100'} ${tab === 'title' ? 'rounded-l-xl' : tab === 'global' ? 'rounded-r-xl' : ''}`}
+                  className={`flex-1 py-2 ${modalTab === tab ? 'bg-red text-white' : 'bg-red-light text-white'} ${tab === 'title' ? 'rounded-l-xl' : tab === 'global' ? 'rounded-r-xl' : ''}`}
                 >
                   {tab === 'title' ? '경전명' : tab === 'content' ? '본문검색' : '전체검색'}
                 </button>
@@ -383,36 +383,59 @@ export default function ScripturePage() {
             {/* 결과 */}
             {modalTab === 'title' && (
   <ul className="space-y-2">
-    {Object.entries(groupedTitles)
-      .filter(([base]) => base.includes(search)) // 상위 이름 필터링
-      .map(([base, titles]) => (
-        <li key={base}>
+{Object.entries(groupedTitles)
+  .filter(([base]) => base.includes(search))
+  .map(([base, titles]) => {
+    const isSingle = titles.length === 1;
+    const hasVolumePattern = titles.some(t => /_\d+권/.test(t)); // 권 수 패턴이 있는지 확인
+
+    return (
+      <li key={base}>
+        {isSingle || !hasVolumePattern ? (
+          // 👉 권 수 없거나 단일 항목이면 바로 선택
           <button
-            onClick={() => setExpandedBase(expandedBase === base ? null : base)}
-            className="w-full flex justify-between items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg"
+            onClick={() => {
+              setSelected(titles[0]);
+              setShowModal(false);
+            }}
+            className="w-full px-4 py-2 text-left bg-white hover:bg-pink-light rounded-lg"
           >
-            <span>{base}</span>
-            <span>{expandedBase === base ? '⏶' : '⏷'}</span>
+            {base}
           </button>
-          {expandedBase === base && (
-            <ul className="pl-6 mt-1 space-y-1">
-              {titles.map((title) => (
-                <li key={title}>
-                  <button
-                    onClick={() => {
-                      setSelected(title);
-                      setShowModal(false);
-                    }}
-                    className="w-full text-left text-sm text-gray-700 hover:underline"
-                  >
-                    {title.replace(`${base}_`, '')} {/* '1권_GPT4.1번역' */}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </li>
-      ))}
+        ) : (
+          <>
+            <button
+              onClick={() => setExpandedBase(expandedBase === base ? null : base)}
+              className="w-full flex justify-between items-center px-4 py-2 bg-white hover:bg-pink-light rounded-lg"
+            >
+              <span>{base}</span>
+              <span>{expandedBase === base ? '⏶' : '⏷'}</span>
+            </button>
+            {expandedBase === base && (
+              <ul className="pl-6 mt-1 space-y-1">
+{titles
+  .slice()
+  .sort((a, b) => a.localeCompare(b, 'ko-KR', { numeric: true }))
+  .map((title) => (
+                  <li key={title}>
+                    <button
+                      onClick={() => {
+                        setSelected(title);
+                        setShowModal(false);
+                      }}
+                      className="w-full text-left text-sm text-gray-700 hover:underline"
+                    >
+                      {title.replace(`${base}_`, '')}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+      </li>
+    );
+  })}
   </ul>
 )}
 
