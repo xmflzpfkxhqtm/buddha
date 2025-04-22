@@ -34,22 +34,37 @@ export default function ConfirmPage() {
 
   const handleSubmit = async () => {
     if (!question) return;
-
+  
     setIsLoading(true);
     setShowLoading(true);
-
+  
     try {
       const minimumTimePromise = new Promise((resolve) => setTimeout(resolve, 3000));
-
+  
       const response = await fetch('/api/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question, parentId, length: selectedLength }),
       });
+  
+      type AskResponse = {
+        questionId?: string;
+        error?: string;
+      };
       
-      const data = await response.json();
+      let data: AskResponse = {};
+            try {
+        data = await response.json();
+      } catch (jsonError) {
+        console.error('❌ JSON 파싱 실패:', jsonError);
+        alert('서버 응답이 올바르지 않습니다.');
+        setIsLoading(false);
+        setShowLoading(false);
+        return;
+      }
+  
       await minimumTimePromise;
-
+  
       if (response.ok && data.questionId) {
         setQuestion('');
         setParentId(null);
@@ -58,18 +73,20 @@ export default function ConfirmPage() {
           router.push(`/answer?questionId=${data.questionId}`);
         }, 1000);
       } else {
-        alert(data.error || '답변을 받아오는 데 실패했습니다.');
+        alert(data?.error || '답변을 받아오는 데 실패했습니다.');
         setIsLoading(false);
         setShowLoading(false);
       }
     } catch (error) {
-      console.error('서버 오류:', error);
+      console.error('❌ fetch 실패 또는 네트워크 오류:', error);
+      // ❗️이전 단계에서 alert가 이미 떴다면 무시됨
+      if (!isLoading) return;
       alert('잠시 후 다시 시도해주세요.');
       setIsLoading(false);
       setShowLoading(false);
     }
   };
-
+  
   const handleBack = () => {
     router.push('/ask');
   };

@@ -21,7 +21,7 @@ const modelMapping = {
 
 const lengthSetting = {
   short: { charLimit: '300자 내외로', maxTokens: 600 },
-  long: { charLimit: '1500자 내외로', maxTokens: 1500 },
+  long: { charLimit: '1200자 내외로', maxTokens: 1500 },
 };
 
 interface ChatMessage {
@@ -116,12 +116,21 @@ async function callGrok(messages: ChatMessage[], model: string, maxTokens: numbe
 
 export async function POST(request: NextRequest) {
   try {
-    const { question, model = 'gpt4.1', length = 'long', parentId = null } = await request.json();
+    let body: any = {};
 
+    try {
+      body = await request.json();
+    } catch (err) {
+      console.error('❌ JSON 파싱 실패:', err);
+      return NextResponse.json({ success: false, message: '요청 본문이 비어있거나 잘못되었습니다.' }, { status: 400 });
+    }
+    
+    const { question, model = 'gpt4.1', length = 'long', parentId = null } = body;
+    
     if (!question || typeof question !== 'string') {
       return NextResponse.json({ success: false, message: '질문이 유효하지 않습니다.' }, { status: 400 });
     }
-
+    
     const { charLimit, maxTokens } = lengthSetting[length as keyof typeof lengthSetting] || lengthSetting.long;
 
     let previousQA = '';
