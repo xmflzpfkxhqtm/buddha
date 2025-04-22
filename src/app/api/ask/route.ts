@@ -1,3 +1,6 @@
+export const runtime = 'nodejs';
+
+
 import { NextRequest, NextResponse } from 'next/server';
 import { generateEmbeddingBatch } from '@/utils/upstage';
 import { searchSimilarDocuments } from '@/utils/supabase';
