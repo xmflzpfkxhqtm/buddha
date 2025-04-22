@@ -152,48 +152,67 @@ export default function AskPage() {
           </button>
 </div>
 <div className="max-w-md w-full z-1 mt-4">
-{/* 토글형 히스토리 여기다가 간다*/}
-          <span className="font-bold text-base mb-2 mr-2">🪷 나의 저장된 문답 보기</span>
-      <button
-        onClick={() => setShowSaved((prev) => !prev)}
-        className="text-sm text-red hover:underline mb-4"
+  {/* 토글형 히스토리 */}
+  <div className="flex items-center justify-start mb-2">
+    <span className="font-bold text-base mr-2">🪷 내가 보관한 문답 보기</span>
+    <button
+      onClick={() => setShowSaved((prev) => !prev)}
+      className="flex items-center text-sm text-red hover:underline"
+    >
+      {showSaved ? '숨기기' : '펼쳐보기'}
+      <svg
+        className={`ml-1 w-4 h-4 transition-transform duration-300 ${showSaved ? 'rotate-180' : 'rotate-0'}`}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        viewBox="0 0 24 24"
       >
-        {showSaved ? '숨기기' : '펼쳐보기'}
-      </button>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+      </svg>
+    </button>
+  </div>
 
-      {showSaved && (
-        <div className="overflow-x-auto no-scrollbar">
-          <div className="flex space-x-4">
-            {user ? (
-              savedAnswers.length > 0 ? (
-                savedAnswers.map((item) => (
-                  <div key={item.id} className="min-w-[300px] bg-[#FFFDF8] p-4 rounded-xl border shadow">
-                    <p className="text-sm text-gray-400 mb-2">{new Date(item.created_at).toLocaleDateString()}</p>
-                    <p className="text-sm font-semibold text-red mb-1">📜 질문</p>
-                    <p className="text-sm text-gray-800 line-clamp-2 mb-2">{item.question}</p>
-                    <p className="text-sm font-semibold text-red mb-1">🪷 응답</p>
-                    <p className="text-sm text-gray-900 line-clamp-4">{item.answer}</p>
-                  </div>
-                ))
-              ) : (
-                <div className="text-sm text-gray-500">저장된 문답이 없습니다.</div>
-              )
-            ) : (
-              <div className="min-w-[300px] py-4 rounded-xl  shadow text-start text-sm text-gray-700">
-                로그인하고 저장된 문답을 확인해보세요.
-              </div>
-            )}
-            {user && savedAnswers.length >= 5 && (
-              <div
-                onClick={() => router.push('/me/answers')}
-                className="min-w-[120px] flex justify-center items-center text-red border border-dashed border-red rounded-xl text-sm cursor-pointer hover:bg-red-light hover:text-white"
-              >
-                더 보기 →
-              </div>
-            )}
-          </div>
+  {showSaved && (
+  <div className="overflow-x-auto no-scrollbar">
+    <div className="flex space-x-4">
+      {user ? (
+        savedAnswers.length > 0 ? (
+          savedAnswers.map((item) => (
+            <div key={item.id} className="min-w-[300px] bg-[#FFFDF8] p-4 rounded-xl border shadow">
+              <p className="text-sm text-gray-400 mb-2">{new Date(item.created_at).toLocaleDateString()}</p>
+              <p className="text-sm font-semibold text-red mb-1">📜 나의 질문</p>
+              <p className="text-sm text-gray-800 line-clamp-2 mb-2">{item.question}</p>
+              <p className="text-sm font-semibold text-red mb-1">🪷 부처님 말씀</p>
+              <p className="text-sm text-gray-900 line-clamp-4">{item.answer}</p>
+            </div>
+          ))
+        ) : (
+          <div className="text-sm text-gray-500">저장된 문답이 없습니다.</div>
+        )
+      ) : (
+        <div className="min-w-[300px] py-4 rounded-xl shadow text-start text-sm text-gray-700">
+          <span> 
+            <button
+              onClick={() => router.push('/login')}
+              className="text-red underline hover:text-red-dark"
+            >
+              로그인
+            </button>
+            하고 저장된 문답을 확인해보세요.
+          </span>
         </div>
       )}
+      {user && savedAnswers.length >= 5 && (
+        <div
+          onClick={() => router.push('/me/answers')}
+          className="min-w-[120px] flex justify-center items-center text-red border border-dashed border-red rounded-xl text-sm cursor-pointer hover:bg-red-light hover:text-white"
+        >
+          더 보기 →
+        </div>
+      )}
+    </div>
+  </div>
+)}
 
 
 
@@ -201,7 +220,7 @@ export default function AskPage() {
 
 
 
-          <div className="mt-4 mb-6">
+          <div className="mt-8 mb-6">
             <p className="font-bold text-base mb-2">부처님의 지혜를 빌려올 원천을 선택하세요(QA용)</p>
             <div className="grid grid-cols-2 gap-2">
               {models.map((model) => (
@@ -222,7 +241,7 @@ export default function AskPage() {
           </div>
 
           <div className="mt-6 mb-6">
-            <p className="font-bold text-sm mb-2">답변 길이 선택</p>
+            <p className="font-bold mb-2">답변 길이 선택</p>
             <div className="grid grid-cols-2 gap-2">
               {lengths.map((length) => (
                 <div
