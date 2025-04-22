@@ -38,9 +38,16 @@ export default function AskPage() {
   const [confirmCancelModal, setConfirmCancelModal] = useState(false);
   const [showGuideModal, setShowGuideModal] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
-  const [savedAnswers, setSavedAnswers] = useState<any[]>([]);
-  const [user, setUser] = useState<any>(null);
-
+  type TempAnswer = {
+    id: string;
+    question: string;
+    answer: string;
+    created_at: string;
+  };
+  
+  const [savedAnswers, setSavedAnswers] = useState<TempAnswer[]>([]);
+  const [user, setUser] = useState<{ id: string } | null>(null);
+  
   useEffect(() => {
     const fetchPrevious = async () => {
       if (!parentId) return;
@@ -172,8 +179,8 @@ export default function AskPage() {
                 <div className="text-sm text-gray-500">저장된 문답이 없습니다.</div>
               )
             ) : (
-              <div className="min-w-[300px] bg-[#FFFDF8] p-4 rounded-xl border shadow text-center text-sm text-gray-500">
-                로그인을 하셔야 저장된 문답을 확인할 수 있습니다.
+              <div className="min-w-[300px] py-4 rounded-xl  shadow text-start text-sm text-gray-700">
+                로그인하고 저장된 문답을 확인해보세요.
               </div>
             )}
             {user && savedAnswers.length >= 5 && (
