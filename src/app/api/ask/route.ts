@@ -113,10 +113,16 @@ async function callGrok(messages: ChatMessage[], model: string, maxTokens: numbe
     usage: data.usage
   };
 }
+type AskRequestBody = {
+  question?: string;
+  model?: string;
+  length?: 'short' | 'long';
+  parentId?: string | null;
+};
 
 export async function POST(request: NextRequest) {
   try {
-    let body: any = {};
+    let body: AskRequestBody = {}; // ✅ any 대신 명확한 타입 사용
 
     try {
       body = await request.json();
@@ -124,9 +130,9 @@ export async function POST(request: NextRequest) {
       console.error('❌ JSON 파싱 실패:', err);
       return NextResponse.json({ success: false, message: '요청 본문이 비어있거나 잘못되었습니다.' }, { status: 400 });
     }
-    
+
     const { question, model = 'gpt4.1', length = 'long', parentId = null } = body;
-    
+
     if (!question || typeof question !== 'string') {
       return NextResponse.json({ success: false, message: '질문이 유효하지 않습니다.' }, { status: 400 });
     }
