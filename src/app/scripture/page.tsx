@@ -54,7 +54,9 @@ export default function ScripturePage() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const indexRef = useRef(currentIndex);
   const [isSearching, setIsSearching] = useState(false);
-
+  const [groupedTitles, setGroupedTitles] = useState<Record<string, string[]>>({});
+  const [expandedBase, setExpandedBase] = useState<string | null>(null);
+  
   const { title, index, clearBookmark } = useBookmarkStore();
 
   useEffect(() => {
@@ -67,12 +69,27 @@ export default function ScripturePage() {
     indexRef.current = currentIndex;
   }, [currentIndex]);
 
+  const groupTitlesByBaseName = (titles: string[]) => {
+    const map: Record<string, string[]> = {};
+    titles.forEach((title) => {
+      const base = title.split('_')[0]; // '금강반야바라밀경'
+      if (!map[base]) map[base] = [];
+      map[base].push(title);
+    });
+    return map;
+  };
+  
+
   useEffect(() => {
     fetch('/api/scripture/list')
       .then(res => res.json())
-      .then(data => setList(data.titles || []));
+      .then(data => {
+        const titles: string[] = data.titles || [];
+        setList(titles);
+        setGroupedTitles(groupTitlesByBaseName(titles));
+      });
   }, []);
-
+  
   useEffect(() => {
     if (!userId || !selected) return;
   
@@ -365,29 +382,39 @@ export default function ScripturePage() {
 
             {/* 결과 */}
             {modalTab === 'title' && (
-              <ul>{list.filter(t => t.includes(search)).map(title => (
-                <li key={title}><button onClick={() => { setSelected(title); setShowModal(false); }} className="w-full text-left px-4 py-2 hover:bg-gray-100">{title}</button></li>
-              ))}</ul>
-            )}
-
-            {modalTab === 'content' && (
-              <ul>{displaySentences.map((text, i) => ({ index: i, text })).filter(s => s.text.includes(search)).map(({ index, text }) => (
-                <li key={index}>
+  <ul className="space-y-2">
+    {Object.entries(groupedTitles)
+      .filter(([base]) => base.includes(search)) // 상위 이름 필터링
+      .map(([base, titles]) => (
+        <li key={base}>
+          <button
+            onClick={() => setExpandedBase(expandedBase === base ? null : base)}
+            className="w-full flex justify-between items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg"
+          >
+            <span>{base}</span>
+            <span>{expandedBase === base ? '⏶' : '⏷'}</span>
+          </button>
+          {expandedBase === base && (
+            <ul className="pl-6 mt-1 space-y-1">
+              {titles.map((title) => (
+                <li key={title}>
                   <button
                     onClick={() => {
-                      setCurrentIndex(index);
+                      setSelected(title);
                       setShowModal(false);
-                      setTimeout(() => sentenceRefs.current[index]?.scrollIntoView({ behavior: 'smooth' }), 300);
                     }}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
+                    className="w-full text-left text-sm text-gray-700 hover:underline"
                   >
-                    <div className="line-clamp-3">
-                      <span className="text-gray-500">[{index}행]</span> {text}
-                    </div>
+                    {title.replace(`${base}_`, '')} {/* '1권_GPT4.1번역' */}
                   </button>
                 </li>
-              ))}</ul>
-            )}
+              ))}
+            </ul>
+          )}
+        </li>
+      ))}
+  </ul>
+)}
 
 {modalTab === 'global' && (
   <>
