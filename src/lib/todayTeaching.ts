@@ -12,7 +12,7 @@ export const todayTeaching = [
       title: '대방광불화엄경_1권_GPT4.1번역',
       index: 135,
       sentence: `
-      모든 법은 다 마음에서 만들어진다.
+      모든 법은 다 마음에서 만들어진다. 만들어진다. 엄청나게 만들어진다. 만들어진다. 진짜 엄청나게 만들어진다.
       `.trim().replaceAll('\n', ' '),
     },
     {

@@ -170,10 +170,10 @@ export default function Home() {
               />
               <div className="flex flex-col">
                 <p className="mb-0 text-base font-medium text-white text-start">
-                  오늘의 법문: {title}
+                  오늘의 법문: {sentence}
                 </p>
                 <p className="mt-0 text-base font-base text-pink-light text-start">
-                  {sentence || '내용을 불러오는 중입니다.'}
+                  {title || '내용을 불러오는 중입니다.'}
                 </p>
               </div>
             </div>

@@ -33,13 +33,15 @@ async function callOpenAI(messages: ChatMessage[], model: string, maxTokens: num
       'Content-Type': 'application/json',
       Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
     },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature: 0.8,
-      max_tokens: maxTokens,
-    }),
+    body: JSON.stringify({ model, messages, temperature: 0.8, max_tokens: maxTokens })
   });
+  
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error('🔥 OpenAI 응답 오류:', response.status, errText);
+    throw new Error(`OpenAI 응답 실패: ${response.status}`);
+  }
+
   return await response.json();
 }
 
@@ -54,26 +56,15 @@ async function callClaude(messages: ChatMessage[], model: string, maxTokens: num
     temperature: 0.8,
     system: systemMessage,
     messages: [
-      {
-        role: 'user',
-        content: [{ type: 'text', text: userMessage }]
-      }
+      { role: 'user', content: [{ type: 'text', text: userMessage }] }
     ]
   });
 
-  const textBlock = response.content.find(
-    (block): block is TextBlock => block.type === 'text'
-  );
+  const textBlock = response.content.find((block): block is TextBlock => block.type === 'text');
   const messageText = textBlock?.text || '';
 
   return {
-    choices: [
-      {
-        message: {
-          content: messageText
-        }
-      }
-    ],
+    choices: [{ message: { content: messageText } }],
     usage: response.usage
   };
 }
@@ -92,6 +83,7 @@ async function callGemini(messages: ChatMessage[], model: string) {
 async function callGrok(messages: ChatMessage[], model: string, maxTokens: number) {
   const system = messages.find(m => m.role === 'system')?.content || '';
   const user = messages.find(m => m.role === 'user')?.content || '';
+
   const response = await fetch('https://api.x.ai/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -105,6 +97,13 @@ async function callGrok(messages: ChatMessage[], model: string, maxTokens: numbe
       max_tokens: maxTokens,
     }),
   });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error('🔥 Grok 응답 오류:', response.status, errText);
+    throw new Error(`Grok 응답 실패: ${response.status}`);
+  }
+
   const data = await response.json();
   return {
     choices: [{ message: { content: data.choices?.[0]?.message?.content || '' } }],
@@ -180,24 +179,20 @@ export async function POST(request: NextRequest) {
       } else if (model.startsWith('claude')) {
         data = await callClaude(messages, apiModel, maxTokens);
       } else if (model.startsWith('gemini')) {
-        data = await callGemini(messages, apiModel); // Gemini는 maxTokens 안 씀
+        data = await callGemini(messages, apiModel);
       } else if (model === 'grok') {
         data = await callGrok(messages, apiModel, maxTokens);
       } else {
         data = await callOpenAI(messages, 'gpt-4.1', maxTokens);
       }
-    } catch {
+    } catch (apiError) {
+      console.warn('⚠️ API 모델 호출 실패, gpt-4.1로 fallback 시도', apiError);
       data = await callOpenAI(messages, 'gpt-4.1', maxTokens);
     }
 
     const answer = data.choices?.[0]?.message?.content || '부처님께서 조용히 침묵하십니다.';
-    console.log('📊 사용 토큰 정보:', {
-      model,
-      usage: data.usage,
-      question,
-      length,
-    });
-    
+    console.log('📊 사용 토큰 정보:', { model, usage: data.usage, question, length });
+
     const { data: inserted, error } = await supabase
       .from('temp_answers')
       .insert([{ question, answer, parent_id: parentId }])
@@ -205,15 +200,24 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error || !inserted) {
+      console.error('❌ Supabase 저장 실패:', error);
       return NextResponse.json({ success: false, message: 'Supabase 저장에 실패했습니다.' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, questionId: inserted.id });
-
-  } catch (error) {
-    return NextResponse.json({
-      success: false,
-      message: error instanceof Error ? error.message : '답변 생성 중 오류',
-    }, { status: 500 });
+  
+  } catch (error: unknown) {
+    console.error('❌ 최상위 오류 발생:', error);
+  
+    let message = '답변 생성 중 알 수 없는 오류';
+    if (error instanceof Error) {
+      message = error.message;
+    } else if (typeof error === 'string') {
+      message = error;
+    } else {
+      message = JSON.stringify(error);
+    }
+  
+    return NextResponse.json({ success: false, message }, { status: 500 });
   }
-}
+  }

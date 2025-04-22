@@ -37,20 +37,39 @@ export default function AskPage() {
   const [previousQA, setPreviousQA] = useState<{ question: string; answer: string } | null>(null);
   const [confirmCancelModal, setConfirmCancelModal] = useState(false);
   const [showGuideModal, setShowGuideModal] = useState(false);
+  const [showSaved, setShowSaved] = useState(false);
+  const [savedAnswers, setSavedAnswers] = useState<any[]>([]);
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
     const fetchPrevious = async () => {
       if (!parentId) return;
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('temp_answers')
         .select('question, answer')
         .eq('id', parentId)
         .single();
-      if (data && !error) {
-        setPreviousQA({ question: data.question, answer: data.answer });
+      if (data) setPreviousQA(data);
+    };
+
+    const fetchUserAndSaved = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      setUser(userData.user);
+
+      if (userData.user) {
+        const { data: answers } = await supabase
+          .from('temp_answers')
+          .select('id, question, answer, created_at')
+          .eq('user_id', userData.user.id)
+          .eq('is_saved', true)
+          .order('saved_at', { ascending: false })
+          .limit(5);
+        setSavedAnswers(answers || []);
       }
     };
+
     fetchPrevious();
+    fetchUserAndSaved();
   }, [parentId]);
 
   const handleNext = () => {
@@ -73,6 +92,9 @@ export default function AskPage() {
   return (
     <>
       <main className="relative min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-white px-6 py-10">
+       
+       
+       
         <div className="w-full z-1 pt-8">
           <h2 className="text-4xl text-red font-semibold text-start">
             부처님의 지혜에<br />귀를 기울여 보세요
@@ -121,8 +143,58 @@ export default function AskPage() {
           >
             작성 내용 삭제
           </button>
+</div>
+<div className="max-w-md w-full z-1 mt-4">
+{/* 토글형 히스토리 여기다가 간다*/}
+          <span className="font-bold text-base mb-2 mr-2">🪷 나의 저장된 문답 보기</span>
+      <button
+        onClick={() => setShowSaved((prev) => !prev)}
+        className="text-sm text-red hover:underline mb-4"
+      >
+        {showSaved ? '숨기기' : '펼쳐보기'}
+      </button>
 
-          <div className="mt-12 mb-6">
+      {showSaved && (
+        <div className="overflow-x-auto no-scrollbar">
+          <div className="flex space-x-4">
+            {user ? (
+              savedAnswers.length > 0 ? (
+                savedAnswers.map((item) => (
+                  <div key={item.id} className="min-w-[300px] bg-[#FFFDF8] p-4 rounded-xl border shadow">
+                    <p className="text-sm text-gray-400 mb-2">{new Date(item.created_at).toLocaleDateString()}</p>
+                    <p className="text-sm font-semibold text-red mb-1">📜 질문</p>
+                    <p className="text-sm text-gray-800 line-clamp-2 mb-2">{item.question}</p>
+                    <p className="text-sm font-semibold text-red mb-1">🪷 응답</p>
+                    <p className="text-sm text-gray-900 line-clamp-4">{item.answer}</p>
+                  </div>
+                ))
+              ) : (
+                <div className="text-sm text-gray-500">저장된 문답이 없습니다.</div>
+              )
+            ) : (
+              <div className="min-w-[300px] bg-[#FFFDF8] p-4 rounded-xl border shadow text-center text-sm text-gray-500">
+                로그인을 하셔야 저장된 문답을 확인할 수 있습니다.
+              </div>
+            )}
+            {user && savedAnswers.length >= 5 && (
+              <div
+                onClick={() => router.push('/me/answers')}
+                className="min-w-[120px] flex justify-center items-center text-red border border-dashed border-red rounded-xl text-sm cursor-pointer hover:bg-red-light hover:text-white"
+              >
+                더 보기 →
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+
+
+
+
+
+
+          <div className="mt-4 mb-6">
             <p className="font-bold text-base mb-2">부처님의 지혜를 빌려올 원천을 선택하세요(QA용)</p>
             <div className="grid grid-cols-2 gap-2">
               {models.map((model) => (
