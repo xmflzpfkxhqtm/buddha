@@ -131,7 +131,7 @@ export default function AskPage() {
 
         <div className="max-w-md w-full z-1 mt-6">
           <textarea
-            className="w-full h-40 p-4 rounded-xl border border-red-light bg-[#FFFDF8] text-base resize-none focus:outline-none focus:ring-2 focus:ring-red"
+            className="w-full h-40 p-4 text-gray-500 rounded-xl border border-red-light bg-[#FFFDF8] text-base resize-none focus:outline-none focus:ring-2 focus:ring-red"
             rows={5}
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
@@ -261,7 +261,7 @@ export default function AskPage() {
 
 
 
-          <div className="mt-8 mb-6">
+          {/* <div className="mt-8 mb-6">
             <p className="font-bold text-base mb-2">부처님의 지혜를 빌려올 원천을 선택하세요(QA용)</p>
             <div className="grid grid-cols-2 gap-2">
               {models.map((model) => (
@@ -279,7 +279,7 @@ export default function AskPage() {
                 </div>
               ))}
             </div>
-          </div>
+          </div> */}
 
           <div className="mt-6 mb-6">
             <p className="font-bold mb-2">답변 길이 선택</p>
@@ -312,7 +312,7 @@ export default function AskPage() {
 
         <button
           onClick={() => setShowGuideModal(true)}
-          className="text-sm text-black underline mt-4 mb-12"
+          className="text-sm text-black underline mt-4 mb-8"
         >
           어떻게 사용하는 건가요?
         </button>

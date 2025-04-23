@@ -202,7 +202,7 @@ export default function Home() {
                 <div className="flex-1 px-3 py-2">
                   <p className="text-base text-left text-white font-medium">부처님께 여쭙기</p>
                   <p className="text-base text-left text-pink-light font-medium">
-                    나의 고민에 대해 부처님이라면 어떤 말씀을 하실까요? 인공지능이 부처님의 지혜로 안내합니다
+                    나의 고민에 대해 부처님이라면 어떤 말씀을 하실까요? <br></br>인공지능이 부처님의 지혜로 안내합니다
                   </p>
                 </div>
               </div>
@@ -224,9 +224,9 @@ export default function Home() {
                   />
                 </div>
                 <div className="flex-1 px-3 py-2">
-                  <p className="text-base text-left text-white font-medium">호날두께 여쭙기</p>
+                  <p className="text-base text-left text-white font-medium">디지털 팔만대장경</p>
                   <p className="text-base text-left text-pink-light font-medium">
-                    나의 고민에 대해 호날두라면 어떤 말씀을 하실까요? 인공지능이 호날두의 지혜로 안내합니다
+                  알기 쉬운 현대어로 풀어쓴 불경 모음<br></br> 방대한 경전의 모든 말씀을 쉽고 편안한 말로 담았습니다
                   </p>
                 </div>
               </div>

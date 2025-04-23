@@ -133,7 +133,7 @@ export default function ConfirmPage() {
           </div>
         )}
 
-        <div className="min-h-[12rem] w-full bg-[#FFFDF8] border border-red-light rounded-xl p-4 text-base text-gray-700 whitespace-pre-wrap mb-4">
+        <div className="min-h-[12rem] w-full bg-[#FFFDF8] border border-red-light rounded-xl p-4 text-base text-gray-500 whitespace-pre-wrap mb-4">
           {question}
         </div>
         <p className="text-center text-gray-600 text-sm mb-4">

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 type AskStore = {
   question: string;
@@ -14,16 +15,29 @@ type AskStore = {
   setParentId: (id: string | null) => void;
 };
 
-export const useAskStore = create<AskStore>((set) => ({
-  question: '',
-  selectedModel: 'gpt4.1',
-  selectedLength: 'short',
-  showModal: false,
-  parentId: null,
+export const useAskStore = create<AskStore>()(
+  persist(
+    (set) => ({
+      question: '',
+      selectedModel: 'gpt4.1',
+      selectedLength: 'short',
+      showModal: false,
+      parentId: null,
 
-  setQuestion: (q) => set({ question: q }),
-  setSelectedModel: (m) => set({ selectedModel: m }),
-  setSelectedLength: (l) => set({ selectedLength: l }),
-  setShowModal: (s) => set({ showModal: s }),
-  setParentId: (id) => set({ parentId: id }),
-}));
+      setQuestion: (q) => set({ question: q }),
+      setSelectedModel: (m) => set({ selectedModel: m }),
+      setSelectedLength: (l) => set({ selectedLength: l }),
+      setShowModal: (s) => set({ showModal: s }),
+      setParentId: (id) => set({ parentId: id }),
+    }),
+    {
+      name: 'ask-store', // localStorage key
+      partialize: (state) => ({
+        question: state.question,
+        selectedModel: state.selectedModel,
+        selectedLength: state.selectedLength,
+        parentId: state.parentId,
+      }),
+    }
+  )
+);

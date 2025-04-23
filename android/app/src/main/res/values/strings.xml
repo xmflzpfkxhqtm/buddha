@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">연등</string>
+    <string name="title_activity_main">연등</string>
+    <string name="package_name">com.lotuslantern.app</string>
+    <string name="custom_url_scheme">com.lotuslantern.app</string>
+</resources>

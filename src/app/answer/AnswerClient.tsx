@@ -11,24 +11,26 @@ import { useBookmarkStore } from '@/stores/useBookmarkStore';
 
 // ✅ 실제 경전명과 매칭되는 인용구만 필터링
 function filterKnownScriptures(answer: string, knownTitles: string[]): string[] {
-    const pattern = /『(.+?)』/g;
-    const matches = new Set<string>();
-    let match;
-  
-    // "대방광불화엄경_1권_GPT4.1번역" → "대방광불화엄경"
-    const baseTitles = knownTitles.map((t) =>
-      t.replace(/_.*$/, '').replace(/\s/g, '').normalize('NFC')
-    );
-  
-    while ((match = pattern.exec(answer)) !== null) {
-      const raw = match[1].trim().replace(/\s/g, '').normalize('NFC');
-      if (baseTitles.includes(raw)) {
-        matches.add(raw);
-      }
+  const pattern = /『(.+?)』/g;
+  const matches = new Set<string>();
+  let match;
+
+  // 예: "대방광불화엄경_1권_GPT4.1번역" → "대방광불화엄경"
+  const baseTitles = knownTitles.map((t) =>
+    t.replace(/_.*$/, '').replace(/\s/g, '').normalize('NFC')
+  );
+
+  while ((match = pattern.exec(answer)) !== null) {
+    let raw = match[1].trim().replace(/\s/g, '').normalize('NFC');
+    // ✅ 『화엄경_31권』 → 『화엄경』
+    raw = raw.replace(/_\d+권$/, '');
+    if (baseTitles.includes(raw)) {
+      matches.add(raw);
     }
-  
-    return Array.from(matches);
   }
+
+  return Array.from(matches);
+}
   
 
 export default function AnswerClient() {
@@ -174,19 +176,24 @@ export default function AnswerClient() {
             <div className="w-full my-12">
               <div className="text-sm text-red-dark font-semibold mb-2">📖 인용된 경전</div>
               <ul className="space-y-2">
-              {validScriptureTitles.map((title, idx) => (
-  <li
-    key={idx}
-    onClick={() => {
-      const formattedTitle = `${title}_GPT4.1번역`;
-      setBookmark(formattedTitle, 0);
-      router.push('/scripture');
-    }}
-    className="cursor-pointer text-red-dark hover:underline text-sm"
-  >
-    {title} 열람 →
-  </li>
-))}
+              {validScriptureTitles.map((title, idx) => {
+  const formattedTitle = scriptureTitles.find((t) =>
+    t.startsWith(title) && t.includes('GPT4.1번역')
+  ) || `${title}_GPT4.1번역`;
+
+  return (
+    <li
+      key={idx}
+      onClick={() => {
+        setBookmark(formattedTitle, 0);
+        router.push('/scripture');
+      }}
+      className="cursor-pointer text-red-dark hover:underline text-sm"
+    >
+      {title} 열람 →
+    </li>
+  );
+})}
 
               </ul>
             </div>

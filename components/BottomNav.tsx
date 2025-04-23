@@ -44,7 +44,7 @@ export default function BottomNav() {
 
   const navItems = [
     { label: '홈', icon: Mountain, path: '/' },
-    { label: '경문', icon: Book, path: '/scripture' },
+    { label: '불경', icon: Book, path: '/scripture' },
     { label: '질문', icon: MessageCircle, path: '/ask' },
     {
       label: user ? '내정보' : '로그인',

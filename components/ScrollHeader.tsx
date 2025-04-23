@@ -29,7 +29,7 @@ export default function ScrollHeader() {
       {/* 우측 상단 사운드 버튼 */}
       <button
         onClick={toggleSound}
-        className="absolute top-4 right-0 z-20 text-beige hover:text-red"
+        className="absolute top-8 right-2 z-20 text-beige hover:text-red"
       >
         {soundEnabled ? <Volume2 size={24} /> : <VolumeX size={24} />}
       </button>
