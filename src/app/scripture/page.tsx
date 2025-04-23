@@ -57,7 +57,6 @@ export default function ScripturePage() {
   const [bookmarkPending, setBookmarkPending] = useState<{ title: string; index: number } | null>(null);
 
   const sentenceRefs = useRef<(HTMLSpanElement | null)[]>([]);
-  const observerRef = useRef<IntersectionObserver | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const indexRef = useRef(currentIndex);
   const [isSearching, setIsSearching] = useState(false);
@@ -185,43 +184,92 @@ export default function ScripturePage() {
     ) {
       setCurrentIndex(bookmarkPending.index);
       setTimeout(() => {
-        sentenceRefs.current[bookmarkPending.index]?.scrollIntoView({ behavior: 'smooth' });
+        sentenceRefs.current[bookmarkPending.index]?.scrollIntoView({   behavior: 'smooth',
+        block: 'center'
+       });
       }, 500);
       clearBookmark();
       setBookmarkPending(null);
     }
   }, [bookmarkPending, selected, displaySentences, clearBookmark]);
 
-  useEffect(() => {
-    if (observerRef.current) observerRef.current.disconnect();
+// ✅ 이거처럼 useEffect 하나 더 추가
+useEffect(() => {
+  const onScroll = () => {
+    if (isSpeaking) return; // ✅ TTS 중에는 무시
 
-    observerRef.current = new IntersectionObserver(entries => {
-      const visible = entries
-        .filter(e => e.isIntersecting)
-        .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-      if (visible.length > 0 && !isSpeaking) {
-        const topIndex = Number(visible[0].target.getAttribute('data-index'));
-        if (!isNaN(topIndex)) setCurrentIndex(topIndex);
+    const centerY = window.innerHeight / 2;
+    let closestIndex = -1;
+    let closestDistance = Infinity;
+
+    sentenceRefs.current.forEach((el, i) => {
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const elementCenter = rect.top + rect.height / 2;
+      const distance = Math.abs(elementCenter - centerY);
+
+      if (distance < closestDistance) {
+        closestIndex = i;
+        closestDistance = distance;
       }
-    }, { threshold: 0.1, rootMargin: '0px 0px -85% 0px' });
+    });
 
-    setTimeout(() => {
-      sentenceRefs.current.forEach(el => el && observerRef.current?.observe(el));
-    }, 100);
-
-    return () => observerRef.current?.disconnect();
-  }, [selected, displaySentences, isSpeaking]);
-
-  const handlePlay = () => {
-    if (isSpeaking) {
-      audioRef.current?.pause();
-      setIsSpeaking(false);
-      return;
+    if (closestIndex !== -1) {
+      setCurrentIndex(closestIndex);
     }
+  };
 
-    let index = currentIndex;
-    setIsSpeaking(true);
+  window.addEventListener('scroll', onScroll, { passive: true });
+  return () => window.removeEventListener('scroll', onScroll);
+}, [isSpeaking]); // ✅ isSpeaking이 변경될 때 다시 등록
 
+useEffect(() => {
+  const stopTTS = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    setIsSpeaking(false);
+  };
+
+  // 페이지 언마운트 시
+  return () => {
+    stopTTS();
+  };
+}, []);
+
+useEffect(() => {
+  const stopTTS = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    setIsSpeaking(false);
+  };
+
+  stopTTS(); // selected / modalTab / showModal 이 바뀔 때도 정지
+}, [selected, modalTab, showModal]);
+
+
+const handlePlay = () => {
+  const stopTTS = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    setIsSpeaking(false);
+  };
+
+  if (isSpeaking) {
+    stopTTS();
+    return;
+  }
+
+  let index = currentIndex;
+  setIsSpeaking(true);
+
+  // ...
+  
     const fetchTTS = async (text: string): Promise<string | null> => {
       try {
         const res = await fetch('/api/tts', {
@@ -241,28 +289,36 @@ export default function ScripturePage() {
         setIsSpeaking(false);
         return;
       }
-
+    
       setCurrentIndex(index);
+    
+      // ✅ 중앙 정렬로 자동 스크롤
+      sentenceRefs.current[index]?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    
       const audioBase64 = await fetchTTS(ttsSentences[index]);
       if (!audioBase64) {
         setIsSpeaking(false);
         return;
       }
-
+    
       const audio = new Audio(`data:audio/mp3;base64,${audioBase64}`);
       audioRef.current = audio;
+    
       audio.onended = () => {
         index++;
         setTimeout(playSentence, 300);
       };
-
+    
       try {
         await audio.play();
       } catch {
         setIsSpeaking(false);
       }
     };
-
+    
     playSentence();
   };
 
@@ -363,7 +419,7 @@ export default function ScripturePage() {
       <div className={`whitespace-pre-wrap font-maruburi bg-white rounded-xl ${fontSizeClass}`}>
         {displaySentences.map((s, i) => (
           <span key={i} data-index={i} ref={(el) => { sentenceRefs.current[i] = el }}
-          className={`block scroll-mt-[128px] ${i === currentIndex ? 'bg-amber-200' : ''} ${bookmarkedIndexes.includes(i) ? 'underline' : ''}`}>
+          className={`block ${i === currentIndex ? 'bg-amber-200' : ''} ${bookmarkedIndexes.includes(i) ? 'underline' : ''}`}>
                       {s}
           </span>
         ))}
@@ -479,7 +535,9 @@ export default function ScripturePage() {
                           setCurrentIndex(index);
                           setShowModal(false);
                           setTimeout(() => {
-                            sentenceRefs.current[index]?.scrollIntoView({ behavior: 'smooth' });
+                            sentenceRefs.current[index]?.scrollIntoView({   behavior: 'smooth',
+                            block: 'center'
+                           });
                           }, 200);
                         }}
                         className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
@@ -528,7 +586,9 @@ export default function ScripturePage() {
                   setShowModal(false);
                   setTimeout(() => {
                     setCurrentIndex(index);
-                    setTimeout(() => sentenceRefs.current[index]?.scrollIntoView({ behavior: 'smooth' }), 300);
+                    setTimeout(() => sentenceRefs.current[index]?.scrollIntoView({   behavior: 'smooth',
+                    block: 'center'
+                   }), 300);
                   }, 200);
                 }}
                 className="w-full text-left px-4 py-4 hover:bg-red-light hover:text-white text-sm"
