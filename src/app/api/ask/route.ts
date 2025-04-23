@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: '요청 본문이 비어있거나 잘못되었습니다.' }, { status: 400 });
     }
 
-    const { question, model = 'gpt4.1', length = 'long', parentId = null } = body;
+    const { question, model = 'gpt4.1-mini', length = 'long', parentId = null } = body;
 
     if (!question || typeof question !== 'string') {
       return NextResponse.json({ success: false, message: '질문이 유효하지 않습니다.' }, { status: 400 });
@@ -188,11 +188,11 @@ export async function POST(request: NextRequest) {
       }
     ];
 
-    const apiModel = modelMapping[model as keyof typeof modelMapping] || 'gpt-4.1';
+    const apiModel = modelMapping[model as keyof typeof modelMapping] || 'gpt-4.1-mini';
     let data;
-
+    
     try {
-      if (model.startsWith('gpt') || model === 'o4-mini') {
+      if (model === 'gpt-4.1-mini') {
         data = await callOpenAI(messages, apiModel, maxTokens);
       } else if (model.startsWith('claude')) {
         data = await callClaude(messages, apiModel, maxTokens);
@@ -201,13 +201,14 @@ export async function POST(request: NextRequest) {
       } else if (model === 'grok') {
         data = await callGrok(messages, apiModel, maxTokens);
       } else {
-        data = await callOpenAI(messages, 'gpt-4.1', maxTokens);
+        // fallback은 무조건 gpt-4.1-mini
+        data = await callOpenAI(messages, 'gpt-4.1-mini', maxTokens);
       }
     } catch (apiError) {
-      console.warn('⚠️ API 모델 호출 실패, gpt-4.1로 fallback 시도', apiError);
-      data = await callOpenAI(messages, 'gpt-4.1', maxTokens);
+      console.warn('⚠️ API 모델 호출 실패, fallback 시도:', apiError);
+      data = await callOpenAI(messages, 'gpt-4.1-mini', maxTokens);
     }
-
+    
     const answer = data.choices?.[0]?.message?.content || '부처님께서 조용히 침묵하십니다.';
     console.log('📊 사용 토큰 정보:', { model, usage: data.usage, question, length });
 
