@@ -6,15 +6,15 @@ import { useAskStore } from '../../stores/askStore';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 
-const models = [
-  { id: 'gpt4.1', name: 'GPT-4.1', description: '가장 강력한 추론 능력' },
-  { id: 'gpt4o', name: 'GPT-4o', description: '빠르고 정확한 균형' },
-  { id: 'gpt-4.1-mini', name: 'GPT-4.1 Mini', description: '경제적인 선택' },
-  { id: 'claude3.7', name: 'Claude 3.7', description: '인간적인 답변' },
-  { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: '구글의 최신 모델' },
-  { id: 'o4-mini', name: 'O4 Mini', description: '인성과 창의성' },
-  { id: 'grok', name: 'Grok 3', description: '유머와 창의성' },
-];
+// const models = [
+//   { id: 'gpt4.1', name: 'GPT-4.1', description: '가장 강력한 추론 능력' },
+//   { id: 'gpt4o', name: 'GPT-4o', description: '빠르고 정확한 균형' },
+//   { id: 'gpt-4.1-mini', name: 'GPT-4.1 Mini', description: '경제적인 선택' },
+//   { id: 'claude3.7', name: 'Claude 3.7', description: '인간적인 답변' },
+//   { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: '구글의 최신 모델' },
+//   { id: 'o4-mini', name: 'O4 Mini', description: '인성과 창의성' },
+//   { id: 'grok', name: 'Grok 3', description: '유머와 창의성' },
+// ];
 
 const lengths = [
   { id: 'short', name: '짧은 답변', description: '간결하지만 깊은 통찰이 담긴 가르침을 빠르게 받아보세요.' },
