@@ -147,7 +147,7 @@ export default function BookmarkPage() {
                           e.stopPropagation();
                           openMemoModal(bm);
                         }}
-                        className="text-base text-blue-600 hover:underline"
+                        className="text-base text-red hover:underline"
                       >
                         메모하기
                       </button>
@@ -157,7 +157,7 @@ export default function BookmarkPage() {
                         e.stopPropagation();
                         setDeleteTargetId(bm.id);
                       }}
-                      className="text-base text-red hover:underline"
+                      className="text-base text-red-light hover:underline"
                     >
                       삭제
                     </button>
@@ -296,7 +296,7 @@ export default function BookmarkPage() {
               </button>
               <button
                 onClick={saveMemo}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm"
+                className="px-4 py-2 bg-red-light text-white rounded-lg text-sm"
               >
                 저장
               </button>
