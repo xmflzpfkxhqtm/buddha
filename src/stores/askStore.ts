@@ -19,7 +19,7 @@ export const useAskStore = create<AskStore>()(
   persist(
     (set) => ({
       question: '',
-      selectedModel: 'gpt4.1',
+      selectedModel: 'gpt-4.1-mini', // ✅ 여기!
       selectedLength: 'short',
       showModal: false,
       parentId: null,
@@ -31,7 +31,7 @@ export const useAskStore = create<AskStore>()(
       setParentId: (id) => set({ parentId: id }),
     }),
     {
-      name: 'ask-store', // localStorage key
+      name: 'ask-store',
       partialize: (state) => ({
         question: state.question,
         selectedModel: state.selectedModel,

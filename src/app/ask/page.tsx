@@ -50,6 +50,14 @@ export default function AskPage() {
   const [selectedItem, setSelectedItem] = useState<TempAnswer | null>(null);
 
   useEffect(() => {
+    // 모델 선택 UI를 감춰뒀으므로 진입 시 강제 설정
+    if (selectedModel !== 'gpt-4.1-mini') {
+      setSelectedModel('gpt-4.1-mini');
+    }
+  }, []);
+  
+
+  useEffect(() => {
     const fetchPrevious = async () => {
       if (!parentId) return;
       const { data } = await supabase.from('temp_answers').select('question, answer').eq('id', parentId).single();
