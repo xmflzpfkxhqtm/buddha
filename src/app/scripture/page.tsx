@@ -520,7 +520,7 @@ export default function ScripturePage() {
         )}
 
         <ul>
-          {globalResults.map(({ title, index, text }, i) => (
+          {globalResults.map(({ title, index }, i) => (
             <li key={`${title}-${index}-${i}`}>
               <button
                 onClick={() => {
