@@ -9,20 +9,17 @@ import type { User } from '@supabase/supabase-js';
 import { useAskStore } from '@/stores/askStore';
 import { useBookmarkStore } from '@/stores/useBookmarkStore';
 
-// ✅ 실제 경전명과 매칭되는 인용구만 필터링
 function filterKnownScriptures(answer: string, knownTitles: string[]): string[] {
   const pattern = /『(.+?)』/g;
   const matches = new Set<string>();
   let match;
 
-  // 예: "대방광불화엄경_1권_GPT4.1번역" → "대방광불화엄경"
   const baseTitles = knownTitles.map((t) =>
     t.replace(/_.*$/, '').replace(/\s/g, '').normalize('NFC')
   );
 
   while ((match = pattern.exec(answer)) !== null) {
     let raw = match[1].trim().replace(/\s/g, '').normalize('NFC');
-    // ✅ 『화엄경_31권』 → 『화엄경』
     raw = raw.replace(/_\d+권$/, '');
     if (baseTitles.includes(raw)) {
       matches.add(raw);
@@ -31,7 +28,12 @@ function filterKnownScriptures(answer: string, knownTitles: string[]): string[] 
 
   return Array.from(matches);
 }
-  
+
+function formatDisplayTitle(rawTitle: string): string {
+  return rawTitle
+    .replace(/_GPT\d+(\.\d+)?번역/, '')
+    .replace(/_/g, ' ');
+}
 
 export default function AnswerClient() {
   const router = useRouter();
@@ -96,17 +98,15 @@ export default function AnswerClient() {
 
   const handleShare = async () => {
     const url = window.location.href;
-  
+
     if (navigator.share) {
       try {
         await navigator.share({
           title: '마음속 부처님과 나눈 이야기',
-          text: "내 질문에 돌아온 부처님의 가르침입니다. 오늘 마음에 닿은 말씀을 함께 나눕니다.",
+          text: '내 질문에 돌아온 부처님의 가르침입니다. 오늘 마음에 닿은 말씀을 함께 나눕니다.',
           url,
         });
-      } catch {
-        // 사용자가 공유를 취소했거나, 예외 발생 시
-      }
+      } catch {}
     } else {
       try {
         await navigator.clipboard.writeText(url);
@@ -117,7 +117,7 @@ export default function AnswerClient() {
       }
     }
   };
-        
+
   const handleSaveToSupabase = async () => {
     if (!user) {
       alert('로그인이 필요합니다!');
@@ -176,25 +176,23 @@ export default function AnswerClient() {
             <div className="w-full my-12">
               <div className="text-sm text-red-dark font-semibold mb-2">📖 인용된 경전</div>
               <ul className="space-y-2">
-              {validScriptureTitles.map((title, idx) => {
-  const formattedTitle = scriptureTitles.find((t) =>
-    t.startsWith(title) && t.includes('GPT4.1번역')
-  ) || `${title}_GPT4.1번역`;
-
-  return (
-    <li
-      key={idx}
-      onClick={() => {
-        setBookmark(formattedTitle, 0);
-        router.push('/scripture');
-      }}
-      className="cursor-pointer text-red-dark hover:underline text-sm"
-    >
-      {title} 열람 →
-    </li>
-  );
-})}
-
+                {validScriptureTitles.map((title, idx) => {
+                  const formattedTitle = scriptureTitles.find((t) =>
+                    t.startsWith(title) && t.includes('GPT4.1번역')
+                  ) || `${title}_GPT4.1번역`;
+                  return (
+                    <li
+                      key={idx}
+                      onClick={() => {
+                        setBookmark(formattedTitle, 0);
+                        router.push('/scripture');
+                      }}
+                      className="cursor-pointer text-red-dark hover:underline text-sm"
+                    >
+                      {formatDisplayTitle(formattedTitle)} 열람 →
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}
@@ -204,12 +202,12 @@ export default function AnswerClient() {
       {done && (
         <div className="w-full flex flex-col space-y-4 mt-12 px-2 mb-12">
           <div className="flex flex-row space-x-4">
-          <button
-  onClick={handleShare}
-  className="w-full py-3 bg-white text-red-dark border border-red font-bold rounded-4xl hover:bg-red transition hover:text-white"
->
-  공유하기
-</button>
+            <button
+              onClick={handleShare}
+              className="w-full py-3 bg-white text-red-dark border border-red font-bold rounded-4xl hover:bg-red transition hover:text-white"
+            >
+              공유하기
+            </button>
             <button
               onClick={handleSaveToSupabase}
               disabled={saved}
@@ -241,18 +239,13 @@ export default function AnswerClient() {
             문답을 이어갑니다
           </button>
         </div>
-        
-        
-   
-)}
-      
-      {showCopiedModal && (
-  <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-sm px-4 py-2 rounded-full shadow-md z-50 transition">
-    ✅ 주소가 복사되었습니다
-  </div>
-)}
+      )}
 
+      {showCopiedModal && (
+        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-sm px-4 py-2 rounded-full shadow-md z-50 transition">
+          ✅ 주소가 복사되었습니다
+        </div>
+      )}
     </main>
-    
   );
 }
