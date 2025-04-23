@@ -28,6 +28,14 @@ export default function AnswerPage() {
     currentPage * ITEMS_PER_PAGE
   );
 
+  function simplifyScriptureCitations(answer: string): string {
+    return answer.replace(/『(.+?)』/g, (_, match) => {
+      const simplified = match.replace(/_\d+권$/, ''); // 예: 대방광불화엄경_10권 → 대방광불화엄경
+      return `『${simplified}』`;
+    });
+  }
+  
+
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
       const user = data.user;
@@ -142,8 +150,8 @@ export default function AnswerPage() {
 
             <p className="text-base font-semibold text-red mb-1">🪷 부처님 말씀</p>
             <p className="text-base text-gray-900 whitespace-pre-line">
-              {selectedItem.answer}
-            </p>
+  {simplifyScriptureCitations(selectedItem.answer)}
+</p>
 
             <button
               onClick={() => {

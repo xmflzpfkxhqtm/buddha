@@ -17,7 +17,12 @@ export default function Home() {
   const [sentence, setSentence] = useState('');
   const [userName, setUserName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true); // 👈 최소 로딩용 상태
-
+  function formatDisplayTitle(rawTitle: string): string {
+    return rawTitle
+      .replace(/_GPT\d+(\.\d+)?번역/, '') // GPT 번역 제거
+      .replace(/_/g, ' ');                // _를 공백으로
+  }
+  
   useEffect(() => {
     const visited = sessionStorage.getItem('visited');
     const isFirstVisit = !visited;
@@ -173,8 +178,8 @@ export default function Home() {
                   오늘의 법문 - {sentence}
                 </p>
                 <p className="mt-0 text-base font-base text-pink-light text-start">
-                  {title || '내용을 불러오는 중입니다.'}
-                </p>
+  {formatDisplayTitle(title) || '내용을 불러오는 중입니다.'}
+</p>
               </div>
             </div>
           )}

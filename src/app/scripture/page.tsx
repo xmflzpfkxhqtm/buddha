@@ -27,6 +27,13 @@ const resolveActualTitle = (title: string, list: string[]): string | null => {
   return candidate || null;
 };
 
+function formatDisplayTitle(rawTitle: string): string {
+  return rawTitle
+    .replace(/_GPT\d+(\.\d+)?번역/, '') // GPT 번역 제거
+    .replace(/_/g, ' ');                // _를 공백으로
+}
+
+
 export default function ScripturePage() {
 
   const router = useRouter();
@@ -332,7 +339,9 @@ export default function ScripturePage() {
       <div className="sticky top-0 z-50 bg-white h-16 py-2">
         <div className="flex items-center justify-between gap-2">
           <div onClick={() => setShowModal(true)} className="cursor-pointer flex items-center max-w-[140px]">
-            <span className="text-base font-semibold text-red-dark truncate">{selected}</span>
+          <span className="text-base font-semibold text-red-dark truncate">
+  {formatDisplayTitle(selected)}
+</span>
             <span className="ml-1 text-base text-red-light">⏷</span>
           </div>
           <span className="text-sm text-red-dark">{`${currentIndex + 1} / ${displaySentences.length}`}</span>
@@ -425,22 +434,23 @@ export default function ScripturePage() {
                         </button>
                         {expandedBase === base && (
                           <ul className="pl-6 mt-1 space-y-1">
-                            {titles
-                              .slice()
-                              .sort((a, b) => a.localeCompare(b, 'ko-KR', { numeric: true }))
-                              .map((title) => (
-                                <li key={title}>
-                                  <button
-                                    onClick={() => {
-                                      setSelected(title);
-                                      setShowModal(false);
-                                    }}
-                                    className="w-full text-left text-sm text-gray-700 hover:underline"
-                                  >
-                                    {title.replace(`${base}_`, '')}
-                                  </button>
-                                </li>
-                              ))}
+{titles
+  .slice()
+  .sort((a, b) => a.localeCompare(b, 'ko-KR', { numeric: true }))
+  .map((title) => (
+    <li key={title}>
+      <button
+        onClick={() => {
+          setSelected(title);
+          setShowModal(false);
+        }}
+        className="w-full text-left text-sm text-gray-700 hover:underline"
+      >
+        {/* 여기를 아래처럼 교체 */}
+        {formatDisplayTitle(title)}
+      </button>
+    </li>
+  ))}
                           </ul>
                         )}
                       </>
@@ -525,7 +535,7 @@ export default function ScripturePage() {
                 disabled={isSearching}
               >
                 <div className="line-clamp-3">
-                  <span className="text-gray-500">[{title} {index + 1}행]</span> {text}
+                <span className="text-gray-500">[{formatDisplayTitle(title)} {index + 1}행]</span>
                 </div>
               </button>
             </li>

@@ -32,7 +32,12 @@ export default function BookmarkPage() {
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
-
+  function formatDisplayTitle(rawTitle: string): string {
+    return rawTitle
+      .replace(/_GPT\d+(\.\d+)?번역/, '') // GPT 번역 제거
+      .replace(/_/g, ' ');                // _를 공백으로
+  }
+    
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
       const user = data.user;
@@ -127,9 +132,9 @@ export default function BookmarkPage() {
               >
                 {/* 1행 */}
                 <div className="flex justify-between items-center mb-1">
-                  <p className="font-semibold text-red-dark text-base truncate">
-                    📖 {bm.title} – {bm.index + 1}행
-                  </p>
+                <p className="font-semibold text-red-dark text-base truncate">
+  📖 {formatDisplayTitle(bm.title)} – {bm.index + 1}행
+</p>
                   <span className="text-base ml-4 text-gray-400 whitespace-nowrap">
                     {new Date(bm.created_at).toLocaleDateString()}
                   </span>
@@ -149,7 +154,7 @@ export default function BookmarkPage() {
                         }}
                         className="text-base text-red hover:underline"
                       >
-                        메모하기
+                        메모
                       </button>
                     )}
                     <button
@@ -188,7 +193,7 @@ export default function BookmarkPage() {
           }}
           className="text-red hover:underline"
         >
-          메모 삭제
+          삭제
         </button>
       </div>
     </div>
