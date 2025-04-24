@@ -256,10 +256,12 @@ export default function AnswerClient() {
   seen.add(key);
 
   const match = scriptureTitles.find((t) =>
-    volume
+  volume
     ? new RegExp(`^${title}[_ ]?${volume}권(?:_|G)`).test(t)
-      : t.startsWith(title) && t.includes('GPT4.1번역')
-  );
+    : scriptureTitles.find((t2) => t2 === title && t2.includes('GPT4.1번역')) || // 1. 정확히 '화엄경' 파일 찾기
+      scriptureTitles.find((t2) => t2.startsWith(`${title}_1권`) && t2.includes('GPT4.1번역')) || // 2. 화엄경_1권 찾기
+      scriptureTitles.find((t2) => t2.startsWith(title) && t2.includes('GPT4.1번역')) // 3. 그 외 화엄경 시작하는 아무거나
+);
 
   if (!match) return null;
 
