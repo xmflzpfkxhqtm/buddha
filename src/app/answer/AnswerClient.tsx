@@ -17,22 +17,23 @@ function filterKnownScriptures(answer: string, knownTitles: string[]): string[] 
   const normalizedTitles = knownTitles.map((t) => ({
     raw: t,
     normalized: t
-      .replace(/_GPT\d+(\.\d+)?번역/, '')
-      .replace(/_/g, '')
-      .replace(/\s/g, '')
+      .replace(/_GPT\d+(\.\d+)?번역/, '') // GPT 버전 제거
+      .replace(/_/g, '')                  // 언더스코어 제거
+      .replace(/\s/g, '')                 // 공백 제거
       .normalize('NFC'),
   }));
 
   while ((match = pattern.exec(answer)) !== null) {
-    const rawInQuote = match[1].replace(/\s/g, '').normalize('NFC');
+    const rawInQuote = match[1].split(/[\s_]/)[0]  // 『현양성교론 제1권』 → 현양성교론
+      .replace(/\s/g, '')
+      .normalize('NFC');
 
-    // 가장 잘 맞는 title을 찾아서 연결
     const found = normalizedTitles.find(({ normalized }) =>
-      rawInQuote.startsWith(normalized)
+      normalized.startsWith(rawInQuote)
     );
 
     if (found) {
-      matches.add(found.raw); // 실제 파일명 그대로 반환
+      matches.add(found.raw); // 실제 파일명 추가
     }
   }
 
