@@ -105,9 +105,17 @@ export default function ScriptureModal({
 
               <div className="flex-1 space-y-2 overflow-y-auto max-h-[50vh]">
                 <div>
-                  <button disabled className="h-8 w-full px-4 text-left bg-red-100 text-red-dark font-semibold rounded-lg">
-                    현재 『{formatDisplayTitle(selected)}』 열람 중
-                  </button>
+                <button
+  disabled
+  className="h-8 w-full px-4 text-left bg-red-100 text-red-dark font-semibold rounded-lg flex items-center justify-start"
+>
+  <span className="truncate whitespace-nowrap overflow-hidden">
+    {formatDisplayTitle(selected).replace(/\s*\d+권$/, '')}
+  </span>
+  <span className="ml-1 flex-shrink-0">
+    {formatDisplayTitle(selected).match(/\d+권$/)?.[0] || ''}
+  </span>
+</button>
                 </div>
 
                 <ul className="space-y-2">
