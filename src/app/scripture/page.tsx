@@ -475,7 +475,7 @@ const handlePlay = () => {
                           setSelected(titles[0]);
                           setShowModal(false);
                         }}
-                        className="w-full px-4 py-2 text-left bg-white hover:bg-pink-light rounded-lg"
+                        className="w-full px-4 py-2 text-left bg-white hover:bg-red-100 rounded-lg"
                       >
                         {base}
                       </button>
@@ -483,7 +483,7 @@ const handlePlay = () => {
                       <>
                         <button
                           onClick={() => setExpandedBase(expandedBase === base ? null : base)}
-                          className="w-full flex justify-between items-center px-4 py-2 bg-white hover:bg-pink-light rounded-lg"
+                          className="w-full flex justify-between items-center px-4 py-2 bg-white hover:bg-red-100 rounded-lg"
                         >
                           <span>{base}</span>
                           <span>{expandedBase === base ? '⏶' : '⏷'}</span>
@@ -540,7 +540,7 @@ const handlePlay = () => {
                            });
                           }, 200);
                         }}
-                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
+                        className="w-full text-left px-4 py-2 hover:bg-red-100 text-sm"
                       >
                         <div className="line-clamp-3">
                           <span className="text-gray-500">[{index + 1}행]</span> {text}
@@ -573,33 +573,41 @@ const handlePlay = () => {
 
         {isSearching && (
           <p className="text-sm text-center text-gray-500 mb-4">
-            모든 경전에서 해당 문장을 찾고 있어요...
+            모든 경전에서 해당 문장을 찾고 있습니다...
           </p>
         )}
 
         <ul>
-          {globalResults.map(({ title, index }, i) => (
-            <li key={`${title}-${index}-${i}`}>
-              <button
-                onClick={() => {
-                  setSelected(title);
-                  setShowModal(false);
-                  setTimeout(() => {
-                    setCurrentIndex(index);
-                    setTimeout(() => sentenceRefs.current[index]?.scrollIntoView({   behavior: 'smooth',
-                    block: 'center'
-                   }), 300);
-                  }, 200);
-                }}
-                className="w-full text-left px-4 py-4 hover:bg-red-light hover:text-white text-sm"
-                disabled={isSearching}
-              >
-                <div className="line-clamp-3">
-                <span className="text-gray-500">[{formatDisplayTitle(title)} {index + 1}행]</span>
-                </div>
-              </button>
-            </li>
-          ))}
+        {globalResults.map(({ title, index }, i) => (
+  <li key={`${title}-${index}-${i}`}>
+    <button
+      onClick={() => {
+        setSelected(title);
+        setShowModal(false);
+        setTimeout(() => {
+          setCurrentIndex(index);
+          setTimeout(() => sentenceRefs.current[index]?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+          }), 300);
+        }, 200);
+      }}
+      className="w-full text-left px-4 py-4 hover:bg-red-100 hover:text-white text-sm"
+      disabled={isSearching}
+    >
+      <div className="line-clamp-3">
+        <span className="text-gray-500">
+          [{formatDisplayTitle(title)} {index + 1}행]
+        </span>
+        {/* ✅ 추가: 문장 본문 표시 */}
+        <div className="mt-1 text-black">
+          {globalResults[i]?.text || '(본문을 불러오지 못했습니다)'}
+        </div>
+      </div>
+    </button>
+  </li>
+))}
+
         </ul>
       </>
     )}
@@ -640,14 +648,14 @@ const handlePlay = () => {
 )}
 
 {isSearching && (
-  <div className="fixed inset-0 bg-black/30 backdrop-blur-xs z-[150] flex flex-col items-center justify-center">
+  <div className="fixed inset-0 bg-red/10 backdrop-blur-xs z-[150] flex flex-col items-center justify-center">
 <Image
-  src="/lotusbeige.png"
+  src="/logo.png"
   alt="로딩"
   width={64}
   height={64}
-  className="animate-float mb-4"
-/>    <p className="text-red text-xl font-semibold">전체 검색 중입니다...</p>
+  className="animate-float rounded-4xl mb-4"
+/>    <p className="text-black text-xl font-semibold">팔만대장경 전체 검색 중입니다</p>
   </div>
 )}
 

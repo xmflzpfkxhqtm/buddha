@@ -43,6 +43,7 @@ export default function AnswerClient() {
 
   const [question, setQuestion] = useState('');
   const [fullAnswer, setFullAnswer] = useState('');
+  
   const [scriptureTitles, setScriptureTitles] = useState<string[]>([]);
   const [done, setDone] = useState(false);
   const [user, setUser] = useState<User | null>(null);
@@ -95,7 +96,12 @@ export default function AnswerClient() {
   const handleEdit = () => {
     router.push('/ask');
   };
-
+  const formattedAnswer = fullAnswer.replace(/『(.+?)』/g, (match, p1) => {
+    const matchedRaw = scriptureTitles.find((t) => t.startsWith(p1)) || p1;
+    const display = formatDisplayTitle(matchedRaw);
+    return `『${display}』`;
+  });
+  
   const handleShare = async () => {
     const url = window.location.href;
 
@@ -162,7 +168,7 @@ export default function AnswerClient() {
         </div>
         <div className="max-w-md w-full pt-4">
           <div className="p-4 rounded-xl shadow-xl border font-maruburi border-red mb-6 whitespace-pre-wrap text-base text-black min-h-[160px]">
-            {fullAnswer}
+            {formattedAnswer}
           </div>
 
           <div className="w-full h-12 bg-red-light rounded-xl flex flex-row items-center mt-6 pl-1 justify-start">
