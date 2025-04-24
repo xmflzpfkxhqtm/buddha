@@ -79,10 +79,13 @@ function filterKnownScriptures(answer: string, knownTitles: string[]): Scripture
 }
 
 
-function formatDisplayTitle(rawTitle: string): string {
-  return rawTitle
+function formatDisplayTitle(rawTitle: string, volume?: number): string {
+  const base = rawTitle
     .replace(/_GPT\d+(\.\d+)?번역/, '')
+    .replace(/_\d+권/, '')   // 권 정보 제거
     .replace(/_/g, ' ');
+
+  return volume ? `${base} ${volume}권` : base;
 }
 
 export default function AnswerClient() {
@@ -232,20 +235,20 @@ export default function AnswerClient() {
             <div className="w-full my-12">
               <div className="text-sm text-red-dark font-semibold mb-2">📖 인용된 경전</div>
               <ul className="space-y-2">
-{validScriptureTitles.map(({ title, volume }, idx) => {
+              {validScriptureTitles.map(({ title, volume }, idx) => {
   const candidates = scriptureTitles.filter((t) =>
     t.startsWith(title) && t.includes('GPT4.1번역')
   );
 
   const formattedTitle = volume
-  ? candidates.find((t) => new RegExp(`_${volume}권(?:_|_)`).test(t)) || candidates[0]
-  : candidates.sort((a, b) => {
-      const getVol = (s: string) => {
-        const match = s.match(/(\d+)권/);
-        return match ? parseInt(match[1]) : Infinity;
-      };
-      return getVol(a) - getVol(b);
-    })[0];
+    ? candidates.find((t) => new RegExp(`_${volume}권(?:_|G)`).test(t)) || candidates[0]
+    : candidates.sort((a, b) => {
+        const getVol = (s: string) => {
+          const match = s.match(/(\d+)권/);
+          return match ? parseInt(match[1]) : Infinity;
+        };
+        return getVol(a) - getVol(b);
+      })[0];
 
   return (
     <li
@@ -256,7 +259,7 @@ export default function AnswerClient() {
       }}
       className="cursor-pointer text-red-dark hover:underline text-sm"
     >
-      {formatDisplayTitle(formattedTitle)} 열람 →
+      {formatDisplayTitle(formattedTitle, volume)} 열람 →
     </li>
   );
 })}
