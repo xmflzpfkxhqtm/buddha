@@ -96,7 +96,7 @@ export default function ScriptureModal({
                   <button
                     key={initial}
                     onClick={() => setInitialFilter(initial)}
-                    className={`px-3 py-1 text-base text-start w-16 ${initialFilter === initial ? 'bg-red-100 text-black font-semibold' : 'bg-white text-red-dark border-red'}`}
+                    className={`px-3 py-1 text-base text-start w-16 ${initialFilter === initial ? 'rounded-lg bg-red-100 text-black font-semibold' : 'bg-white text-red-dark border-red'}`}
                   >
                     {initial}
                   </button>
@@ -105,7 +105,7 @@ export default function ScriptureModal({
 
               <div className="flex-1 space-y-2 overflow-y-auto max-h-[50vh]">
                 <div>
-                  <button disabled className="w-full px-4 text-left bg-red-100 text-red-dark font-semibold rounded-lg">
+                  <button disabled className="h-8 w-full px-4 text-left bg-red-100 text-red-dark font-semibold rounded-lg">
                     현재 『{formatDisplayTitle(selected)}』 열람 중
                   </button>
                 </div>
