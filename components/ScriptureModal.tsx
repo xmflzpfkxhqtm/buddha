@@ -1,8 +1,6 @@
 'use client';
-import { Dispatch, RefObject, SetStateAction } from 'react';
 
-import { useEffect } from 'react';
-import Image from 'next/image';
+import { RefObject, useEffect } from 'react';
 
 interface GlobalSearchResult {
   title: string;
@@ -30,8 +28,9 @@ interface ScriptureModalProps {
   handleGlobalSearch: () => void;
   setCurrentIndex: (i: number) => void;
   isSearching: boolean;
-  sentenceRefs: RefObject<(HTMLSpanElement | null)[]>; // ✅ 이 줄 추가
-
+  sentenceRefs: RefObject<(HTMLSpanElement | null)[]>;
+  displaySentences: string[]; // ✅ 본문 검색에 필요
+  setShowModal: (b: boolean) => void; // ✅ 본문 검색 버튼 닫기에 필요
 }
 
 export default function ScriptureModal({
@@ -53,19 +52,22 @@ export default function ScriptureModal({
   globalResults,
   handleGlobalSearch,
   setCurrentIndex,
-  sentenceRefs, // ✅ 추가
   isSearching,
+  sentenceRefs,
+  displaySentences,
+  setShowModal,
 }: ScriptureModalProps) {
   useEffect(() => {
     if (modalTab !== 'global' && isSearching) {
       setSearch('');
     }
-  }, [modalTab]);
+  }, [modalTab, setSearch]);
 
   return (
     <div onClick={onClose} className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[100] flex items-end justify-center">
       <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-t-2xl p-4 h-[80vh] overflow-y-auto w-full max-w-md flex flex-col justify-between">
         <div>
+          {/* 탭 메뉴 */}
           <div className="flex mb-4">
             {(['title', 'content', 'global'] as const).map(tab => (
               <button
@@ -78,13 +80,15 @@ export default function ScriptureModal({
             ))}
           </div>
 
+          {/* 검색창 */}
           <input
             placeholder="검색어 입력..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
             className="w-full mb-4 px-4 py-2 border rounded-lg"
           />
 
+          {/* 경전명 검색 */}
           {modalTab === 'title' && (
             <div className="flex w-full">
               <div className="flex flex-col mr-4 space-y-1">
@@ -101,13 +105,11 @@ export default function ScriptureModal({
 
               <div className="flex-1 space-y-2 overflow-y-auto max-h-[50vh]">
                 <div>
-                  <button
-                    disabled
-                    className="w-full px-4 text-left bg-red-100 text-red-dark font-semibold rounded-lg"
-                  >
+                  <button disabled className="w-full px-4 text-left bg-red-100 text-red-dark font-semibold rounded-lg">
                     현재 『{formatDisplayTitle(selected)}』 열람 중
                   </button>
                 </div>
+
                 <ul className="space-y-2">
                   {Object.entries(groupedTitles)
                     .filter(([base]) => {
@@ -167,6 +169,42 @@ export default function ScriptureModal({
             </div>
           )}
 
+          {/* 본문 검색 */}
+          {modalTab === 'content' && (
+            <>
+              {search.trim().length === 0 ? (
+                <p className="text-center text-sm text-gray-500 mt-4">
+                  검색어를 입력하면 현재 경전에서 검색됩니다.
+                </p>
+              ) : (
+                <ul>
+                  {displaySentences
+                    .map((s, i) => ({ text: s, index: i }))
+                    .filter(({ text }) => text.includes(search))
+                    .map(({ text, index }) => (
+                      <li key={index}>
+                        <button
+                          onClick={() => {
+                            setCurrentIndex(index);
+                            setShowModal(false);
+                            setTimeout(() => {
+                              sentenceRefs.current[index]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }, 200);
+                          }}
+                          className="w-full text-left px-4 py-2 hover:bg-red-100 text-sm"
+                        >
+                          <div className="line-clamp-3">
+                            <span className="text-gray-500">[{index + 1}행]</span> {text}
+                          </div>
+                        </button>
+                      </li>
+                    ))}
+                </ul>
+              )}
+            </>
+          )}
+
+          {/* 전체 검색 */}
           {modalTab === 'global' && (
             <>
               <button
@@ -176,6 +214,7 @@ export default function ScriptureModal({
               >
                 {isSearching ? '🔍 검색 중입니다...' : '전체 검색 실행'}
               </button>
+
               <ul>
                 {globalResults.map(({ title, index, text }, i) => (
                   <li key={`${title}-${index}-${i}`}>
