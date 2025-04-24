@@ -208,6 +208,7 @@ export default function AnswerClient() {
   };
 
   const validScriptureTitles = filterKnownScriptures(fullAnswer, scriptureTitles);
+  const seen = new Set<string>();
 
   return (
     <main className="relative min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-white px-6 py-10">
@@ -236,31 +237,30 @@ export default function AnswerClient() {
             <div className="w-full my-12">
               <div className="text-sm text-red-dark font-semibold mb-2">📖 인용된 경전</div>
               <ul className="space-y-2">
-              {validScriptureTitles.map(({ title, volume }, idx) => {
-  const candidates = scriptureTitles.filter((t) =>
-    t.startsWith(title) && t.includes('GPT4.1번역')
+
+{validScriptureTitles.map(({ title, volume }, idx) => {
+  const key = `${title}_${volume ?? 'no-volume'}`;
+  if (seen.has(key)) return null;
+  seen.add(key);
+
+  const match = scriptureTitles.find((t) =>
+    volume
+      ? t.startsWith(title) && t.includes(`${volume}권`) && t.includes('GPT4.1번역')
+      : t.startsWith(title) && t.includes('GPT4.1번역')
   );
 
-  const formattedTitle = volume
-    ? candidates.find((t) => new RegExp(`_${volume}권(?:_|G)`).test(t)) || candidates[0]
-    : candidates.sort((a, b) => {
-        const getVol = (s: string) => {
-          const match = s.match(/(\d+)권/);
-          return match ? parseInt(match[1]) : Infinity;
-        };
-        return getVol(a) - getVol(b);
-      })[0];
+  if (!match) return null;
 
   return (
     <li
       key={idx}
       onClick={() => {
-        setBookmark(formattedTitle, 0);
+        setBookmark(match, 0);
         router.push('/scripture');
       }}
       className="cursor-pointer text-red-dark hover:underline text-sm"
     >
-      {formatDisplayTitle(formattedTitle, volume)} 열람 →
+      {formatDisplayTitle(match, volume)} 열람 →
     </li>
   );
 })}
