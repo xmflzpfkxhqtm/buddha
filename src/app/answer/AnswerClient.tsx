@@ -76,7 +76,32 @@ function filterKnownScriptures(answer: string, knownTitles: string[]): Scripture
     }
   }
 
-  return matches;
+ // 중복 제거 및 volume 없는 인용 제거
+const seen = new Map<string, boolean>();
+
+const uniqueMatches = matches.filter(({ title, volume }) => {
+  const key = title;
+
+  if (seen.has(key)) {
+    // 이미 본 title이 있는데, 그게 volume 있는 항목이면 이번 건 스킵
+    if (seen.get(key) === true) return false;
+
+    // 기존에 volume 없는 걸 봤고, 지금 volume 있음이면 교체
+    if (volume !== undefined) {
+      seen.set(key, true);
+      return true;
+    }
+
+    return false;
+  } else {
+    // 처음 보는 title
+    seen.set(key, volume !== undefined);
+    return true;
+  }
+});
+
+return uniqueMatches;
+
 }
 
 
