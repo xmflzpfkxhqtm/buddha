@@ -14,15 +14,25 @@ function filterKnownScriptures(answer: string, knownTitles: string[]): string[] 
   const matches = new Set<string>();
   let match;
 
-  const baseTitles = knownTitles.map((t) =>
-    t.replace(/_.*$/, '').replace(/\s/g, '').normalize('NFC')
-  );
+  const normalizedTitles = knownTitles.map((t) => ({
+    raw: t,
+    normalized: t
+      .replace(/_GPT\d+(\.\d+)?번역/, '')
+      .replace(/_/g, '')
+      .replace(/\s/g, '')
+      .normalize('NFC'),
+  }));
 
   while ((match = pattern.exec(answer)) !== null) {
-    let raw = match[1].trim().replace(/\s/g, '').normalize('NFC');
-    raw = raw.replace(/_\d+권$/, '');
-    if (baseTitles.includes(raw)) {
-      matches.add(raw);
+    const rawInQuote = match[1].replace(/\s/g, '').normalize('NFC');
+
+    // 가장 잘 맞는 title을 찾아서 연결
+    const found = normalizedTitles.find(({ normalized }) =>
+      rawInQuote.startsWith(normalized)
+    );
+
+    if (found) {
+      matches.add(found.raw); // 실제 파일명 그대로 반환
     }
   }
 
