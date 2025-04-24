@@ -152,7 +152,7 @@ export default function BookmarkPage() {
                           e.stopPropagation();
                           openMemoModal(bm);
                         }}
-                        className="text-base text-red hover:underline"
+                        className="text-sm text-red hover:underline"
                       >
                         메모
                       </button>
@@ -162,7 +162,7 @@ export default function BookmarkPage() {
                         e.stopPropagation();
                         setDeleteTargetId(bm.id);
                       }}
-                      className="text-base text-red-light hover:underline"
+                      className="text-sm text-red-light hover:underline"
                     >
                       삭제
                     </button>
@@ -182,7 +182,7 @@ export default function BookmarkPage() {
             e.stopPropagation();
             openMemoModal(bm);
           }}
-          className="text-gray hover:underline"
+          className="text-sm text-gray hover:underline"
         >
           수정
         </button>
@@ -191,7 +191,7 @@ export default function BookmarkPage() {
             e.stopPropagation();
             deleteMemo(bm);
           }}
-          className="text-red hover:underline"
+          className="text-sm text-red hover:underline"
         >
           삭제
         </button>
