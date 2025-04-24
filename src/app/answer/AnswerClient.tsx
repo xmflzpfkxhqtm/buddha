@@ -41,11 +41,12 @@ function filterKnownScriptures(answer: string, knownTitles: string[]): Scripture
   }));
 
   const patterns = [
-    /『(.+?)』[^『\n\r]*?(\d+)\s*권/g,       // 『경전명』 5권 or 『경전명(한자)』 제2권
-    /『(.+?)_(\d+)권』/g,                   // 『경전명_3권』
-    /『(.+?)\s*(\d+)권』/g,                 // 『경전명 10권』
+    /『(.+?)_(\d+)권』/g,                  // 『현양성교론_3권』 우선
+    /『(.+?)』[^『\n\r]*?(\d+)\s*권/g,     // 『묘법연화경』 3권
+    /『(.+?)\s*(\d+)권』/g,                // 『묘법연화경 3권』 (마지막으로)
+    /『(.+?)』/g  // 기본 꺽쇠 인용
   ];
-
+  
   for (const pattern of patterns) {
     let match;
     while ((match = pattern.exec(answer)) !== null) {
