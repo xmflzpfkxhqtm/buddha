@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useAskStore } from '../../../stores/askStore';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import Loading from '../../../../components/Loading';
 
@@ -15,13 +15,14 @@ export default function ConfirmPage() {
   const [showLoading, setShowLoading] = useState(false);
 
   const [previousQA, setPreviousQA] = useState<{ question: string; answer: string } | null>(null);
-  const [confirmCancelModal, setConfirmCancelModal] = useState(false); // ✅ 추가
+  const [confirmCancelModal, setConfirmCancelModal] = useState(false);
+
+  const questionIdRef = useRef<string | null>(null); // ✅ 새로 추가됨
 
   useEffect(() => {
-    // 페이지 진입 시 백엔드 서버를 미리 깨워둡니다
+    // 백엔드 API pre-warm
     fetch('/api/ask/ping').catch(() => {});
   }, []);
-  
 
   useEffect(() => {
     const fetchPrevious = async () => {
@@ -38,28 +39,41 @@ export default function ConfirmPage() {
     fetchPrevious();
   }, [parentId]);
 
+  // ✅ 백그라운드 복귀 후 재전송 로직
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && fadeOut && questionIdRef.current) {
+        router.push(`/answer?questionId=${questionIdRef.current}`);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [fadeOut]);
+
   const handleSubmit = async () => {
     if (!question) return;
-  
+
     setIsLoading(true);
     setShowLoading(true);
-  
+
     try {
       const minimumTimePromise = new Promise((resolve) => setTimeout(resolve, 3000));
-  
+
       const response = await fetch('/api/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question, parentId, length: selectedLength }),
       });
-  
+
       type AskResponse = {
         questionId?: string;
         error?: string;
       };
-      
+
       let data: AskResponse = {};
-            try {
+      try {
         data = await response.json();
       } catch (jsonError) {
         console.error('❌ JSON 파싱 실패:', jsonError);
@@ -68,16 +82,17 @@ export default function ConfirmPage() {
         setShowLoading(false);
         return;
       }
-  
+
       await minimumTimePromise;
-  
+
       if (response.ok && data.questionId) {
+        questionIdRef.current = data.questionId; // ✅ push 실패 대비 ref 저장
         setQuestion('');
         setParentId(null);
         setFadeOut(true);
-        setTimeout(() => {
-          router.push(`/answer?questionId=${data.questionId}`);
-        }, 1000);
+
+        await new Promise((resolve) => setTimeout(resolve, 1000)); // ✅ 안정성 개선
+        router.push(`/answer?questionId=${data.questionId}`);
       } else {
         alert(data?.error || '답변을 받아오는 데 실패했습니다.');
         setIsLoading(false);
@@ -85,14 +100,13 @@ export default function ConfirmPage() {
       }
     } catch (error) {
       console.error('❌ fetch 실패 또는 네트워크 오류:', error);
-      // ❗️이전 단계에서 alert가 이미 떴다면 무시됨
       if (!isLoading) return;
       alert('잠시 후 다시 시도해주세요.');
       setIsLoading(false);
       setShowLoading(false);
     }
   };
-  
+
   const handleBack = () => {
     router.push('/ask');
   };
@@ -142,13 +156,16 @@ export default function ConfirmPage() {
         <div className="min-h-[12rem] w-full bg-[#FFFDF8] border border-red-light rounded-xl p-4 text-base text-gray-500 whitespace-pre-wrap mb-4">
           {question}
         </div>
+
         <div className="flex flex-row w-full space-x-6 mb-4">
-        <p className="text-start text-red text-sm mb-4">
-        고요히 응시한 물음일수록, 그 안에 담긴 마음의 결이 섬세할수록<br />
-  부처님의 가르침은 더욱 깊고 분명하게 되돌아옵니다.<br /><br />
-  질문에는 상황과 감정을 구체적으로 담아보세요.<br />
-  질문이 자세할수록, 답변도 깊어집니다.
-</p></div>
+          <p className="text-start text-red text-sm mb-4">
+            고요히 응시한 물음일수록, 그 안에 담긴 마음의 결이 섬세할수록<br />
+            부처님의 가르침은 더욱 깊고 분명하게 되돌아옵니다.<br /><br />
+            질문에는 상황과 감정을 구체적으로 담아보세요.<br />
+            질문이 자세할수록, 답변도 깊어집니다.
+          </p>
+        </div>
+
         <div className="flex flex-row w-full space-x-6 mb-12">
           <button
             onClick={handleBack}
@@ -167,7 +184,6 @@ export default function ConfirmPage() {
         </div>
       </main>
 
-      {/* ✅ 확인 모달 */}
       {confirmCancelModal && (
         <div
           onClick={() => setConfirmCancelModal(false)}
