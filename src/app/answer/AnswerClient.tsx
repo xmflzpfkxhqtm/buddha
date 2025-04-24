@@ -270,7 +270,7 @@ export default function AnswerClient() {
 
   const match = scriptureTitles.find((t) =>
     volume
-      ? t.startsWith(title) && t.includes(`${volume}권`) && t.includes('GPT4.1번역')
+    ? new RegExp(`^${title}[_ ]?${volume}권(?:_|G)`).test(t)
       : t.startsWith(title) && t.includes('GPT4.1번역')
   );
 
