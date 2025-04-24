@@ -28,9 +28,7 @@ function levenshtein(a: string, b: string): number {
 type ScriptureMatch = { title: string; volume?: number };
 
 function filterKnownScriptures(answer: string, knownTitles: string[]): ScriptureMatch[] {
-  const pattern = /『(.+?)』/g;
   const matches: ScriptureMatch[] = [];
-  let match;
 
   const normalizedTitles = knownTitles.map((t) => ({
     raw: t,
@@ -42,27 +40,38 @@ function filterKnownScriptures(answer: string, knownTitles: string[]): Scripture
       .normalize('NFC'),
   }));
 
-  while ((match = pattern.exec(answer)) !== null) {
-    const inQuote = match[1];
-    const rawInQuote = inQuote.replace(/\s/g, '').normalize('NFC');
+  const patterns = [
+    /『(.+?)』[^『\n\r]*?(\d+)\s*권/g,       // 『경전명』 5권 or 『경전명(한자)』 제2권
+    /『(.+?)_(\d+)권』/g,                   // 『경전명_3권』
+    /『(.+?)\s*(\d+)권』/g,                 // 『경전명 10권』
+  ];
 
-    const volumeMatch = inQuote.match(/(\d+)권/);
-    const volume = volumeMatch ? parseInt(volumeMatch[1]) : undefined;
+  for (const pattern of patterns) {
+    let match;
+    while ((match = pattern.exec(answer)) !== null) {
+      const inQuote = match[1];
+      const volume = parseInt(match[2]);
 
-    let bestMatch = null;
-    let bestScore = Infinity;
+      const baseInQuote = inQuote
+        .replace(/\(.*?\)/g, '') // 괄호(한자 등) 제거
+        .replace(/\s/g, '')
+        .normalize('NFC');
 
-    for (const { raw, base } of normalizedTitles) {
-      const score = levenshtein(rawInQuote, base);
-      if (score < bestScore) {
-        bestScore = score;
-        bestMatch = raw;
+      let bestMatch = null;
+      let bestScore = Infinity;
+
+      for (const { raw, base } of normalizedTitles) {
+        const score = levenshtein(baseInQuote, base);
+        if (score < bestScore) {
+          bestScore = score;
+          bestMatch = raw;
+        }
       }
-    }
 
-    if (bestScore <= 5 && bestMatch) {
-      const baseTitle = bestMatch.replace(/_GPT.*$/, '').replace(/_\d+권$/, '');
-      matches.push({ title: baseTitle, volume });
+      if (bestScore <= 5 && bestMatch) {
+        const baseTitle = bestMatch.replace(/_GPT.*$/, '').replace(/_\d+권$/, '');
+        matches.push({ title: baseTitle, volume });
+      }
     }
   }
 
