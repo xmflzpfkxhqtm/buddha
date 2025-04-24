@@ -18,6 +18,12 @@ export default function ConfirmPage() {
   const [confirmCancelModal, setConfirmCancelModal] = useState(false); // ✅ 추가
 
   useEffect(() => {
+    // 페이지 진입 시 백엔드 서버를 미리 깨워둡니다
+    fetch('/api/ask/ping').catch(() => {});
+  }, []);
+  
+
+  useEffect(() => {
     const fetchPrevious = async () => {
       if (!parentId) return;
       const { data, error } = await supabase
