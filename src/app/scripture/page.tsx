@@ -13,11 +13,6 @@ interface GlobalSearchResult {
   index: number;
   text: string;
 }
-const chosungMap: Record<string, string> = {
-  'ㄱ': '가', 'ㄴ': '나', 'ㄷ': '다', 'ㄹ': '라', 'ㅁ': '마',
-  'ㅂ': '바', 'ㅅ': '사', 'ㅇ': '아', 'ㅈ': '자', 'ㅊ': '차',
-  'ㅋ': '카', 'ㅌ': '타', 'ㅍ': '파', 'ㅎ': '하'
-};
 
 const getChosung = (char: string): string => {
   const code = char.charCodeAt(0) - 44032;
