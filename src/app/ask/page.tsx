@@ -169,8 +169,12 @@ export default function AskPage() {
   <ul className="list-disc list-outside space-y-2 mx-4 mb-4 text-sm text-gray-700 whitespace-pre-line">
     {exampleQuestions.map((ex, i) => (
       <li
-        key={i}
-        onClick={() => setQuestion(ex)}
+      key={i}
+      onClick={() => {
+        setQuestion(ex);
+        setShowExamples(false); // ✅ 여기 추가
+      }}
+          
         className="cursor-pointer hover:text-red-dark hover:underline"
       >
         {ex}

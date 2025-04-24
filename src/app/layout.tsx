@@ -12,6 +12,10 @@ const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin']
 export const metadata: Metadata = {
   title: '연등',
   description: '내 손안의 작은 법당',
+  icons: {
+    icon: '/favicon.ico', // ✅ 여기에 경로 지정
+  },
+
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
