@@ -182,7 +182,7 @@ export default function AskPage() {
 
         <div className="max-w-md w-full z-1 mt-2">
           <textarea
-            className="w-full h-40 p-4 text-gray-500 rounded-xl border border-red-light bg-[#FFFDF8] text-base resize-none focus:outline-none focus:ring-2 focus:ring-red"
+            className="w-full h-40 p-4 text-black rounded-xl border border-red-light bg-[#FFFDF8] text-base resize-none focus:outline-none focus:ring-2 focus:ring-red"
             rows={5}
             value={question}
             onChange={(e) => setQuestion(e.target.value)}

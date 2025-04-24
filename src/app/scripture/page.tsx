@@ -13,6 +13,30 @@ interface GlobalSearchResult {
   index: number;
   text: string;
 }
+const chosungMap: Record<string, string> = {
+  'ㄱ': '가', 'ㄴ': '나', 'ㄷ': '다', 'ㄹ': '라', 'ㅁ': '마',
+  'ㅂ': '바', 'ㅅ': '사', 'ㅇ': '아', 'ㅈ': '자', 'ㅊ': '차',
+  'ㅋ': '카', 'ㅌ': '타', 'ㅍ': '파', 'ㅎ': '하'
+};
+
+const getChosung = (char: string): string => {
+  const code = char.charCodeAt(0) - 44032;
+  if (code < 0 || code > 11171) return char;
+
+  const baseConsonants = [
+    'ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ',
+    'ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'
+  ];
+
+  const labels: Record<string, string> = {
+    'ㄱ': '가', 'ㄴ': '나', 'ㄷ': '다', 'ㄹ': '라', 'ㅁ': '마',
+    'ㅂ': '바', 'ㅅ': '사', 'ㅇ': '아', 'ㅈ': '자', 'ㅊ': '차',
+    'ㅋ': '카', 'ㅌ': '타', 'ㅍ': '파', 'ㅎ': '하'
+  };
+
+  const cho = baseConsonants[Math.floor(code / 588)];
+  return labels[cho] || char;
+};
 
 // ✅ fallback 지원 함수 추가
 const resolveActualTitle = (title: string, list: string[]): string | null => {
@@ -48,13 +72,14 @@ export default function ScripturePage() {
   const [search, setSearch] = useState('');
   const [modalTab, setModalTab] = useState<'title' | 'content' | 'global'>('title');
   const [globalResults, setGlobalResults] = useState<GlobalSearchResult[]>([]);
-  const [fontSize, setFontSize] = useState<'sm' | 'base' | 'lg'>('lg');
-  const fontSizeClass = { sm: 'text-sm', base: 'text-base', lg: 'text-lg' }[fontSize];
+  const [fontSize, setFontSize] = useState<'base' | 'lg' | 'xl'>('lg');
+  const fontSizeClass = { base: 'text-base', lg: 'text-lg', xl: 'text-xl' }[fontSize];
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [showMessage, setShowMessage] = useState(false);
   const [bookmarkPending, setBookmarkPending] = useState<{ title: string; index: number } | null>(null);
+  const [initialFilter, setInitialFilter] = useState('전체');
 
   const sentenceRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -62,6 +87,7 @@ export default function ScripturePage() {
   const [isSearching, setIsSearching] = useState(false);
   const [groupedTitles, setGroupedTitles] = useState<Record<string, string[]>>({});
   const [expandedBase, setExpandedBase] = useState<string | null>(null);
+  
   
   const { title, index, clearBookmark } = useBookmarkStore();
 
@@ -84,6 +110,17 @@ export default function ScripturePage() {
     });
     return map;
   };
+
+  const getUsedInitials = (groups: Record<string, string[]>) => {
+    const initials = new Set<string>();
+    Object.keys(groups).forEach((base) => {
+      const cho = getChosung(base.charAt(0));
+      initials.add(cho);
+    });
+    return initials;
+  };
+  
+  const usedInitials = getUsedInitials(groupedTitles);
   
 
   useEffect(() => {
@@ -363,7 +400,7 @@ const handlePlay = () => {
   };
     
   const cycleFontSize = () =>
-    setFontSize(prev => (prev === 'sm' ? 'base' : prev === 'base' ? 'lg' : 'sm'));
+    setFontSize(prev => (prev === 'base' ? 'lg' : prev === 'lg' ? 'xl' : 'base'));
 
   const handleGlobalSearch = async () => {
     setIsSearching(true);
@@ -409,7 +446,7 @@ const handlePlay = () => {
   {isBookmarked ? '책갈피 삭제' : '책갈피 저장'}
 </button>
             <button onClick={cycleFontSize} className="w-9 h-9 bg-red-light text-white rounded-lg">
-              {fontSize === 'sm' ? '가' : fontSize === 'base' ? <span className="text-lg">가</span> : <span className="text-xl font-semibold">가</span>}
+              {fontSize === 'base' ? '가' : fontSize === 'lg' ? <span className="text-lg">가</span> : <span className="text-xl font-semibold">가</span>}
             </button>
           </div>
         </div>
@@ -460,104 +497,116 @@ const handlePlay = () => {
 
         {/* 결과 */}
         {modalTab === 'title' && (
-          <ul className="space-y-2">
-            {Object.entries(groupedTitles)
-              .filter(([base]) => base.includes(search))
-              .map(([base, titles]) => {
-                const isSingle = titles.length === 1;
-                const hasVolumePattern = titles.some(t => /_\d+권/.test(t));
+  <>
+    {/* ✅ 검색창 */}
 
-                return (
-                  <li key={base}>
-                    {isSingle || !hasVolumePattern ? (
-                      <button
-                        onClick={() => {
-                          setSelected(titles[0]);
-                          setShowModal(false);
-                        }}
-                        className="w-full px-4 py-2 text-left bg-white hover:bg-red-100 rounded-lg"
-                      >
-                        {base}
-                      </button>
-                    ) : (
-                      <>
-                        <button
-                          onClick={() => setExpandedBase(expandedBase === base ? null : base)}
-                          className="w-full flex justify-between items-center px-4 py-2 bg-white hover:bg-red-100 rounded-lg"
-                        >
-                          <span>{base}</span>
-                          <span>{expandedBase === base ? '⏶' : '⏷'}</span>
-                        </button>
-                        {expandedBase === base && (
-                          <ul className="pl-6 mt-1 space-y-1">
-{titles
-  .slice()
-  .sort((a, b) => a.localeCompare(b, 'ko-KR', { numeric: true }))
-  .map((title) => (
-    <li key={title}>
-      <button
-        onClick={() => {
-          setSelected(title);
-          setShowModal(false);
-        }}
-        className="w-full text-left text-sm text-gray-700 hover:underline"
-      >
-        {/* 여기를 아래처럼 교체 */}
-        {formatDisplayTitle(title)}
-      </button>
-    </li>
-  ))}
-                          </ul>
-                        )}
-                      </>
-                    )}
-                  </li>
-                );
-              })}
-          </ul>
-        )}
+    {/* ✅ 레이아웃: 좌측 초성, 우측 리스트 */}
+    <div className="flex w-full">
+      {/* 좌측: 초성 필터 */}
+      <div className="flex flex-col mr-4 space-y-1">
+{['전체', '가', '나', '다', '라', '마', '바', '사', '아', '자', '차', '카', '타', '파', '하']
+  .filter((initial) => initial === '전체' || usedInitials.has(initial))
+  .map((initial) => (
+    <button
+      key={initial}
+      onClick={() => setInitialFilter(initial)}
+      className={`px-3 py-1 text-bas text-start w-16 ${
+        initialFilter === initial
+          ? 'bg-red-100 text-black font-semibold'
+          : 'bg-white text-red-dark border-red'
+      }`}
+    >
+      {initial === '전체' ? '전체' : initial}
+    </button>
+))}
+      </div>
 
-        {modalTab === 'content' && (
-          <>
-            {search.trim().length === 0 ? (
-              <p className="text-center text-sm text-gray-500 mt-4">
-                검색어를 입력하면 현재 경전에서 검색됩니다.
-              </p>
-            ) : (
-              <ul>
-                {displaySentences
-                  .map((s, i) => ({ text: s, index: i }))
-                  .filter(({ text }) => text.includes(search))
-                  .map(({ text, index }) => (
-                    <li key={index}>
+      {/* 우측: 경전 리스트 */}
+      <div className="flex-1 space-y-2 overflow-y-auto max-h-[50vh]">
+        {/* ✅ 현재 경전 */}
+        <div>
+          <button
+            disabled
+            className="w-full px-4 text-left bg-red-50 text-red-dark font-semibold rounded-lg"
+          >
+            현재 『{formatDisplayTitle(selected)}』 열람 중
+          </button>
+        </div>
+
+        <ul className="space-y-2">
+          {Object.entries(groupedTitles)
+.filter(([base]) => {
+  if (search) return base.includes(search);
+  if (initialFilter === '전체') return true;
+
+  const firstChar = getChosung(base.charAt(0));
+  return firstChar === initialFilter;
+})
+            .map(([base, titles]) => {
+              const isSingle = titles.length === 1;
+              const hasVolumePattern = titles.some(t => /_\d+권/.test(t));
+              const sortedTitles = [...titles].sort((a, b) => {
+                if (a === selected) return -1;
+                if (b === selected) return 1;
+                return a.localeCompare(b, 'ko-KR', { numeric: true });
+              });
+
+              return (
+                <li key={base}>
+                  {isSingle || !hasVolumePattern ? (
+                    <button
+                      onClick={() => {
+                        setSelected(sortedTitles[0]);
+                        setShowModal(false);
+                      }}
+                      className="w-full px-4 py-2 text-left bg-white hover:bg-red-100 rounded-lg"
+                    >
+                      {base}
+                    </button>
+                  ) : (
+                    <>
                       <button
-                        onClick={() => {
-                          setCurrentIndex(index);
-                          setShowModal(false);
-                          setTimeout(() => {
-                            sentenceRefs.current[index]?.scrollIntoView({   behavior: 'smooth',
-                            block: 'center'
-                           });
-                          }, 200);
-                        }}
-                        className="w-full text-left px-4 py-2 hover:bg-red-100 text-sm"
+                        onClick={() => setExpandedBase(expandedBase === base ? null : base)}
+                        className="w-full flex justify-between items-center px-4 py-2 bg-white hover:bg-red-100 rounded-lg"
                       >
-                        <div className="line-clamp-3">
-                          <span className="text-gray-500">[{index + 1}행]</span> {text}
-                        </div>
+                        <span>{base}</span>
+                        <span>{expandedBase === base ? '⏶' : '⏷'}</span>
                       </button>
-                    </li>
-                  ))}
-              </ul>
-            )}
-          </>
-        )}
+                      {expandedBase === base && (
+                        <ul className="pl-6 mt-1 space-y-1">
+                          {sortedTitles.map((title) => (
+                            <li key={title}>
+                              <button
+                                onClick={() => {
+                                  setSelected(title);
+                                  setShowModal(false);
+                                }}
+                                className={`w-full text-left text-sm hover:underline ${
+                                  title === selected ? 'text-red font-semibold' : 'text-gray-700'
+                                }`}
+                              >
+                                {formatDisplayTitle(title)}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </>
+                  )}
+                </li>
+              );
+            })}
+        </ul>
+      </div>
+    </div>
+  </>
+)}
 
 {modalTab === 'global' && (
   <>
     {search.trim().length === 0 ? (
       <p className="text-center text-sm text-gray-500 mt-4">
-        검색어를 입력하면 전체 경전을 대상으로 검색합니다.
+        검색어를 입력하면 전체 경전을 대상으로 검색합니다.  
       </p>
     ) : (
       <>
