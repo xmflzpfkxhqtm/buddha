@@ -9,36 +9,66 @@ import type { User } from '@supabase/supabase-js';
 import { useAskStore } from '@/stores/askStore';
 import { useBookmarkStore } from '@/stores/useBookmarkStore';
 
-function filterKnownScriptures(answer: string, knownTitles: string[]): string[] {
+function levenshtein(a: string, b: string): number {
+  const dp = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 0; j <= b.length; j++) dp[0][j] = j;
+
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+    }
+  }
+  return dp[a.length][b.length];
+}
+
+type ScriptureMatch = { title: string; volume?: number };
+
+function filterKnownScriptures(answer: string, knownTitles: string[]): ScriptureMatch[] {
   const pattern = /『(.+?)』/g;
-  const matches = new Set<string>();
+  const matches: ScriptureMatch[] = [];
   let match;
 
   const normalizedTitles = knownTitles.map((t) => ({
     raw: t,
-    normalized: t
-      .replace(/_GPT\d+(\.\d+)?번역/, '') // GPT 버전 제거
-      .replace(/_/g, '')                  // 언더스코어 제거
-      .replace(/\s/g, '')                 // 공백 제거
+    base: t
+      .replace(/_GPT\d+(\.\d+)?번역/, '')
+      .replace(/_?\d+권/, '')
+      .replace(/_/g, '')
+      .replace(/\s/g, '')
       .normalize('NFC'),
   }));
 
   while ((match = pattern.exec(answer)) !== null) {
-    const rawInQuote = match[1].split(/[\s_]/)[0]  // 『현양성교론 제1권』 → 현양성교론
-      .replace(/\s/g, '')
-      .normalize('NFC');
+    const inQuote = match[1];
+    const rawInQuote = inQuote.replace(/\s/g, '').normalize('NFC');
 
-    const found = normalizedTitles.find(({ normalized }) =>
-      normalized.startsWith(rawInQuote)
-    );
+    const volumeMatch = inQuote.match(/(\d+)권/);
+    const volume = volumeMatch ? parseInt(volumeMatch[1]) : undefined;
 
-    if (found) {
-      matches.add(found.raw); // 실제 파일명 추가
+    let bestMatch = null;
+    let bestScore = Infinity;
+
+    for (const { raw, base } of normalizedTitles) {
+      const score = levenshtein(rawInQuote, base);
+      if (score < bestScore) {
+        bestScore = score;
+        bestMatch = raw;
+      }
+    }
+
+    if (bestScore <= 5 && bestMatch) {
+      const baseTitle = bestMatch.replace(/_GPT.*$/, '').replace(/_\d+권$/, '');
+      matches.push({ title: baseTitle, volume });
     }
   }
 
-  return Array.from(matches);
+  return matches;
 }
+
 
 function formatDisplayTitle(rawTitle: string): string {
   return rawTitle
@@ -193,23 +223,34 @@ export default function AnswerClient() {
             <div className="w-full my-12">
               <div className="text-sm text-red-dark font-semibold mb-2">📖 인용된 경전</div>
               <ul className="space-y-2">
-                {validScriptureTitles.map((title, idx) => {
-                  const formattedTitle = scriptureTitles.find((t) =>
-                    t.startsWith(title) && t.includes('GPT4.1번역')
-                  ) || `${title}_GPT4.1번역`;
-                  return (
-                    <li
-                      key={idx}
-                      onClick={() => {
-                        setBookmark(formattedTitle, 0);
-                        router.push('/scripture');
-                      }}
-                      className="cursor-pointer text-red-dark hover:underline text-sm"
-                    >
-                      {formatDisplayTitle(formattedTitle)} 열람 →
-                    </li>
-                  );
-                })}
+{validScriptureTitles.map(({ title, volume }, idx) => {
+  const candidates = scriptureTitles.filter((t) =>
+    t.startsWith(title) && t.includes('GPT4.1번역')
+  );
+
+  const formattedTitle = volume
+  ? candidates.find((t) => new RegExp(`_${volume}권(?:_|_)`).test(t)) || candidates[0]
+  : candidates.sort((a, b) => {
+      const getVol = (s: string) => {
+        const match = s.match(/(\d+)권/);
+        return match ? parseInt(match[1]) : Infinity;
+      };
+      return getVol(a) - getVol(b);
+    })[0];
+
+  return (
+    <li
+      key={idx}
+      onClick={() => {
+        setBookmark(formattedTitle, 0);
+        router.push('/scripture');
+      }}
+      className="cursor-pointer text-red-dark hover:underline text-sm"
+    >
+      {formatDisplayTitle(formattedTitle)} 열람 →
+    </li>
+  );
+})}
               </ul>
             </div>
           )}
