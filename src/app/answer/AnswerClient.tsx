@@ -254,14 +254,17 @@ export default function AnswerClient() {
   const key = `${title}_${volume ?? 'no-volume'}`;
   if (seen.has(key)) return null;
   seen.add(key);
-
+  
   const match = scriptureTitles.find((t) =>
   volume
-    ? new RegExp(`^${title}[_ ]?${volume}권(?:_|G)`).test(t)
-    : scriptureTitles.find((t2) => t2 === title && t2.includes('GPT4.1번역')) || // 1. 정확히 '화엄경' 파일 찾기
-      scriptureTitles.find((t2) => t2.startsWith(`${title}_1권`) && t2.includes('GPT4.1번역')) || // 2. 화엄경_1권 찾기
-      scriptureTitles.find((t2) => t2.startsWith(title) && t2.includes('GPT4.1번역')) // 3. 그 외 화엄경 시작하는 아무거나
+    ? new RegExp(`^${title}[_ ]?${volume}권(?:_|G)`).test(t) // 권이 있으면 정규식 매칭
+    : (
+        scriptureTitles.find((t2) => t2 === `${title}_GPT4.1번역`) ||  // 1. 정확히 '화엄경_GPT4.1번역'
+        scriptureTitles.find((t2) => t2.startsWith(`${title}_1권`) && t2.includes('GPT4.1번역')) || // 2. '화엄경_1권_GPT4.1번역'
+        scriptureTitles.find((t2) => t2.startsWith(title) && t2.includes('GPT4.1번역'))             // 3. 그 외 '화엄경'으로 시작하는 파일
+      )
 );
+
 
   if (!match) return null;
 
