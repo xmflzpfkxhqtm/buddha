@@ -142,9 +142,13 @@ export default function ConfirmPage() {
         <div className="min-h-[12rem] w-full bg-[#FFFDF8] border border-red-light rounded-xl p-4 text-base text-gray-500 whitespace-pre-wrap mb-4">
           {question}
         </div>
-        <p className="text-center text-gray-600 text-sm mb-4">
-        “응무소주 이생기심 — 머무름 없이 마음을 일으키십시오.”
-</p>
+        <div className="flex flex-row w-full space-x-6 mb-4">
+        <p className="text-start text-red text-sm mb-4">
+        고요히 응시한 물음일수록, 그 안에 담긴 마음의 결이 섬세할수록<br />
+  부처님의 가르침은 더욱 깊고 분명하게 되돌아옵니다.<br /><br />
+  질문에는 상황과 감정을 구체적으로 담아보세요.<br />
+  질문이 자세할수록, 답변도 깊어집니다.
+</p></div>
         <div className="flex flex-row w-full space-x-6 mb-12">
           <button
             onClick={handleBack}

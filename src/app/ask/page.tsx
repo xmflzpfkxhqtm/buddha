@@ -15,6 +15,14 @@ import { supabase } from '@/lib/supabaseClient';
 //   { id: 'o4-mini', name: 'O4 Mini', description: '인성과 창의성' },
 //   { id: 'grok', name: 'Grok 3', description: '유머와 창의성' },
 // ];
+const exampleQuestions = [
+  '죽음이 두려울 때 어떻게 마음을 다잡을 수 있을까요?',
+  '공(空)을 이해하는 것과 삶에서 진정으로 체득하는 것 사이에는 어떤 차이가 있을까요?',
+  '인연에 너무 몰입하고 나를 잃어가는 기분이에요. 어떻게 중심을 잡을 수 있을까요?',
+  '“무언가를 끊임없이 바라고, 더 가지려는 제 마음이 지칩니다. 조금은 내려놓고 편안해지고 싶은데, 어떻게 하면 욕심을 놓을 수 있을까요?',
+  '나이 들어가니 외롭고 허할 때가 많습니다. 이런 마음도 괜찮은 걸까요?',
+'몸이 자주 아프다 보니 마음도 자꾸 움츠러듭니다. 병과 함께 사는 삶에도 평안이 있을까요?'
+];
 
 const lengths = [
   { id: 'short', name: '짧은 답변', description: '간결하지만 깊은 통찰이 담긴 가르침을 빠르게 받아보세요.' },
@@ -40,6 +48,7 @@ export default function AskPage() {
     parentId,
     setParentId,
   } = useAskStore();
+  const [showExamples, setShowExamples] = useState(false);
 
   const [previousQA, setPreviousQA] = useState<{ question: string; answer: string } | null>(null);
   const [confirmCancelModal, setConfirmCancelModal] = useState(false);
@@ -136,8 +145,42 @@ export default function AskPage() {
             </p>
           </div>
         </div>
+        <div className="max-w-md w-full z-1 mt-4">
+  <div className="flex items-center justify-start mb-2">
+    <span className="font-bold text-base mr-2 my-2">예시 질문 보기</span>
+    <button
+      onClick={() => setShowExamples((prev) => !prev)}
+      className="flex items-center text-sm text-red hover:underline"
+    >
+      {showExamples ? '숨기기' : '펼쳐보기'}
+      <svg
+        className={`ml-1 w-4 h-4 transition-transform duration-300 ${showExamples ? 'rotate-180' : 'rotate-0'}`}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        viewBox="0 0 24 24"
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+      </svg>
+    </button>
+  </div>
 
-        <div className="max-w-md w-full z-1 mt-6">
+  {showExamples && (
+  <ul className="list-disc list-outside space-y-2 mx-4 mb-4 text-sm text-gray-700 whitespace-pre-line">
+    {exampleQuestions.map((ex, i) => (
+      <li
+        key={i}
+        onClick={() => setQuestion(ex)}
+        className="cursor-pointer hover:text-red-dark hover:underline"
+      >
+        {ex}
+      </li>
+    ))}
+  </ul>
+)}
+</div>
+
+        <div className="max-w-md w-full z-1 mt-2">
           <textarea
             className="w-full h-40 p-4 text-gray-500 rounded-xl border border-red-light bg-[#FFFDF8] text-base resize-none focus:outline-none focus:ring-2 focus:ring-red"
             rows={5}
@@ -155,7 +198,7 @@ export default function AskPage() {
 <div className="max-w-md w-full z-1 mt-4">
   {/* 토글형 히스토리 */}
   <div className="flex items-center justify-start mb-2">
-    <span className="font-bold text-base mr-2">🪷 내가 보관한 문답 보기</span>
+    <span className="font-bold text-base mr-2">내가 보관한 문답 보기</span>
     <button
       onClick={() => setShowSaved((prev) => !prev)}
       className="flex items-center text-sm text-red hover:underline"
