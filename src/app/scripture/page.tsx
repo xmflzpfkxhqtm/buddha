@@ -256,20 +256,21 @@ useEffect(() => {
   return () => window.removeEventListener('scroll', onScroll);
 }, [isSpeaking]); // ✅ isSpeaking이 변경될 때 다시 등록
 
-useEffect(() => {
-  const stopTTS = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-    setIsSpeaking(false);
-  };
+const stopTTS = () => {
+  if (audioRef.current) {
+    audioRef.current.pause();
+    audioRef.current = null;
+  }
+  setIsSpeaking(false);
+};
 
-  // 페이지 언마운트 시
-  return () => {
-    stopTTS();
-  };
-}, []);
+// ✅ 언마운트 시에도 재생 정지
+useEffect(() => stopTTS, []);
+
+// ✅ selected 변경/모달 열릴 때도 정지
+useEffect(() => {
+  stopTTS();
+}, [selected, modalTab, showModal]);
 
 useEffect(() => {
   const stopTTS = () => {
@@ -285,75 +286,62 @@ useEffect(() => {
 
 
 const handlePlay = () => {
-  const stopTTS = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-    setIsSpeaking(false);
-  };
+  stopTTS(); // 항상 기존 재생 끊고 시작
 
-  if (isSpeaking) {
-    stopTTS();
-    return;
-  }
+  if (isSpeaking) return; // 일시정지 동작
 
-  let index = currentIndex;
   setIsSpeaking(true);
+  let index = currentIndex;
 
-  // ...
-  
-    const fetchTTS = async (text: string): Promise<string | null> => {
-      try {
-        const res = await fetch('/api/tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text }),
-        });
-        const data = await res.json();
-        return data.audioContent || null;
-      } catch {
-        return null;
-      }
-    };
-
-    const playSentence = async () => {
-      if (index >= ttsSentences.length) {
-        setIsSpeaking(false);
-        return;
-      }
-    
-      setCurrentIndex(index);
-    
-      // ✅ 중앙 정렬로 자동 스크롤
-      sentenceRefs.current[index]?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
+  const fetchTTS = async (text: string): Promise<string | null> => {
+    try {
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
       });
-    
-      const audioBase64 = await fetchTTS(ttsSentences[index]);
-      if (!audioBase64) {
-        setIsSpeaking(false);
-        return;
-      }
-    
-      const audio = new Audio(`data:audio/mp3;base64,${audioBase64}`);
-      audioRef.current = audio;
-    
-      audio.onended = () => {
-        index++;
-        setTimeout(playSentence, 300);
-      };
-    
-      try {
-        await audio.play();
-      } catch {
-        setIsSpeaking(false);
-      }
-    };
-    
-    playSentence();
+      const data = await res.json();
+      return data.audioContent || null;
+    } catch {
+      return null;
+    }
   };
+
+  const playSentence = async () => {
+    if (index >= ttsSentences.length) {
+      stopTTS();
+      return;
+    }
+
+    setCurrentIndex(index);
+    sentenceRefs.current[index]?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+    });
+
+    const audioBase64 = await fetchTTS(ttsSentences[index]);
+    if (!audioBase64) {
+      stopTTS();
+      return;
+    }
+
+    const audio = new Audio(`data:audio/mp3;base64,${audioBase64}`);
+    audioRef.current = audio;
+
+    audio.onended = () => {
+      index++;
+      setTimeout(playSentence, 300); // 다음 문장 예약
+    };
+
+    try {
+      await audio.play();
+    } catch {
+      stopTTS();
+    }
+  };
+
+  playSentence();
+};
 
   const handleBookmark = async () => {
     if (!userId) {
