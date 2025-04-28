@@ -259,9 +259,9 @@ export default function AnswerClient() {
   ? scriptureTitles.find((t) =>
       new RegExp(`^${title}[_ ]?${volume}권(?:_|G)`).test(t)
     )
-  : scriptureTitles.find((t) => t === `${title}_GPT4.1번역`) ||
-    scriptureTitles.find((t) => t.startsWith(`${title}_1권`) && t.includes('GPT4.1번역')) ||
-    scriptureTitles.find((t) => t.startsWith(title) && t.includes('GPT4.1번역'));
+  : scriptureTitles.find((t) => t === `${title}`) ||
+    scriptureTitles.find((t) => t.startsWith(`${title}_1권`) ) ||
+    scriptureTitles.find((t) => t.startsWith(title) );
 
   if (!match) return null;
 

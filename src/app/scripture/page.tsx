@@ -155,7 +155,7 @@ export default function ScripturePage() {
       setBookmarkPending({ title, index: index ?? 0 });
       setSelected(title);
     } else if (!title && !selected && list.length > 0) {
-      const defaultTitle = '금강반야바라밀경_1권_GPT4.1번역';
+      const defaultTitle = '금강반야바라밀경_1권';
       const resolved = resolveActualTitle(defaultTitle, list);
       setSelected(resolved ?? list[0]);
     }
