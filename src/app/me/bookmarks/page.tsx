@@ -56,9 +56,17 @@ export default function BookmarkPage() {
           for (const title of titles) {
             const res = await fetch(`/api/scripture?title=${encodeURIComponent(title)}`);
             const json = await res.json();
-            const lines = (json.content || '').match(/[^.!?\n]+[.!?\n]*/g) || [json.content || ''];
-            map[title] = lines;
-          }
+            const paragraphs = (json.content || '').split(/\n\s*\n/);
+            const sentences = paragraphs
+              .map((p: string) =>
+                p
+                  .split(/(?<=[.!?]["”'’]?)\s+/)
+                  .map((s) => s.trim())
+                  .filter((s) => s.length > 0)
+              )
+              .flat();
+            map[title] = sentences;
+                      }
 
           setScriptureMap(map);
         }
