@@ -56,6 +56,8 @@ function formatDisplayTitle(rawTitle: string): string {
 
 export default function ScripturePage() {
 
+  
+  const [displayParagraphs, setDisplayParagraphs] = useState<string[][]>([]);
   const router = useRouter();
   const [list, setList] = useState<string[]>([]);
   const [selected, setSelected] = useState('');
@@ -167,33 +169,54 @@ export default function ScripturePage() {
 
     const loadScripture = async () => {
       const actual = resolveActualTitle(selected, list);
-
+    
       if (!actual) {
         console.warn('❌ 해당 경전을 찾을 수 없습니다:', selected);
         setDisplaySentences(['해당 경전을 불러올 수 없습니다.']);
         setTtsSentences([]);
+        setDisplayParagraphs([]);
         return;
       }
-
+    
       const res = await fetch(`/api/scripture?title=${encodeURIComponent(actual)}`);
       const data = await res.json();
-
+    
       if (data?.content) {
         const full = data.content;
-        const display = full.match(/[^.!?\n]+[.!?\n]*/g) || [full];
-        const tts = display.map((s: string) => s.replace(/\([^\)]*\)/g, ''));
 
-        setDisplaySentences(display);
+        // 문단 나누기
+        const paragraphs = full.split(/\n\s*\n/);
+        
+        // 문장 쪼개기 (split 방식)
+        const paragraphSentences = paragraphs.map((p: string) =>
+          p
+            .split(/(?<=[.!?]["”'’]?)\s+/)  // ✅ 마침표/느낌표/물음표(+따옴표) 뒤 공백으로 쪼갬
+            .map(s => s.trim())
+            .filter(s => s.length > 0)      // ✅ 빈 문장 제거
+        );
+        
+        // 화면용 문단 구조
+        setDisplayParagraphs(paragraphSentences);
+        
+        // 내부 로직용 1차원 배열
+        const flatSentences = paragraphSentences.flat();
+        setDisplaySentences(flatSentences);
+        
+        // TTS용 문장
+        const tts = flatSentences.map((s: string) => s.replace(/\([^\)]*\)/g, ''));
         setTtsSentences(tts);
+        
+        // 초기화
         setCurrentIndex(0);
-        setSelected(actual); // ✅ fallback 적용
-        sentenceRefs.current = Array(display.length).fill(null);
-      } else {
+        setSelected(actual);
+        sentenceRefs.current = Array(flatSentences.length).fill(null);
+              } else {
         setDisplaySentences(['해당 경전을 불러올 수 없습니다.']);
         setTtsSentences([]);
+        setDisplayParagraphs([]);
       }
     };
-
+    
     loadScripture();
   }, [selected, list]);
 
@@ -437,14 +460,29 @@ const handlePlay = () => {
       </div>
 
       {/* 본문 */}
-      <div className={`whitespace-pre-wrap font-maruburi bg-white rounded-xl ${fontSizeClass}`}>
-        {displaySentences.map((s, i) => (
-          <span key={i} data-index={i} ref={(el) => { sentenceRefs.current[i] = el }}
-          className={`block ${i === currentIndex ? 'bg-amber-200' : ''} ${bookmarkedIndexes.includes(i) ? 'underline' : ''}`}>
-                      {s}
+      <div className={`whitespace-pre-wrap font-maruburi bg-white rounded-xl ${fontSizeClass} leading-relaxed`}>
+  {displayParagraphs.map((sentences, pIdx) => (
+    <div key={pIdx} className="mb-6">
+      {sentences.map((s, i) => {
+        // 문장 인덱스 계산
+        const globalIndex = displayParagraphs
+          .slice(0, pIdx)
+          .flat().length + i;
+
+        return (
+          <span
+            key={globalIndex}
+            data-index={globalIndex}
+            ref={(el) => { sentenceRefs.current[globalIndex] = el }}
+            className={`block ${globalIndex === currentIndex ? 'bg-amber-200' : ''} ${bookmarkedIndexes.includes(globalIndex) ? 'underline' : ''}`}
+          >
+            {s}
           </span>
-        ))}
-      </div>
+        );
+      })}
+    </div>
+  ))}
+</div>
 
       {/* 재생 버튼 */}
       <button onClick={handlePlay} className="fixed bottom-[84px] left-1/2 -translate-x-1/2 bg-red-light text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg z-50">
