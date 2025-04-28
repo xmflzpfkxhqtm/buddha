@@ -1,32 +1,17 @@
 import os
+import unicodedata
 
-# 📂 검사할 폴더 경로
-folder_path = "./data"  # 여기에 네 폴더 경로 입력
+data_dir = './data'
 
-for filename in os.listdir(folder_path):
-    if filename.endswith(".txt"):
-        file_path = os.path.join(folder_path, filename)
+for filename in os.listdir(data_dir):
+    if filename.endswith('.txt'):
+        # BOM 제거, 공백 제거, 유니코드 NFC 정규화
+        clean_name = filename.replace('\ufeff', '').replace(' ', '')
+        clean_name = unicodedata.normalize('NFC', clean_name)
 
-        # 파일 읽기
-        with open(file_path, "r", encoding="utf-8") as f:
-            content = f.read()
+        old_path = os.path.join(data_dir, filename)
+        new_path = os.path.join(data_dir, clean_name)
 
-        print(f"\n🔎 파일명: {filename}")
-
-        # 파일 안에 \n이 하나라도 있으면
-        if "\n" in content:
-            print("✅ 줄바꿈(\\n)이 존재합니다. 줄별로 검사 시작합니다...")
-
-            lines = content.splitlines()
-
-            for i, line in enumerate(lines):
-                if line.strip() == "":
-                    print(f"📍 {i+1}번째 줄: 빈 줄")
-                if line.startswith('”') and i > 0:
-                    print(f"⚠️ {i+1}번째 줄: 따옴표(”)로 시작하는 줄 발견")
-                if line.endswith('“'):
-                    print(f"⚠️ {i+1}번째 줄: 따옴표(“)로 끝나는 줄 발견")
-        else:
-            print("🎯 줄바꿈(\\n) 없음, 깨끗한 파일입니다.")
-
-print("\n🎉 모든 파일 검사 완료!")
+        if old_path != new_path:
+            print(f"Renaming: {filename} -> {clean_name}")
+            os.rename(old_path, new_path)

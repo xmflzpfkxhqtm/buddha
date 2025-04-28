@@ -20,6 +20,7 @@ interface ScriptureModalProps {
   usedInitials: Set<string>;
   initialFilter: string;
   setInitialFilter: (s: string) => void;
+  setBookmarkPending: (pending: { title: string; index: number } | null) => void;  // ✅ 추가
   expandedBase: string | null;
   setExpandedBase: (s: string | null) => void;
   formatDisplayTitle: (title: string) => string;
@@ -56,6 +57,7 @@ export default function ScriptureModal({
   sentenceRefs,
   displaySentences,
   setShowModal,
+  setBookmarkPending,
 }: ScriptureModalProps) {
   useEffect(() => {
     if (modalTab !== 'global' && isSearching) {
@@ -227,11 +229,12 @@ export default function ScriptureModal({
                 {globalResults.map(({ title, index, text }, i) => (
                   <li key={`${title}-${index}-${i}`}>
                     <button
-                      onClick={() => {
-                        setSelected(title);
-                        onClose();
-                        setTimeout(() => setCurrentIndex(index), 100);
-                      }}
+// global 검색에서 클릭할 때
+onClick={() => {
+  setSelected(title);
+  onClose();
+  setBookmarkPending({ title, index });  // ✅ 여기다 임시로 저장
+}}
                       className="w-full text-left px-4 py-4 hover:bg-red-100 hover:text-white text-sm"
                       disabled={isSearching}
                     >

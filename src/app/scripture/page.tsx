@@ -208,7 +208,6 @@ export default function ScripturePage() {
         
         // 초기화
         setCurrentIndex(0);
-        setSelected(actual);
         sentenceRefs.current = Array(flatSentences.length).fill(null);
               } else {
         setDisplaySentences(['해당 경전을 불러올 수 없습니다.']);
@@ -238,17 +237,16 @@ export default function ScripturePage() {
       selected === bookmarkPending.title &&
       displaySentences.length > 0
     ) {
+      console.log('✅ Bookmark Pending 처리:', bookmarkPending);
       setCurrentIndex(bookmarkPending.index);
       setTimeout(() => {
-        sentenceRefs.current[bookmarkPending.index]?.scrollIntoView({   behavior: 'smooth',
-        block: 'center'
-       });
-      }, 500);
-      clearBookmark();
-      setBookmarkPending(null);
+        sentenceRefs.current[bookmarkPending.index]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        clearBookmark();  // ✅ 이동 끝난 뒤에 clear
+        setBookmarkPending(null);
+      }, 200);  // ✅ scrollIntoView 한 직후에 clear
     }
   }, [bookmarkPending, selected, displaySentences, clearBookmark]);
-
+      
 // ✅ 이거처럼 useEffect 하나 더 추가
 useEffect(() => {
   const onScroll = () => {
@@ -409,28 +407,25 @@ const handlePlay = () => {
   const cycleFontSize = () =>
     setFontSize(prev => (prev === 'base' ? 'lg' : prev === 'lg' ? 'xl' : 'base'));
 
-  const handleGlobalSearch = async () => {
-    setIsSearching(true);
-    setGlobalResults([]);
-
-    const results: GlobalSearchResult[] = [];
-
-    for (const title of list) {
-      const res = await fetch(`/api/scripture?title=${encodeURIComponent(title)}`);
-      const json = await res.json();
-      const lines = json.content.match(/[^.!?\n]+[.!?\n]*/g) || [json.content || ''];
-
-      lines.forEach((line: string, idx: number) => {
-        if (line.includes(search)) {
-          results.push({ title, index: idx, text: line });
-        }
-      });
-    }
-
-    setGlobalResults(results);
-    setIsSearching(false);
-  };
-
+    const handleGlobalSearch = async () => {
+      if (!search.trim()) return;
+    
+      setIsSearching(true);
+      setGlobalResults([]);
+    
+      try {
+        const res = await fetch(`/api/global-search?query=${encodeURIComponent(search)}`);
+        const data = await res.json();
+    
+        setGlobalResults(data.results || []);
+      } catch (err) {
+        console.error('전체 검색 실패:', err);
+        setGlobalResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+        
 
   return (
     
@@ -512,6 +507,7 @@ const handlePlay = () => {
     setCurrentIndex={setCurrentIndex}
     isSearching={isSearching}
     sentenceRefs={sentenceRefs}
+    setBookmarkPending={setBookmarkPending} // ✅ 추가
     displaySentences={displaySentences}
 setShowModal={setShowModal}
 
