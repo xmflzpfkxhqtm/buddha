@@ -356,20 +356,26 @@ const handlePlay = async () => {
       return;
     }
 
-    const audio = new Audio(`data:audio/mp3;base64,${audioBase64}`);
-    audioRef.current = audio;
 
-    audio.onended = () => {
-      index++;
-      setTimeout(playSentence, 300);
-    };
+    const blob = await (await fetch(`data:audio/mp3;base64,${audioBase64}`)).blob();
+const objectUrl = URL.createObjectURL(blob);
+const audio = new Audio(objectUrl);
+audioRef.current = audio;
 
-    try {
-      await audio.play();
-    } catch {
-      await stopTTS();
-      setIsLocked(false);
-    }
+audio.onended = () => {
+  URL.revokeObjectURL(objectUrl); // 🔥 메모리 누수 방지
+  index++;
+  setTimeout(playSentence, 300);
+};
+
+await new Promise((r) => setTimeout(r, 200));
+
+try {
+  await audio.play();
+} catch {
+  await stopTTS();
+  setIsLocked(false);
+}
   };
 
   playSentence();
