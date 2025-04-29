@@ -9,19 +9,18 @@ export default function AuthDeepLinkPage() {
       try {
         const { data, error } = await supabase.auth.getSession();
 
-        if (error) {
-          console.error('Session fetch error:', error);
+        if (error || !data.session) {
+          alert('로그인 실패');
           return;
         }
 
-        if (data?.session) {
-          window.location.href = 'yeondeung://auth/callback';
-        } else {
-          alert('로그인에 실패했거나 취소되었습니다.');
-        }
+        const { access_token, refresh_token } = data.session;
+
+        // 앱 딥링크로 access_token 전달
+        const deeplink = `yeondeung://auth/callback?access_token=${access_token}&refresh_token=${refresh_token}`;
+        window.location.href = deeplink;
       } catch (err) {
-        console.error('Unhandled exception in deeplink redirect:', err);
-        alert('예상치 못한 오류가 발생했습니다.');
+        console.error('DeepLink error:', err);
       }
     };
 

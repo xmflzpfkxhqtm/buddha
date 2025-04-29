@@ -1,10 +1,10 @@
-// ✅ server component 유지 (❌ use client X)
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import PageTransition from '../../components/PageTransition';
 import MarbleOverlay from '../../components/Overlay';
 import BottomNav from '../../components/BottomNav';
+import DeepLinkHandler from '../../components/DeepLinkHandler'; // ✅ 추가
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
@@ -13,9 +13,8 @@ export const metadata: Metadata = {
   title: '연등',
   description: '내 손안의 작은 법당',
   icons: {
-    icon: '/favicon.ico', // ✅ 여기에 경로 지정
+    icon: '/favicon.ico',
   },
-
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -29,16 +28,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-title" content="연등" />
         <link rel="apple-touch-icon" href="/icon.png" />
         <link rel="icon" href="/favicon.ico" />
-
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning={true}
       >
+        <DeepLinkHandler /> {/* ✅ 앱 딥링크 감지 */}
         <div className="relative min-h-screen w-full max-w-[430px] mx-auto pb-[64px]">
           <PageTransition>{children}</PageTransition>
         </div>
-        <BottomNav /> {/* 표시 여부는 내부에서 제어 */}
+        <BottomNav />
         <MarbleOverlay />
       </body>
     </html>

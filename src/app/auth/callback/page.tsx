@@ -1,31 +1,42 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 
 export default function AuthCallbackPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
-    const handleAuth = async () => {
-      const { data, error } = await supabase.auth.getSession();
+    const handleSession = async () => {
+      const access_token = searchParams.get('access_token');
+      const refresh_token = searchParams.get('refresh_token');
 
-      if (!data.session && !error) {
-        // 세션이 없으면 강제로 새로고침 시도
-        await supabase.auth.refreshSession();
+      if (access_token && refresh_token) {
+        // 앱 딥링크에서 받은 경우
+        const { data, error } = await supabase.auth.setSession({
+          access_token,
+          refresh_token,
+        });
+
+        if (!error && data.session) {
+          router.push('/me');
+          return;
+        }
       }
 
-      const { data: finalSession } = await supabase.auth.getSession();
-      if (finalSession.session) {
+      // fallback: 기존 방식 (웹이나 쿠키 있는 경우)
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
         router.push('/me');
       } else {
         router.push('/login');
       }
     };
 
-    handleAuth();
-  }, [router]);
+    handleSession();
+  }, [router, searchParams]);
 
   return (
     <main className="flex justify-center items-center min-h-screen">
