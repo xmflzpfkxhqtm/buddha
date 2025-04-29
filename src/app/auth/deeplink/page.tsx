@@ -6,6 +6,9 @@ import { supabase } from '@/lib/supabaseClient';
 export default function AuthDeepLinkPage() {
   useEffect(() => {
     const tryRedirect = async () => {
+      console.log('🧹 현재 window.location:', window.location.href);
+      console.log('🧹 현재 window.location.hash:', window.location.hash);
+
       if (isNativeApp()) {
         try {
           const { data, error } = await supabase.auth.getSession();
@@ -24,12 +27,13 @@ export default function AuthDeepLinkPage() {
         }
       } else {
         // ✅ 웹이면 location.hash를 query로 변환
-        if (window.location.hash) {
+        if (window.location.hash && window.location.hash.length > 1) {
           const queryString = window.location.hash.substring(1); // '#' 제거
           const newUrl = `/auth/callback?${queryString}`;
+          console.log('🛫 웹 리다이렉트 URL:', newUrl);
           window.location.replace(newUrl); // 바로 이동
         } else {
-          // hash 없으면 fallback
+          console.log('⚠️ hash 없음, fallback 으로 /auth/callback 로 이동');
           setTimeout(() => {
             window.location.href = '/auth/callback';
           }, 2000);
