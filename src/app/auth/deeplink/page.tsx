@@ -26,14 +26,14 @@ export default function AuthDeepLinkPage() {
           console.error('DeepLink error:', err);
         }
       } else {
-        // ✅ 웹이면 location.hash를 query로 변환
+        // ✅ 웹에서는 무조건 hash를 query로 변환
         if (window.location.hash && window.location.hash.length > 1) {
-          const queryString = window.location.hash.substring(1); // '#' 제거
+          const queryString = window.location.hash.substring(1);
           const newUrl = `/auth/callback?${queryString}`;
           console.log('🛫 웹 리다이렉트 URL:', newUrl);
-          window.location.replace(newUrl); // 바로 이동
+          window.location.replace(newUrl);
         } else {
-          console.log('⚠️ hash 없음, fallback 으로 /auth/callback 로 이동');
+          console.log('⚠️ hash 없음, fallback으로 /auth/callback로 이동');
           setTimeout(() => {
             window.location.href = '/auth/callback';
           }, 2000);
@@ -53,6 +53,6 @@ export default function AuthDeepLinkPage() {
 
 function isNativeApp() {
   if (typeof window === 'undefined') return false;
-  // @ts-expect-error Capacitor global object
-  return !!window.Capacitor;
+  // @ts-expect-error Capacitor may exist but need to confirm environment
+  return !!window.Capacitor && !window.navigator.userAgent.includes('Chrome') && !window.navigator.userAgent.includes('Safari');
 }
