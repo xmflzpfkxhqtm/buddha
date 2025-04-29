@@ -34,7 +34,7 @@ export default function PrivacyPolicyPage() {
   
         <h2 className="font-semibold mt-6 mb-2">5. 개인정보 보호 책임자</h2>
         <p className="mb-8">
-          문의 사항은 서비스 내 피드백 또는 이메일을 통해 접수해주시면 성실히 응답하겠습니다.
+          문의 사항은 서비스 내 피드백 또는 이메일을 통해 접수해주시면 성실히 응답하겠습니다.<br>yeondeungx@gmail.com</br>
         </p>
   
         <p className="text-xs text-gray-500">
