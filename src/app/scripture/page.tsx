@@ -79,6 +79,7 @@ export default function ScripturePage() {
   const [showMessage, setShowMessage] = useState(false);
   const [bookmarkPending, setBookmarkPending] = useState<{ title: string; index: number } | null>(null);
   const [initialFilter, setInitialFilter] = useState('전체');
+  const [nextAudioUrl, setNextAudioUrl] = useState<string | null>(null);
 
   const sentenceRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -357,68 +358,70 @@ const handlePlay = async () => {
   };
     
 
-  const playSentence = async () => {
-    if (index >= ttsSentences.length) {
-      await stopTTS();
-      setIsLocked(false);
-      return;
-    }
-
-    setCurrentIndex(index);
-
-    // ✅ 이건 요청한대로 절대 변경 안함
-    sentenceRefs.current[index]?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'center',
-    });
-
-    const audioUrl = await fetchUntilSuccess(ttsSentences[index], index);
-    if (!audioUrl) {
-      console.error('❌ fetchTTS 실패: url 없음');
-      await stopTTS();
-      setIsLocked(false);
-      return;
-    }
-
-    const audio = new Audio(audioUrl);
-    audioRef.current = audio;
-
-    let retries = 3;
-
-    const tryPlay = async () => {
-      try {
-        await new Promise((r) => setTimeout(r, 200)); // 안정성 대기
-        await audio.play();
-        console.log('✅ 재생 성공');
-      } catch (err) {
-        console.warn('⚠️ 재생 실패, 재시도 남음:', retries, err);
-        retries--;
-        if (retries > 0) {
-          await new Promise((r) => setTimeout(r, 300));
-          await tryPlay();
-        } else {
-          console.error('❌ 재생 최종 실패');
-          await stopTTS();
-          setIsLocked(false);
-        }
-      }
-    };
-
-    audio.onended = async () => {
-      console.log('✅ 재생 끝, 다음 문장');
-      index++;
-      await new Promise((r) => setTimeout(r, 300));
-      await playSentence();
-    };
-
-    audio.onerror = async () => {
-      console.error('❌ audio 재생 중 에러 발생');
-      await stopTTS();
-      setIsLocked(false);
-    };
-
-    await tryPlay();
+  // ✅ Audio가 준비될 때까지 기다리는 함수
+const waitForCanPlay = (audio: HTMLAudioElement) =>
+new Promise<void>((res, rej) => {
+  const t = setTimeout(() => rej('timeout'), 8000); // 8초 제한
+  const handler = () => {
+    clearTimeout(t);
+    audio.removeEventListener('canplaythrough', handler);
+    res();
   };
+  audio.addEventListener('canplaythrough', handler);
+});
+
+
+const playSentence = async () => {
+  if (index >= ttsSentences.length) {
+    await stopTTS();
+    setIsLocked(false);
+    return;
+  }
+
+  setCurrentIndex(index);
+  sentenceRefs.current[index]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  let audioUrl = nextAudioUrl || await fetchUntilSuccess(ttsSentences[index], index);
+  setNextAudioUrl(null); // 다음 문장용 preload 초기화
+
+  const audio = new Audio(audioUrl);
+  audio.crossOrigin = 'anonymous'; // ✅ CORS 방지
+  audio.preload = 'auto';          // ✅ Android에서 안정성↑
+  audioRef.current = audio;
+
+  try {
+    await waitForCanPlay(audio);  // ✅ 재생 전 안정성 확보
+    await audio.play();
+    console.log('✅ 재생 성공');
+  } catch (err) {
+    console.warn('⚠️ 재생 실패, 건너뜀:', err);
+    index++;
+    await new Promise((r) => setTimeout(r, 300)); // 텀 두고
+    await playSentence(); // 다음 문장 재귀 호출
+    return;
+  }
+
+  // ✅ 다음 문장 preload
+  if (index + 1 < ttsSentences.length) {
+    fetchUntilSuccess(ttsSentences[index + 1], index + 1).then((url) => {
+      setNextAudioUrl(url);
+    });
+  }
+
+  audio.onended = async () => {
+    console.log('✅ 재생 끝, 다음 문장');
+    index++;
+    await new Promise((r) => setTimeout(r, 200));
+    await playSentence();
+  };
+
+  audio.onerror = async () => {
+    console.error('❌ 재생 중 오류 발생, 다음 문장으로 넘어감');
+    index++;
+    await playSentence();
+  };
+};
+
 
   playSentence();
 };
