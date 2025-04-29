@@ -88,6 +88,14 @@ export default function ScripturePage() {
   const [isSearching, setIsSearching] = useState(false);
   const [groupedTitles, setGroupedTitles] = useState<Record<string, string[]>>({});
   const [expandedBase, setExpandedBase] = useState<string | null>(null);
+  const fetchAudioBlob = async (url: string): Promise<Blob> => {
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`오디오 다운로드 실패: ${res.status}`);
+    }
+    return await res.blob();
+  };
+  
   
   
   const { title, index, clearBookmark } = useBookmarkStore();
@@ -372,6 +380,7 @@ new Promise<void>((res, rej) => {
 });
 
 
+// 🔥 playSentence
 const playSentence = async () => {
   if (index >= ttsSentences.length) {
     await stopTTS();
@@ -383,53 +392,58 @@ const playSentence = async () => {
   sentenceRefs.current[index]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
   const audioUrl = nextAudioUrl || await fetchUntilSuccess(ttsSentences[index], index);
-  setNextAudioUrl(nextNextAudioUrl); // 👉 다음을 앞으로 당기기
-  setNextNextAudioUrl(null); // 👉 초기화
-  
-  const audio = new Audio(audioUrl);
-  audio.crossOrigin = 'anonymous'; // ✅ CORS 방지
-  audio.preload = 'auto';          // ✅ Android에서 안정성↑
-  audioRef.current = audio;
+  setNextAudioUrl(nextNextAudioUrl ?? null); // 안전하게 null 방어
+  setNextNextAudioUrl(null);
 
   try {
-    await waitForCanPlay(audio);  // ✅ 재생 전 안정성 확보
+    const blob = await fetchAudioBlob(audioUrl);
+    const blobUrl = URL.createObjectURL(blob);
+
+    const audio = new Audio(blobUrl);
+    audioRef.current = audio;
+    audio.crossOrigin = 'anonymous';
+    audio.preload = 'auto';
+
+    await waitForCanPlay(audio);
     await audio.play();
     console.log('✅ 재생 성공');
+
+    // ✅ 재생 성공 이후에 이벤트 핸들러 등록
+    audio.onended = async () => {
+      console.log('✅ 재생 끝, 다음 문장');
+      URL.revokeObjectURL(audio.src); // ✅ blob 메모리 해제
+      index++;
+      await new Promise((r) => setTimeout(r, 200));
+      await playSentence();
+    };
+    
+    audio.onerror = async () => {
+      console.error('❌ 재생 중 오류 발생, 다음 문장으로 넘어감');
+      URL.revokeObjectURL(audio.src); // ✅ blob 메모리 해제
+      index++;
+      await playSentence();
+    };
+    
   } catch (err) {
     console.warn('⚠️ 재생 실패, 건너뜀:', err);
     index++;
-    await new Promise((r) => setTimeout(r, 300)); // 텀 두고
-    await playSentence(); // 다음 문장 재귀 호출
+    await new Promise((r) => setTimeout(r, 300));
+    await playSentence();
     return;
   }
 
   // ✅ 다음 문장 preload
-// 다음 문장 1개 preload
-if (index + 1 < ttsSentences.length) {
-  fetchUntilSuccess(ttsSentences[index + 1], index + 1).then((url) => {
-    setNextAudioUrl(url);
-  });
-}
+  if (index + 1 < ttsSentences.length) {
+    fetchUntilSuccess(ttsSentences[index + 1], index + 1).then((url) => {
+      setNextAudioUrl(url);
+    });
+  }
 
-// 다다음 문장 preload
-if (index + 2 < ttsSentences.length) {
-  fetchUntilSuccess(ttsSentences[index + 2], index + 2).then((url) => {
-    setNextNextAudioUrl(url);
-  });
-}
-
-  audio.onended = async () => {
-    console.log('✅ 재생 끝, 다음 문장');
-    index++;
-    await new Promise((r) => setTimeout(r, 200));
-    await playSentence();
-  };
-
-  audio.onerror = async () => {
-    console.error('❌ 재생 중 오류 발생, 다음 문장으로 넘어감');
-    index++;
-    await playSentence();
-  };
+  if (index + 2 < ttsSentences.length) {
+    fetchUntilSuccess(ttsSentences[index + 2], index + 2).then((url) => {
+      setNextNextAudioUrl(url);
+    });
+  }
 };
 
 
@@ -531,7 +545,7 @@ if (index + 2 < ttsSentences.length) {
       {/* 본문 */}
       <div className={`whitespace-pre-wrap font-maruburi bg-white rounded-xl ${fontSizeClass} leading-relaxed`}>
       {currentIndex < 10 && (
-        <div style={{ height: '40vh' }} className="flex flex-col justify-center gap-3 bg-[#FAF5EF] text-[#6B4C3B]">
+        <div style={{ height: '40vh' }} className="flex flex-col justify-center gap-3 text-red-dark]">
   <p className="text-lg font-bold">{formatDisplayTitle(selected)}</p>
   <p className="text-base leading-relaxed">
     천천히 아래로 스크롤하며 경전을 읽어보세요.<br />
