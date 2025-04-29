@@ -13,8 +13,8 @@ import { Browser } from '@capacitor/browser';
 const isNative = () => {
   if (typeof window === 'undefined') return false;
 
-  // @ts-expect-error
-  return !!window.Capacitor;
+// @ts-expect-error: Capacitor is only available in native app runtime
+return !!window.Capacitor;
 };
 
 export default function LoginPage() {
