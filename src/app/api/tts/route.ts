@@ -3,6 +3,34 @@ export const dynamic = 'force-dynamic'; // App Router의 정적화 방지
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 
+
+
+async function fetchWithRetry(
+  url: string,
+  opts: RequestInit & { timeout?: number; retries?: number } = {},
+) {
+  const { timeout = 8000, retries = 3, ...rest } = opts;
+  for (let i = 0; i < retries; i++) {
+    const ctl = new AbortController();
+    const tId = setTimeout(() => ctl.abort(), timeout);
+    try {
+      const res = await fetch(url, { ...rest, signal: ctl.signal });
+      clearTimeout(tId);
+      if (res.ok) return res;
+      if (res.status >= 500) {                    // 5xx → 재시도
+        await new Promise(r => setTimeout(r, 300 * 2 ** i));
+        continue;
+      }
+      return res;                                // 4xx 그대로 반환
+    } catch {
+      clearTimeout(tId);
+      if (i === retries - 1) throw new Error('retry failed');
+      await new Promise(r => setTimeout(r, 300 * 2 ** i));
+    }
+  }
+  throw new Error('retry failed');
+}
+
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const SUPABASE_BUCKET = 'tts-audios';
@@ -40,16 +68,16 @@ export async function POST(req: NextRequest) {
   console.time('1️⃣ Google TTS fetch');
 
   // ✅ 2. Google TTS 호출
-  const gRes = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_KEY}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      input: { text },
-      voice: { languageCode: 'ko-KR', name: 'ko-KR-Neural2-C' },
-      audioConfig: { audioEncoding: 'MP3', speakingRate: 0.85, pitch: -5.0 },
-    }),
-  });
-
+  const gRes = await fetchWithRetry(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        input: { text },
+        voice: { languageCode: 'ko-KR', name: 'ko-KR-Neural2-C' },
+        audioConfig: { audioEncoding: 'MP3', speakingRate: 0.85, pitch: -5.0 },
+      }),
+    });
+    
   const gResText = await gRes.text();
   console.timeEnd('1️⃣ Google TTS fetch');
 
@@ -70,19 +98,16 @@ export async function POST(req: NextRequest) {
   const audioBuffer = Buffer.from(gData.audioContent, 'base64');
 
  // 3. Storage 업로드 먼저 완료
- const uploadRes = await fetch(
-   `${SUPABASE_URL}/storage/v1/object/${SUPABASE_BUCKET}/${uploadPath}`,
-   {
-     method: 'POST',
-     headers: {
-       Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
-       'Content-Type': 'application/octet-stream',
-       'x-upsert': 'true',
-     },
-     body: audioBuffer,
-   },
- );
-
+ const uploadRes = await fetchWithRetry(`${SUPABASE_URL}/storage/v1/object/${SUPABASE_BUCKET}/${uploadPath}`, {
+   method: 'POST',
+   headers: {
+     Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+     'Content-Type': 'audio/mpeg',
+     'x-upsert': 'true',
+    },
+    body: audioBuffer,
+  });
+  
  if (!uploadRes.ok) {
    const errText = await uploadRes.text();
    console.error('❌ Storage 업로드 실패', errText);
@@ -91,17 +116,16 @@ export async function POST(req: NextRequest) {
   
 // ── 3-b. 서명 URL 발급 (버킷이 public 이어도 사용) ──────────────
 // ── 3-b. 서명 URL 발급 ─────────────────────────────
- const signRes = await fetch(
-   `${SUPABASE_URL}/storage/v1/object/sign/${SUPABASE_BUCKET}/${uploadPath}`,
-    {
-    method: 'POST',                                 // ★ POST!
-    headers: {
-      Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ expiresIn: SIGN_EXPIRES }) // ★ body 로 전달
-  }
+const signRes = await fetchWithRetry(`${SUPABASE_URL}/storage/v1/object/sign/${SUPABASE_BUCKET}/${uploadPath}`, {
+ method: 'POST',
+ headers: {
+   Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+   'Content-Type': 'application/json',
+ },
+ body: JSON.stringify({ expiresIn: SIGN_EXPIRES })
+}
 );
+
 
 if (!signRes.ok) {
   const err = await signRes.text();
@@ -109,9 +133,18 @@ if (!signRes.ok) {
   return NextResponse.json({ error: 'sign_failed', detail: err }, { status: 502 });
 }
 
+
+for (let k = 0; k < 8; k++) {                 // 최대 3.2 s 대기
+  const head = await fetch(`${SUPABASE_URL}/storage/v1/object/public/${uploadPath}`, { method: 'HEAD' });
+  if (head.ok) break;
+  await new Promise(r => setTimeout(r, 400));
+}
+
+
+
+
 const { signedURL } = await signRes.json();          // eg. /object/sign/...
 const signedFullURL = `${SUPABASE_URL}/storage/v1${signedURL}`;  // ✅
-
 
 
 
