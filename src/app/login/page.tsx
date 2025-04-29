@@ -34,9 +34,12 @@ export default function LoginPage() {
       provider: 'google',
       options: {
         redirectTo,
+        queryParams: {
+          prompt: 'select_account', // ✅ 매번 계정 선택창 강제
+        },
       },
     });
-
+    
     if (error) {
       alert('로그인 실패');
       return;
