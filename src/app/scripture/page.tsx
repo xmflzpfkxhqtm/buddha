@@ -350,7 +350,7 @@ const handlePlay = async () => {
 
     sentenceRefs.current[index]?.scrollIntoView({
       behavior: 'smooth',
-      block: index < 5 ? 'start' : 'center',  // ✅ 요기
+      block: 'center',  // ✅ 요기
     });
     
     const audioUrl = await fetchTTS(ttsSentences[index], index);
