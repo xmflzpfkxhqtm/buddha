@@ -91,9 +91,9 @@ export async function POST(req: NextRequest) {
   
 // ── 3-b. 서명 URL 발급 (버킷이 public 이어도 사용) ──────────────
 // ── 3-b. 서명 URL 발급 ─────────────────────────────
-const signRes = await fetch(
-  `${SUPABASE_URL}/storage/v1/object/sign/${SUPABASE_BUCKET}/${encodeURIComponent(uploadPath)}`,
-  {
+ const signRes = await fetch(
+   `${SUPABASE_URL}/storage/v1/object/sign/${SUPABASE_BUCKET}/${uploadPath}`,
+    {
     method: 'POST',                                 // ★ POST!
     headers: {
       Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
