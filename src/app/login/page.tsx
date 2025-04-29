@@ -13,7 +13,7 @@ import { Browser } from '@capacitor/browser';
 const isNative = () => {
   if (typeof window === 'undefined') return false;
 
-  // @ts-ignore
+  // @ts-expect-error
   return !!window.Capacitor;
 };
 
