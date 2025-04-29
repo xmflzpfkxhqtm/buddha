@@ -347,8 +347,12 @@ const handlePlay = async () => {
     }
 
     setCurrentIndex(index);
-    sentenceRefs.current[index]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
+    sentenceRefs.current[index]?.scrollIntoView({
+      behavior: 'smooth',
+      block: index < 5 ? 'start' : 'center',  // ✅ 요기
+    });
+    
     const audioUrl = await fetchTTS(ttsSentences[index], index);
     if (!audioUrl) {
       await stopTTS();
@@ -479,6 +483,24 @@ const handlePlay = async () => {
 
       {/* 본문 */}
       <div className={`whitespace-pre-wrap font-maruburi bg-white rounded-xl ${fontSizeClass} leading-relaxed`}>
+      {currentIndex < 10 && (
+        <div style={{ height: '40vh' }} className="flex flex-col justify-center gap-3 bg-[#FAF5EF] text-[#6B4C3B]">
+  <p className="text-lg font-bold">{formatDisplayTitle(selected)}</p>
+  <p className="text-base leading-relaxed">
+    천천히 아래로 스크롤하며 경전을 읽어보세요.<br />
+    화면 아래의 버튼을 누르면 문장이 낭독됩니다.
+  </p>
+  <ul className="list-none space-y-1 pl-1 text-base">
+    <li className="flex items-start"><span className="mr-2">-</span> 좌측 상단에서 경전 선택 / 문장 검색</li>
+    <li className="flex items-start"><span className="mr-2">-</span> 우측 상단 ‘가’ 버튼으로 글자 크기 조절</li>
+    <li className="flex items-start"><span className="mr-2">-</span> 문장을 책갈피에 저장 가능</li>
+    <li className="flex items-start"><span className="mr-2">-</span> 재생 버튼으로 문장을 낭독</li>
+  </ul>
+</div>
+
+)}
+              
+
   {displayParagraphs.map((sentences, pIdx) => (
     <div key={pIdx} className="mb-6">
       {sentences.map((s, i) => {
