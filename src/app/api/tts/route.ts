@@ -121,17 +121,6 @@ console.time('3️⃣ Supabase DB insert');
   const audioUrl = urlData.publicUrl;
 
   // ✅ 4. DB에 캐시 저장
-  await supabase.from('tts_cache').insert({
-    scripture_id,
-    line_index,
-    text_original: text,
-    text_hash: textHash,
-    audio_url: audioUrl,
-  });
-
-  console.timeEnd('3️⃣ Supabase DB insert');
-console.timeEnd('TTS 전체');
-
 
   const insertResult = await supabase.from('tts_cache').insert({
     scripture_id,
