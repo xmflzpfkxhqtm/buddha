@@ -67,31 +67,32 @@ export async function POST(req: NextRequest) {
   if (!gData.audioContent) {
     return NextResponse.json({ error: 'TTS 응답 오류', detail: gData }, { status: 500 });
   }
-
-  // ✅ 3. 오디오 URL 먼저 반환
-  const response = NextResponse.json({ url: audioUrl });
-
-  // ✅ 4. 백그라운드 작업 (업로드 + DB insert)
   const audioBuffer = Buffer.from(gData.audioContent, 'base64');
 
-  // 4-1. Storage 업로드 (fetch로 호출)
-  fetch(`${SUPABASE_URL}/storage/v1/object/${SUPABASE_BUCKET}/${uploadPath}`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
-      'Content-Type': 'audio/mpeg',
-      'x-upsert': 'true',
-    },
-    body: audioBuffer,
-  }).then(async (res) => {
-    if (!res.ok) {
-      console.error('❌ Storage 업로드 실패', await res.text());
-      return;
-    }
-    console.log('✅ Storage 업로드 성공');
-  });
+ // 3. Storage 업로드 먼저 완료
+ const uploadRes = await fetch(
+   `${SUPABASE_URL}/storage/v1/object/${SUPABASE_BUCKET}/${uploadPath}`,
+   {
+     method: 'POST',
+     headers: {
+       Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+       'Content-Type': 'application/octet-stream',
+       'x-upsert': 'true',
+     },
+     body: audioBuffer,
+   },
+ );
 
-  // 4-2. DB insert (fetch)
+ if (!uploadRes.ok) {
+   const errText = await uploadRes.text();
+   console.error('❌ Storage 업로드 실패', errText);
+   return NextResponse.json({ error: 'upload_failed', detail: errText }, { status: 502 });
+ }
+  
+  // ✅ 4. 백그라운드 작업 (업로드 + DB insert)
+
+
+  // 3-2. DB insert (fetch)
   fetch(`${SUPABASE_URL}/rest/v1/tts_cache`, {
     method: 'POST',
     headers: {
@@ -115,6 +116,8 @@ export async function POST(req: NextRequest) {
     console.log('✅ DB insert 성공 또는 무시');
   });
 
+
+  const response = NextResponse.json({ url: audioUrl });
   console.timeEnd('TTS 전체');
   return response;
 }
