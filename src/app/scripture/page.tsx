@@ -303,13 +303,21 @@ const fetchTTSUrl = async (text: string, idx: number): Promise<string> => {
 
 // ── 실제 mp3(blob) 다운로드 ─────────────────────────────
 const fetchBlob = async (url: string): Promise<Blob> => {
-  while (true) {
-    try { const r = await fetch(url); if (r.ok) return r.blob(); }
-    catch {/* ignore */}
-    await new Promise(r => setTimeout(r, 400));
-  }
-};
+  let retry = 0;
+  while (retry < 3) {
+    const r = await fetch(url);
+    if (r.ok) return r.blob();
 
+    // Storage 전파 지연이면 400 또는 404
+    if (r.status === 400 || r.status === 404) {
+      retry += 1;
+      await new Promise(res => setTimeout(res, 250));
+      continue;
+    }
+    throw new Error(`fetchBlob failed ${r.status}`);
+  }
+  throw new Error('blob not ready after 3 retries');
+};
 
 
 
