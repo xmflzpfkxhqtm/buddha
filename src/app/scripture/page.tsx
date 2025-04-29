@@ -88,13 +88,23 @@ export default function ScripturePage() {
   const [isSearching, setIsSearching] = useState(false);
   const [groupedTitles, setGroupedTitles] = useState<Record<string, string[]>>({});
   const [expandedBase, setExpandedBase] = useState<string | null>(null);
-  const fetchAudioBlob = async (url: string): Promise<Blob> => {
-    const res = await fetch(url);
-    if (!res.ok) {
-      throw new Error(`오디오 다운로드 실패: ${res.status}`);
+  
+  const fetchAudioBlobUntilSuccess = async (url: string, delay = 500): Promise<Blob> => {
+    while (true) {
+      try {
+        const res = await fetch(url);
+        if (res.ok) {
+          return await res.blob();
+        } else {
+          console.warn(`⏳ fetchAudioBlob 실패 (${res.status}), ${delay}ms 후 재시도`);
+        }
+      } catch (err) {
+        console.warn('⏳ fetchAudioBlob 네트워크 오류, 재시도', err);
+      }
+      await new Promise(r => setTimeout(r, delay));
     }
-    return await res.blob();
   };
+  
   
   
   
@@ -408,7 +418,7 @@ const playSentence = async () => {
   setNextNextAudioUrl(null);
 
   try {
-    const blob = await fetchAudioBlob(audioUrl);
+    const blob = await fetchAudioBlobUntilSuccess(audioUrl);
     const blobUrl = URL.createObjectURL(blob);
 
     const audio = new Audio(blobUrl);
