@@ -304,52 +304,41 @@ useEffect(() => {
 
 const handlePlay = async () => {
   if (isSpeaking) {
-    // 🔥 재생 중이면: 일시정지 (isLocked 무시하고 일단 멈춤)
     await stopTTS();
     setIsLocked(false);
     return;
   }
 
-  if (isLocked) return; // 🔒 재생 중 새 재생 시도 막기
+  if (isLocked) return;
 
-  // 🔥 재생 시작
   setIsLocked(true);
-
-  await stopTTS(); // 혹시 모를 중복 재생 대비
+  await stopTTS();
   await KeepAwake.keepAwake();
-
   setIsSpeaking(true);
 
   let index = currentIndex;
 
-  const fetchTTS = async (text: string, index: number): Promise<string | null> => {
+  const fetchTTS = async (text: string, idx: number): Promise<string | null> => {
     try {
       const res = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           scripture_id: selected,
-          line_index: index,  // ✅ 여기만 고침
+          line_index: idx,
           text,
         }),
-              });
-  
+      });
+
       const textResponse = await res.text();
-  
-      try {
-        const data = JSON.parse(textResponse);
-        return data.url || null;
-      } catch {
-        console.error('❌ JSON 파싱 실패: 응답은 HTML로 추정됨');
-        console.warn(textResponse.slice(0, 100)); // 응답 일부 미리 보기
-        return null;
-      }
+      const data = JSON.parse(textResponse);
+      return data.url || null;
     } catch (err) {
-      console.error('❌ fetchTTS 네트워크 오류:', err);
+      console.error('❌ TTS fetch 에러:', err);
       return null;
     }
   };
-    
+
   const playSentence = async () => {
     if (index >= ttsSentences.length) {
       await stopTTS();
@@ -358,10 +347,7 @@ const handlePlay = async () => {
     }
 
     setCurrentIndex(index);
-    sentenceRefs.current[index]?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'center',
-    });
+    sentenceRefs.current[index]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
     const audioUrl = await fetchTTS(ttsSentences[index], index);
     if (!audioUrl) {
@@ -369,27 +355,37 @@ const handlePlay = async () => {
       setIsLocked(false);
       return;
     }
-    
+
     const audio = new Audio(audioUrl);
     audioRef.current = audio;
-    
-    audio.onended = () => {
-      index++;
-      setTimeout(playSentence, 300);
-    };
-    
+
     try {
-      await new Promise((r) => setTimeout(r, 200)); // iOS용 안정 대기
+      await new Promise((resolve) => setTimeout(resolve, 200)); // iOS 안정 대기
       await audio.play();
-    } catch {
+
+      audio.addEventListener('ended', async () => {
+        await new Promise((resolve) => setTimeout(resolve, 300)); // 자연스러운 문장간 텀
+        index++;
+        playSentence();
+      });
+
+      audio.addEventListener('error', async () => {
+        console.error('❌ 오디오 재생 오류 발생');
+        await stopTTS();
+        setIsLocked(false);
+      });
+
+    } catch (err) {
+      console.error('❌ 오디오 재생 중 에러:', err);
       await stopTTS();
       setIsLocked(false);
     }
-    
   };
 
   playSentence();
 };
+
+
 
   const handleBookmark = async () => {
     if (!userId) {
