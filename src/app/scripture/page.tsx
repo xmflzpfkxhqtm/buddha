@@ -79,31 +79,15 @@ export default function ScripturePage() {
   const [showMessage, setShowMessage] = useState(false);
   const [bookmarkPending, setBookmarkPending] = useState<{ title: string; index: number } | null>(null);
   const [initialFilter, setInitialFilter] = useState('전체');
-  const [nextAudioUrl, setNextAudioUrl] = useState<string | null>(null);
-  const [nextNextAudioUrl, setNextNextAudioUrl] = useState<string | null>(null);
-  
+  const shouldStop  = useRef(false);            // 이름 단순화
+  const preloadMap  = useRef<Map<number,string>>(new Map()); // 새 Map
   const sentenceRefs = useRef<(HTMLSpanElement | null)[]>([]);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const indexRef = useRef(currentIndex);
+  const audioRef     = useRef<HTMLAudioElement | null>(null);
+  const indexRef     = useRef(currentIndex);
+    
   const [isSearching, setIsSearching] = useState(false);
   const [groupedTitles, setGroupedTitles] = useState<Record<string, string[]>>({});
   const [expandedBase, setExpandedBase] = useState<string | null>(null);
-  
-  const fetchAudioBlobUntilSuccess = async (url: string, delay = 500): Promise<Blob> => {
-    while (true) {
-      try {
-        const res = await fetch(url);
-        if (res.ok) {
-          return await res.blob();
-        } else {
-          console.warn(`⏳ fetchAudioBlob 실패 (${res.status}), ${delay}ms 후 재시도`);
-        }
-      } catch (err) {
-        console.warn('⏳ fetchAudioBlob 네트워크 오류, 재시도', err);
-      }
-      await new Promise(r => setTimeout(r, delay));
-    }
-  };
   
   
   
@@ -299,18 +283,50 @@ useEffect(() => {
 }, [isSpeaking]); // ✅ isSpeaking이 변경될 때 다시 등록
 
 
-const [isLocked, setIsLocked] = useState(false); // ✅ 락 추가
+
+// ── TTS URL 받아오기 (요청 실패 시 재시도) ─────────────────────────
+const fetchTTSUrl = async (text: string, idx: number): Promise<string> => {
+  while (true) {
+    try {
+      const r   = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:   JSON.stringify({ scripture_id: selected, line_index: idx, text })
+      });
+      const raw = await r.text();
+      const j   = JSON.parse(raw);
+      if (j?.url) return j.url;
+    } catch {/* ignore */}
+    await new Promise(r => setTimeout(r, 400));
+  }
+};
+
+// ── 실제 mp3(blob) 다운로드 ─────────────────────────────
+const fetchBlob = async (url: string): Promise<Blob> => {
+  while (true) {
+    try { const r = await fetch(url); if (r.ok) return r.blob(); }
+    catch {/* ignore */}
+    await new Promise(r => setTimeout(r, 400));
+  }
+};
+
+
+
 
 const stopTTS = async () => {
+  shouldStop.current = true;      // ✅ 이름 맞추기
   if (audioRef.current) {
     audioRef.current.pause();
     audioRef.current.src = '';
     audioRef.current.load();
     audioRef.current = null;
   }
+  indexRef.current = currentIndex;
+
   setIsSpeaking(false); // ✅ 여기 꼭 확실히 false로 바꿔줘야 돼
   await KeepAwake.allowSleep();
-};
+  preloadMap.current.clear();     // ★ 이 줄 추가
+  };
 
 // ✅ 언마운트 시에도 재생 정지
 useEffect(() => {
@@ -323,151 +339,64 @@ useEffect(() => {
 }, [selected, modalTab, showModal]);
 
 const handlePlay = async () => {
-  if (isSpeaking) {
-    await stopTTS();
-    setIsLocked(false);
-    return;
-  }
+  // 이미 재생 중이라면 → 일시정지
+  if (isSpeaking) { await stopTTS(); return; }
 
-  if (isLocked) return;
-
-  setIsLocked(true);
+  // 초기화
   await stopTTS();
-  await KeepAwake.keepAwake();
+  shouldStop.current = false;
   setIsSpeaking(true);
+  await KeepAwake.keepAwake();
+  indexRef.current = currentIndex;
 
-  let index = currentIndex;
+  // ===== 메인 while 루프 =====
+  while (indexRef.current < ttsSentences.length && !shouldStop.current) {
+    const idx  = indexRef.current;
+    const text = ttsSentences[idx];
 
-  const fetchTTS = async (text: string, idx: number): Promise<string | null> => {
-    try {
-      const res = await fetch('/api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          scripture_id: selected,
-          line_index: idx,
-          text,
-        }),
-      });
+    // 화면 스크롤 & 인덱스 동기화
+    setCurrentIndex(idx);
+    sentenceRefs.current[idx]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-      const textResponse = await res.text();
-      try {
-        const data = JSON.parse(textResponse);
-        return data.url || null;
-      } catch {
-        console.error('❌ JSON 파싱 실패: HTML 반환 가능성');
-        console.warn(textResponse.slice(0, 100));
-        return null;
-      }
-    } catch (err) {
-      console.error('❌ fetchTTS 네트워크 오류:', err);
-      return null;
+    // ---- URL 가져오기 (캐시 우선) ----
+    let url: string;
+    if (preloadMap.current.has(idx)) {
+      url = preloadMap.current.get(idx)!;
+    } else {
+      url = await fetchTTSUrl(text, idx);
     }
-  };
 
-  const fetchUntilSuccess = async (text: string, idx: number, delay = 500): Promise<string> => {
-    while (true) {
-      const url = await fetchTTS(text, idx);
-      if (url) {
-        return url;
+    // ---- 다음 2문장 프리로드 ----
+    [1, 2].forEach(offset => {
+      const next = idx + offset;
+      if (next < ttsSentences.length && !preloadMap.current.has(next)) {
+        fetchTTSUrl(ttsSentences[next], next)
+          .then(u => preloadMap.current.set(next, u))
+          .catch(() => {/* ignore */});
       }
-      console.warn(`⏳ fetchTTS 실패, ${delay}ms 후 재시도`);
-      await new Promise(r => setTimeout(r, delay));
-    }
-  };
-    
+    });
 
-  // ✅ Audio가 준비될 때까지 기다리는 함수
-// ✅ Audio가 준비될 때까지 기다리는 함수
-const waitForCanPlay = (audio: HTMLAudioElement) =>
-  new Promise<void>((resolve, reject) => {
-    const timeout = setTimeout(() => reject('Timeout while waiting for canplaythrough'), 8000);
-    const handler = () => {
-      clearTimeout(timeout);
-      audio.removeEventListener('canplaythrough', handler);
-      resolve();
-    };
-    audio.addEventListener('canplaythrough', handler);
-    audio.load(); // ✅ 명시적으로 load() 호출
-  });
-
-// ✅ play()를 안전하게 호출하는 함수
-const safePlay = async (audio: HTMLAudioElement) => {
-  try {
-    await audio.play();
-  } catch (err) {
-    console.warn('🔁 play() 실패, 300ms 후 재시도', err);
-    await new Promise((r) => setTimeout(r, 300));
-    await audio.play();
-  }
-};
-
-// 🔥 완전 개선된 playSentence 함수
-const playSentence = async () => {
-  if (index >= ttsSentences.length) {
-    await stopTTS();
-    setIsLocked(false);
-    return;
-  }
-
-  setCurrentIndex(index);
-  sentenceRefs.current[index]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-  const audioUrl = nextAudioUrl || await fetchUntilSuccess(ttsSentences[index], index);
-  setNextAudioUrl(nextNextAudioUrl ?? null);
-  setNextNextAudioUrl(null);
-
-  try {
-    const blob = await fetchAudioBlobUntilSuccess(audioUrl);
-    const blobUrl = URL.createObjectURL(blob);
-
-    const audio = new Audio(blobUrl);
+    // ---- 오디오 재생 ----
+    const blob   = await fetchBlob(url);
+    const blobId = URL.createObjectURL(blob);
+    const audio  = new Audio(blobId);
     audioRef.current = audio;
-    audio.crossOrigin = 'anonymous';
-    audio.preload = 'auto';
 
-    await waitForCanPlay(audio);
-    await safePlay(audio); // ✅ play() 실패해도 다시 재시도
-    console.log('✅ 재생 성공');
+    try { await audio.play(); }
+    catch { await new Promise(r => setTimeout(r, 300)); await audio.play(); }
 
-    audio.onended = async () => {
-      console.log('✅ 재생 완료, 다음 문장으로');
-      URL.revokeObjectURL(audio.src);
-      index++;
-      await new Promise((r) => setTimeout(r, 200));
-      await playSentence();
-    };
-
-    audio.onerror = async () => {
-      console.error('❌ 재생 오류 발생, 다음 문장으로 넘어감');
-      URL.revokeObjectURL(audio.src);
-      index++;
-      await new Promise((r) => setTimeout(r, 300));
-      await playSentence();
-    };
-
-  } catch (err) {
-    console.error('⚠️ 재생 준비 실패, 건너뜀:', err);
-    index++;
-    await new Promise((r) => setTimeout(r, 300));
-    await playSentence();
-  }
-
-  // ✅ 다음 문장 preload
-  if (index + 1 < ttsSentences.length) {
-    fetchUntilSuccess(ttsSentences[index + 1], index + 1).then((url) => {
-      setNextAudioUrl(url);
+    // 끝날 때까지 대기
+    await new Promise<void>((resolve) => {
+      audio.onended = () => resolve();        // 매개변수 무시하고 호출
+      audio.onerror = () => resolve();        // ↑ 같은 래퍼 함수
     });
-  }
-  if (index + 2 < ttsSentences.length) {
-    fetchUntilSuccess(ttsSentences[index + 2], index + 2).then((url) => {
-      setNextNextAudioUrl(url);
-    });
-  }
-};
+        URL.revokeObjectURL(blobId);
+    preloadMap.current.delete(idx);   // 메모리 해제
 
+    indexRef.current += 1;
+  }
 
-  playSentence();
+  await stopTTS();
 };
 
 
