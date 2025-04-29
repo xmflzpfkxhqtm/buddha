@@ -2,12 +2,10 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Suspense } from 'react';
 import AuthCallbackInner from './AuthCallbackInner';
 
 export default function AuthCallbackPage() {
-  const router = useRouter();
 
   useEffect(() => {
     // ✅ 해시로 온 경우 강제로 쿼리로 바꿔주기
