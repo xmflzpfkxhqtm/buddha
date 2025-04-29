@@ -16,7 +16,7 @@ export default function AuthDeepLinkPage() {
 
         const { access_token, refresh_token } = data.session;
 
-        // 앱 딥링크로 access_token 전달
+        // ✅ 여기! 딥링크에 토큰을 붙여야 한다
         const deeplink = `yeondeung://auth/callback?access_token=${access_token}&refresh_token=${refresh_token}`;
         window.location.href = deeplink;
       } catch (err) {
