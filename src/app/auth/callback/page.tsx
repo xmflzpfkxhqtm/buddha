@@ -1,16 +1,16 @@
 'use client';
-export const dynamic = 'force-dynamic'; // ✅ CSR 강제
+export const dynamic = 'force-dynamic';
 
-import { Suspense, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 
-function CallbackInner() {
+export default function AuthCallbackPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    const handleSession = async () => {
+    const run = async () => {
       const access_token = searchParams.get('access_token');
       const refresh_token = searchParams.get('refresh_token');
 
@@ -20,34 +20,33 @@ function CallbackInner() {
           refresh_token,
         });
 
-        if (!error && data.session) {
-          router.push('/me');
+        if (error) {
+          console.error('Session set 실패', error);
+          router.replace('/login');
           return;
         }
-      }
 
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        router.push('/me');
+        if (data.session) {
+          router.replace('/me');
+          return;
+        }
       } else {
-        router.push('/login');
+        // token이 URL에 없으면, 기존 세션으로 로그인 시도
+        const { data } = await supabase.auth.getSession();
+        if (data.session) {
+          router.replace('/me');
+        } else {
+          router.replace('/login');
+        }
       }
     };
 
-    handleSession();
+    run();
   }, [router, searchParams]);
 
   return (
     <main className="flex justify-center items-center min-h-screen">
       <p>로그인 처리 중...</p>
     </main>
-  );
-}
-
-export default function AuthCallbackPage() {
-  return (
-    <Suspense fallback={<div>잠시만 기다려주세요...</div>}>
-      <CallbackInner />
-    </Suspense>
   );
 }
