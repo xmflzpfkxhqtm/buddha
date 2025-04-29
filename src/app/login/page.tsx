@@ -24,10 +24,14 @@ export default function LoginPage() {
   }, [router]);
 
   // ✅ 환경별 redirectTo 결정
-  const redirectTo = isNativeApp()
-    ? 'yeondeung://auth/callback' // ✅ 앱이면 딥링크로
-    : 'https://buddha-dusky.vercel.app/auth/deeplink'; // ✅ 웹이면 기존 deeplink로
+  const isLocal = typeof window !== 'undefined' && window.location.hostname === 'localhost';
 
+  const redirectTo = isNativeApp()
+    ? 'yeondeung://auth/callback'
+    : isLocal
+      ? 'http://localhost:3000/auth/deeplink'  // ✅ 로컬일 때
+      : 'https://buddha-dusky.vercel.app/auth/deeplink'; // ✅ 배포일 때
+  
   // ✅ 구글 로그인 함수
   const handleGoogleLogin = async () => {
     const { data, error } = await supabase.auth.signInWithOAuth({

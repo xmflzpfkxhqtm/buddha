@@ -155,14 +155,25 @@ export default function ProfilePage() {
           <p className="text-sm text-center mt-3 text-gray-700">{saveMessage}</p>
         )}
 
-        <p className="text-xs text-center text-gray-500 mt-4">
-          입력하신 개인정보는 서비스 이용을 위한 본인 식별 및 통계 분석 목적으로만 사용되며,
-          동의 없이 외부에 제공되지 않습니다.
-        </p>
-        <p className="text-xs text-center text-gray-500">
-          자세한 내용은 <a href="/privacy" className="underline hover:text-red-dark">개인정보 처리방침</a>을 확인해주세요.
-        </p>
+<p className="text-xs text-center text-gray-500 mt-4">
+  입력하신 개인정보는 서비스 이용을 위한 본인 식별 및 통계 분석 목적으로만 사용되며,
+  동의 없이 외부에 제공되지 않습니다.
+</p>
+<p className="text-xs text-center text-gray-500">
+  자세한 내용은 <a href="/privacy" className="underline hover:text-red-dark">개인정보 처리방침</a>을 확인해주세요.
+</p>
+<p className="text-xs text-center text-gray-400 mt-2">
+  <button
+    onClick={() => router.push('/me/profile/account-delete')}
+    className="underline hover:text-red-dark"
+  >
+    계정 삭제 요청하기
+  </button>
+</p>
+
       </div>
+  
+
     </main>
   );
 }
