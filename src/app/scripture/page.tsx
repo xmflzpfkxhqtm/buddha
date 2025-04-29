@@ -345,7 +345,7 @@ const handlePlay = async () => {
     }
   };
 
-  const fetchUntilSuccess = async (text: string, idx: number, delay = 1000): Promise<string> => {
+  const fetchUntilSuccess = async (text: string, idx: number, delay = 500): Promise<string> => {
     while (true) {
       const url = await fetchTTS(text, idx);
       if (url) {
