@@ -345,19 +345,17 @@ const handlePlay = async () => {
     }
   };
 
-  const fetchWithRetry = async (text: string, idx: number, maxRetries = 5, delay = 500): Promise<string | null> => {
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
+  const fetchUntilSuccess = async (text: string, idx: number, delay = 1000): Promise<string> => {
+    while (true) {
       const url = await fetchTTS(text, idx);
       if (url) {
         return url;
       }
-      console.warn(`⏳ fetchTTS 재시도 중 (${attempt + 1}/${maxRetries})`);
+      console.warn(`⏳ fetchTTS 실패, ${delay}ms 후 재시도`);
       await new Promise(r => setTimeout(r, delay));
     }
-    console.error('❌ fetchTTS 최종 실패');
-    return null;
   };
-  
+    
 
   const playSentence = async () => {
     if (index >= ttsSentences.length) {
@@ -374,7 +372,7 @@ const handlePlay = async () => {
       block: 'center',
     });
 
-    const audioUrl = await fetchWithRetry(ttsSentences[index], index);
+    const audioUrl = await fetchUntilSuccess(ttsSentences[index], index);
     if (!audioUrl) {
       console.error('❌ fetchTTS 실패: url 없음');
       await stopTTS();
