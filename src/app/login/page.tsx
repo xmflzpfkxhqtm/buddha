@@ -7,6 +7,15 @@ import { FcGoogle } from 'react-icons/fc';
 import { SiKakaotalk } from 'react-icons/si';
 import Image from 'next/image';
 import ScrollHeader from '../../../components/ScrollHeader';
+import { Browser } from '@capacitor/browser';
+
+// ✅ Capacitor 앱 환경 감지 함수
+const isNative = () => {
+  if (typeof window === 'undefined') return false;
+
+  // @ts-ignore
+  return !!window.Capacitor;
+};
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,40 +33,52 @@ export default function LoginPage() {
 
   // ✅ 구글 로그인 함수
   const handleGoogleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo:
           typeof window !== 'undefined'
-            ? window.location.origin
-            : 'https://buddha-dusky.vercel.app',
+            ? window.location.origin + '/auth/callback'
+            : 'https://buddha-dusky.vercel.app/auth/callback',
       },
     });
 
     if (error) {
       alert('로그인 실패');
+      return;
+    }
+
+    // 앱 환경이면 Browser로 열기
+    if (isNative() && data?.url) {
+      await Browser.open({ url: data.url });
     }
   };
 
   // ✅ 카카오 로그인 함수
   const handleKakaoLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'kakao',
       options: {
         redirectTo:
           typeof window !== 'undefined'
-            ? window.location.origin
-            : 'https://buddha-dusky.vercel.app',
+            ? window.location.origin + '/auth/callback'
+            : 'https://buddha-dusky.vercel.app/auth/callback',
       },
     });
 
     if (error) {
       alert('카카오 로그인 실패');
+      return;
+    }
+
+    // 앱 환경이면 Browser로 열기
+    if (isNative() && data?.url) {
+      await Browser.open({ url: data.url });
     }
   };
 
   return (
-    <main className="relative min-h-screen flex flex-col items-center justify-start bg-red py-24 px-6">
+    <main className="relative min-h-screen flex flex-col items-center justify-start bg-red py-4 px-6">
       <Image
         src="/bg_loading.png"
         alt="로딩 배경"
