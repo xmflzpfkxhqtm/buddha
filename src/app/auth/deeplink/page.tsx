@@ -6,29 +6,28 @@ import { supabase } from '@/lib/supabaseClient';
 export default function AuthDeepLinkPage() {
   useEffect(() => {
     const tryRedirect = async () => {
-      try {
-        const { data, error } = await supabase.auth.getSession();
+      if (isNativeApp()) {
+        try {
+          const { data, error } = await supabase.auth.getSession();
 
-        if (error || !data.session) {
-          alert('로그인 실패');
-          return;
-        }
+          if (error || !data.session) {
+            alert('로그인 실패');
+            return;
+          }
 
-        const { access_token, refresh_token } = data.session;
+          const { access_token, refresh_token } = data.session;
 
-        const deeplink = `yeondeung://auth/callback?access_token=${access_token}&refresh_token=${refresh_token}`;
-
-        if (isNativeApp()) {
           // ✅ 앱이면 딥링크로
+          const deeplink = `yeondeung://auth/callback?access_token=${access_token}&refresh_token=${refresh_token}`;
           window.location.href = deeplink;
-        } else {
-          // ✅ 웹이면 2초 기다렸다가 /auth/callback?~~로 이동
-          setTimeout(() => {
-            window.location.href = `/auth/callback?access_token=${access_token}&refresh_token=${refresh_token}`;
-          }, 2000);
+        } catch (err) {
+          console.error('DeepLink error:', err);
         }
-      } catch (err) {
-        console.error('DeepLink error:', err);
+      } else {
+        // ✅ 웹이면 그냥 2초 후 /auth/callback로 강제 이동
+        setTimeout(() => {
+          window.location.href = '/auth/callback';
+        }, 2000);
       }
     };
 
@@ -45,6 +44,6 @@ export default function AuthDeepLinkPage() {
 // ✅ 앱/웹 구분 함수
 function isNativeApp() {
   if (typeof window === 'undefined') return false;
-// @ts-expect-error Capacitor global object
-return !!window.Capacitor;
+  // @ts-expect-error Capacitor global object
+  return !!window.Capacitor;
 }
