@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import ScriptureModal from '../../../components/ScriptureModal'; // ✅ 추가
+import { KeepAwake } from '@capacitor-community/keep-awake';
 
 
 interface GlobalSearchResult {
@@ -277,41 +278,48 @@ useEffect(() => {
   return () => window.removeEventListener('scroll', onScroll);
 }, [isSpeaking]); // ✅ isSpeaking이 변경될 때 다시 등록
 
-const stopTTS = () => {
+
+const [isLocked, setIsLocked] = useState(false); // ✅ 락 추가
+
+const stopTTS = async () => {
   if (audioRef.current) {
     audioRef.current.pause();
+    audioRef.current.src = '';
+    audioRef.current.load();
     audioRef.current = null;
   }
-  setIsSpeaking(false);
+  setIsSpeaking(false); // ✅ 여기 꼭 확실히 false로 바꿔줘야 돼
+  await KeepAwake.allowSleep();
 };
 
 // ✅ 언마운트 시에도 재생 정지
-useEffect(() => stopTTS, []);
+useEffect(() => {
+  return () => { stopTTS(); };
+}, []);
 
-// ✅ selected 변경/모달 열릴 때도 정지
+// ✅ selected, modalTab, showModal 바뀔 때도 재생 정지
 useEffect(() => {
   stopTTS();
 }, [selected, modalTab, showModal]);
 
-useEffect(() => {
-  const stopTTS = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-    setIsSpeaking(false);
-  };
+const handlePlay = async () => {
+  if (isSpeaking) {
+    // 🔥 재생 중이면: 일시정지 (isLocked 무시하고 일단 멈춤)
+    await stopTTS();
+    setIsLocked(false);
+    return;
+  }
 
-  stopTTS(); // selected / modalTab / showModal 이 바뀔 때도 정지
-}, [selected, modalTab, showModal]);
+  if (isLocked) return; // 🔒 재생 중 새 재생 시도 막기
 
+  // 🔥 재생 시작
+  setIsLocked(true);
 
-const handlePlay = () => {
-  stopTTS(); // 항상 기존 재생 끊고 시작
-
-  if (isSpeaking) return; // 일시정지 동작
+  await stopTTS(); // 혹시 모를 중복 재생 대비
+  await KeepAwake.keepAwake();
 
   setIsSpeaking(true);
+
   let index = currentIndex;
 
   const fetchTTS = async (text: string): Promise<string | null> => {
@@ -330,7 +338,8 @@ const handlePlay = () => {
 
   const playSentence = async () => {
     if (index >= ttsSentences.length) {
-      stopTTS();
+      await stopTTS();
+      setIsLocked(false);
       return;
     }
 
@@ -342,7 +351,8 @@ const handlePlay = () => {
 
     const audioBase64 = await fetchTTS(ttsSentences[index]);
     if (!audioBase64) {
-      stopTTS();
+      await stopTTS();
+      setIsLocked(false);
       return;
     }
 
@@ -351,13 +361,14 @@ const handlePlay = () => {
 
     audio.onended = () => {
       index++;
-      setTimeout(playSentence, 300); // 다음 문장 예약
+      setTimeout(playSentence, 300);
     };
 
     try {
       await audio.play();
     } catch {
-      stopTTS();
+      await stopTTS();
+      setIsLocked(false);
     }
   };
 
