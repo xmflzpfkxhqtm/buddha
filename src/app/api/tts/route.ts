@@ -1,5 +1,5 @@
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic'; // App Router의 정적화 방지
-
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 
