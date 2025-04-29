@@ -13,8 +13,8 @@ import { Browser } from '@capacitor/browser';
 const isNative = () => {
   if (typeof window === 'undefined') return false;
 
-// @ts-expect-error: Capacitor is only available in native app runtime
-return !!window.Capacitor;
+  // @ts-expect-error: Capacitor is only available in native app runtime
+  return !!window.Capacitor;
 };
 
 export default function LoginPage() {
@@ -36,10 +36,9 @@ export default function LoginPage() {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo:
-          typeof window !== 'undefined'
-            ? window.location.origin + '/auth/callback'
-            : 'https://buddha-dusky.vercel.app/auth/callback',
+        redirectTo: isNative()
+          ? 'yeondeung://auth/callback'
+          : window.location.origin + '/auth/callback',
       },
     });
 
@@ -48,7 +47,6 @@ export default function LoginPage() {
       return;
     }
 
-    // 앱 환경이면 Browser로 열기
     if (isNative() && data?.url) {
       await Browser.open({ url: data.url });
     }
@@ -59,10 +57,9 @@ export default function LoginPage() {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'kakao',
       options: {
-        redirectTo:
-          typeof window !== 'undefined'
-            ? window.location.origin + '/auth/callback'
-            : 'https://buddha-dusky.vercel.app/auth/callback',
+        redirectTo: isNative()
+          ? 'yeondeung://auth/callback'
+          : window.location.origin + '/auth/callback',
       },
     });
 
@@ -71,7 +68,6 @@ export default function LoginPage() {
       return;
     }
 
-    // 앱 환경이면 Browser로 열기
     if (isNative() && data?.url) {
       await Browser.open({ url: data.url });
     }
