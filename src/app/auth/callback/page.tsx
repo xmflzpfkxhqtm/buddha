@@ -1,4 +1,5 @@
 'use client';
+export const dynamic = 'force-dynamic'; // or 'force-no-static'
 
 import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -14,7 +15,6 @@ export default function AuthCallbackPage() {
       const refresh_token = searchParams.get('refresh_token');
 
       if (access_token && refresh_token) {
-        // 앱 딥링크에서 받은 경우
         const { data, error } = await supabase.auth.setSession({
           access_token,
           refresh_token,
@@ -26,7 +26,6 @@ export default function AuthCallbackPage() {
         }
       }
 
-      // fallback: 기존 방식 (웹이나 쿠키 있는 경우)
       const { data } = await supabase.auth.getSession();
       if (data.session) {
         router.push('/me');
