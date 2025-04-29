@@ -9,14 +9,6 @@ import Image from 'next/image';
 import ScrollHeader from '../../../components/ScrollHeader';
 import { Browser } from '@capacitor/browser';
 
-// ✅ Capacitor 앱 환경 감지 함수
-const isNative = () => {
-  if (typeof window === 'undefined') return false;
-
-  // @ts-expect-error: Capacitor is only available in native app runtime
-  return !!window.Capacitor;
-};
-
 export default function LoginPage() {
   const router = useRouter();
 
@@ -31,14 +23,14 @@ export default function LoginPage() {
     checkLogin();
   }, [router]);
 
+  const redirectTo = 'https://buddha-dusky.vercel.app/auth/deeplink';
+
   // ✅ 구글 로그인 함수
   const handleGoogleLogin = async () => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: isNative()
-          ? 'yeondeung://auth/callback'
-          : window.location.origin + '/auth/callback',
+        redirectTo,
       },
     });
 
@@ -47,7 +39,7 @@ export default function LoginPage() {
       return;
     }
 
-    if (isNative() && data?.url) {
+    if (data?.url) {
       await Browser.open({ url: data.url });
     }
   };
@@ -57,9 +49,7 @@ export default function LoginPage() {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'kakao',
       options: {
-        redirectTo: isNative()
-          ? 'yeondeung://auth/callback'
-          : window.location.origin + '/auth/callback',
+        redirectTo,
       },
     });
 
@@ -68,7 +58,7 @@ export default function LoginPage() {
       return;
     }
 
-    if (isNative() && data?.url) {
+    if (data?.url) {
       await Browser.open({ url: data.url });
     }
   };
