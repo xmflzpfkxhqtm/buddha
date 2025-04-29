@@ -7,6 +7,7 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const SUPABASE_BUCKET = 'tts-audios';
 const GOOGLE_TTS_KEY = process.env.GOOGLE_TTS_API_KEY!;
+const SIGN_EXPIRES = 60 * 60;        // 서명 URL 유효시간(초) – 1시간
 
 export async function POST(req: NextRequest) {
   const { scripture_id, line_index, text } = await req.json();
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
     body: JSON.stringify({
       input: { text },
       voice: { languageCode: 'ko-KR', name: 'ko-KR-Neural2-C' },
-      audioConfig: { audioEncoding: 'MP3', speakingRate: 0.85, pitch: -4.0 },
+      audioConfig: { audioEncoding: 'MP3', speakingRate: 0.85, pitch: -5.0 },
     }),
   });
 
@@ -89,6 +90,33 @@ export async function POST(req: NextRequest) {
    return NextResponse.json({ error: 'upload_failed', detail: errText }, { status: 502 });
  }
   
+// ── 3-b. 서명 URL 발급 (버킷이 public 이어도 사용) ──────────────
+// ── 3-b. 서명 URL 발급 ─────────────────────────────
+const signRes = await fetch(
+  `${SUPABASE_URL}/storage/v1/object/sign/${SUPABASE_BUCKET}/${encodeURIComponent(uploadPath)}`,
+  {
+    method: 'POST',                                 // ★ POST!
+    headers: {
+      Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ expiresIn: SIGN_EXPIRES }) // ★ body 로 전달
+  }
+);
+
+if (!signRes.ok) {
+  const err = await signRes.text();
+  console.error('❌ signURL 실패', err);
+  return NextResponse.json({ error: 'sign_failed', detail: err }, { status: 502 });
+}
+
+const { signedURL } = await signRes.json();          // eg. /object/sign/...
+const signedFullURL = `${SUPABASE_URL}/storage/v1${signedURL}`;  // ✅
+
+
+
+
+
   // ✅ 4. 백그라운드 작업 (업로드 + DB insert)
 
 
@@ -106,7 +134,7 @@ export async function POST(req: NextRequest) {
       line_index,
       text_original: text,
       text_hash: textHash,
-      audio_url: audioUrl,
+      audio_url: signedFullURL,
     }),
   }).then(async (res) => {
     if (!res.ok) {
@@ -117,7 +145,7 @@ export async function POST(req: NextRequest) {
   });
 
 
-  const response = NextResponse.json({ url: audioUrl });
+  const response = NextResponse.json({ url: signedFullURL });
   console.timeEnd('TTS 전체');
   return response;
 }
