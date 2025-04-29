@@ -25,8 +25,9 @@ export async function POST(req: NextRequest) {
 
   const textHash = crypto.createHash('md5').update(text).digest('hex');
   const fileName = `${textHash}.mp3`;
+  const uploadPath = `tts/${fileName}`;
 
-  // ✅ 1. 캐시 조회
+  // ✅ 1. 캐시 확인
   const { data: existing } = await supabase
     .from('tts_cache')
     .select('audio_url')
@@ -42,6 +43,7 @@ export async function POST(req: NextRequest) {
   console.time('TTS 전체');
   console.time('1️⃣ Google TTS fetch');
 
+  // ✅ 2. Google TTS 호출
   const gRes = await fetch(
     `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`,
     {
@@ -67,7 +69,7 @@ export async function POST(req: NextRequest) {
   try {
     gData = JSON.parse(gResText);
   } catch {
-    console.error('❌ JSON 파싱 실패 (HTML일 수 있음):', gResText.slice(0, 200));
+    console.error('❌ JSON 파싱 실패:', gResText.slice(0, 200));
     return NextResponse.json({ error: 'TTS 응답 파싱 실패', preview: gResText.slice(0, 100) }, { status: 502 });
   }
 
@@ -76,23 +78,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'TTS 실패', detail: gData }, { status: 500 });
   }
 
-  const audioBuffer = Buffer.from(gData.audioContent, 'base64');
-  const uploadPath = `tts/${fileName}`;
-
-  console.time('2️⃣ Supabase upload');
-  const { error: uploadError } = await supabase.storage
-    .from('tts-audios')
-    .upload(uploadPath, audioBuffer, {
-      contentType: 'audio/mpeg',
-      upsert: true,
-    });
-  console.timeEnd('2️⃣ Supabase upload');
-
-  if (uploadError) {
-    console.error('❌ Supabase 업로드 실패:', uploadError);
-    return NextResponse.json({ error: 'Storage 업로드 실패', detail: uploadError }, { status: 500 });
-  }
-
+  // ✅ 3. URL 미리 생성
   const { data: urlData } = supabase.storage.from('tts-audios').getPublicUrl(uploadPath);
   const audioUrl = urlData?.publicUrl;
 
@@ -101,10 +87,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'URL 생성 실패' }, { status: 500 });
   }
 
-  // ✅ 4. DB insert (insert 실패 무시하는 버전)
-  console.time('3️⃣ Supabase DB insert');
+  // ✅ 4. 바로 응답 먼저 보내기
+  const response = NextResponse.json({ url: audioUrl });
 
-  const { error: insertError } = await supabase
+  // ✅ 5. 백그라운드에서 Storage 업로드 + DB insert
+  const audioBuffer = Buffer.from(gData.audioContent, 'base64');
+
+  supabase.storage
+    .from('tts-audios')
+    .upload(uploadPath, audioBuffer, {
+      contentType: 'audio/mpeg',
+      upsert: true,
+    })
+    .then(({ error: uploadError }) => {
+      if (uploadError) {
+        console.error('❌ Supabase 업로드 실패:', uploadError);
+      } else {
+        console.log('✅ Supabase 업로드 성공');
+      }
+    });
+
+  supabase
     .from('tts_cache')
     .insert({
       scripture_id,
@@ -112,18 +115,15 @@ export async function POST(req: NextRequest) {
       text_original: text,
       text_hash: textHash,
       audio_url: audioUrl,
+    })
+    .then(({ error }) => {
+      if (error && error.code !== '23505') {
+        console.error('❌ DB insert 실패:', error);
+      } else {
+        console.log('✅ DB insert 성공 또는 중복 무시');
+      }
     });
 
-  if (insertError) {
-    // 🎯 이미 존재하는 경우는 무시하고 넘어간다
-    if (insertError.code !== '23505') { // 23505 = unique violation
-      console.error('❌ DB insert 실패:', insertError);
-      return NextResponse.json({ error: 'DB 삽입 실패', detail: insertError }, { status: 500 });
-    }
-  }
-
-  console.timeEnd('3️⃣ Supabase DB insert');
   console.timeEnd('TTS 전체');
-
-  return NextResponse.json({ url: audioUrl });
+  return response;
 }
