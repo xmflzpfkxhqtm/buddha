@@ -23,7 +23,10 @@ export default function LoginPage() {
     checkLogin();
   }, [router]);
 
-  const redirectTo = 'https://buddha-dusky.vercel.app/auth/deeplink';
+  // ✅ 환경별 redirectTo 결정
+  const redirectTo = isNativeApp()
+    ? 'yeondeung://auth/callback' // ✅ 앱이면 딥링크로
+    : 'https://buddha-dusky.vercel.app/auth/deeplink'; // ✅ 웹이면 기존 deeplink로
 
   // ✅ 구글 로그인 함수
   const handleGoogleLogin = async () => {
@@ -103,4 +106,11 @@ export default function LoginPage() {
       </div>
     </main>
   );
+}
+
+// ✅ Native 앱 판별 함수
+function isNativeApp() {
+  if (typeof window === 'undefined') return false;
+  // @ts-expect-error Capacitor global only in native build
+  return !!window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() !== 'web';
 }
