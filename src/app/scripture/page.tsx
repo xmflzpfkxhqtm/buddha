@@ -322,20 +322,34 @@ const handlePlay = async () => {
 
   let index = currentIndex;
 
-  const fetchTTS = async (text: string): Promise<string | null> => {
+  const fetchTTS = async (text: string, index: number): Promise<string | null> => {
     try {
       const res = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
-      const data = await res.json();
-      return data.audioContent || null;
-    } catch {
+        body: JSON.stringify({
+          scripture_id: selected,
+          line_index: index,  // ✅ 여기만 고침
+          text,
+        }),
+              });
+  
+      const textResponse = await res.text();
+  
+      try {
+        const data = JSON.parse(textResponse);
+        return data.url || null;
+      } catch {
+        console.error('❌ JSON 파싱 실패: 응답은 HTML로 추정됨');
+        console.warn(textResponse.slice(0, 100)); // 응답 일부 미리 보기
+        return null;
+      }
+    } catch (err) {
+      console.error('❌ fetchTTS 네트워크 오류:', err);
       return null;
     }
   };
-
+    
   const playSentence = async () => {
     if (index >= ttsSentences.length) {
       await stopTTS();
@@ -349,33 +363,29 @@ const handlePlay = async () => {
       block: 'center',
     });
 
-    const audioBase64 = await fetchTTS(ttsSentences[index]);
-    if (!audioBase64) {
+    const audioUrl = await fetchTTS(ttsSentences[index], index);
+    if (!audioUrl) {
       await stopTTS();
       setIsLocked(false);
       return;
     }
-
-
-    const blob = await (await fetch(`data:audio/mp3;base64,${audioBase64}`)).blob();
-const objectUrl = URL.createObjectURL(blob);
-const audio = new Audio(objectUrl);
-audioRef.current = audio;
-
-audio.onended = () => {
-  URL.revokeObjectURL(objectUrl); // 🔥 메모리 누수 방지
-  index++;
-  setTimeout(playSentence, 300);
-};
-
-await new Promise((r) => setTimeout(r, 200));
-
-try {
-  await audio.play();
-} catch {
-  await stopTTS();
-  setIsLocked(false);
-}
+    
+    const audio = new Audio(audioUrl);
+    audioRef.current = audio;
+    
+    audio.onended = () => {
+      index++;
+      setTimeout(playSentence, 300);
+    };
+    
+    try {
+      await new Promise((r) => setTimeout(r, 200)); // iOS용 안정 대기
+      await audio.play();
+    } catch {
+      await stopTTS();
+      setIsLocked(false);
+    }
+    
   };
 
   playSentence();
