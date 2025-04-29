@@ -80,7 +80,8 @@ export default function ScripturePage() {
   const [bookmarkPending, setBookmarkPending] = useState<{ title: string; index: number } | null>(null);
   const [initialFilter, setInitialFilter] = useState('전체');
   const [nextAudioUrl, setNextAudioUrl] = useState<string | null>(null);
-
+  const [nextNextAudioUrl, setNextNextAudioUrl] = useState<string | null>(null);
+  
   const sentenceRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const indexRef = useRef(currentIndex);
@@ -382,8 +383,9 @@ const playSentence = async () => {
   sentenceRefs.current[index]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
   const audioUrl = nextAudioUrl || await fetchUntilSuccess(ttsSentences[index], index);
-  setNextAudioUrl(null); // 다음 문장용 preload 초기화
-
+  setNextAudioUrl(nextNextAudioUrl); // 👉 다음을 앞으로 당기기
+  setNextNextAudioUrl(null); // 👉 초기화
+  
   const audio = new Audio(audioUrl);
   audio.crossOrigin = 'anonymous'; // ✅ CORS 방지
   audio.preload = 'auto';          // ✅ Android에서 안정성↑
@@ -402,11 +404,19 @@ const playSentence = async () => {
   }
 
   // ✅ 다음 문장 preload
-  if (index + 1 < ttsSentences.length) {
-    fetchUntilSuccess(ttsSentences[index + 1], index + 1).then((url) => {
-      setNextAudioUrl(url);
-    });
-  }
+// 다음 문장 1개 preload
+if (index + 1 < ttsSentences.length) {
+  fetchUntilSuccess(ttsSentences[index + 1], index + 1).then((url) => {
+    setNextAudioUrl(url);
+  });
+}
+
+// 다다음 문장 preload
+if (index + 2 < ttsSentences.length) {
+  fetchUntilSuccess(ttsSentences[index + 2], index + 2).then((url) => {
+    setNextNextAudioUrl(url);
+  });
+}
 
   audio.onended = async () => {
     console.log('✅ 재생 끝, 다음 문장');
