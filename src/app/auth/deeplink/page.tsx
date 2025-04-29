@@ -45,6 +45,6 @@ export default function AuthDeepLinkPage() {
 // ✅ 앱/웹 구분 함수
 function isNativeApp() {
   if (typeof window === 'undefined') return false;
-  // @ts-expect-error
-  return !!window.Capacitor;
+// @ts-expect-error Capacitor global object
+return !!window.Capacitor;
 }
