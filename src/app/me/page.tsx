@@ -56,7 +56,7 @@ export default function MePage() {
   return (
     <main className="min-h-screen max-w-[430px] mx-auto bg-white px-6 py-10 flex flex-col gap-6">
       {userName && (
-        <p className="text-lg text-red font-semibold mx-4 mb-2">{userName}님, 성불하십쇼 🙏</p>
+        <p className="text-lg text-red font-semibold mx-4 mb-2">{userName}님, 평온한 하루 되십시오 🙏</p>
       )}
 
       <ul className="rounded-xl">
