@@ -19,7 +19,6 @@ export async function POST(req: NextRequest) {
   const textHash = crypto.createHash('md5').update(text).digest('hex');
   const fileName = `${textHash}.mp3`;
   const uploadPath = `tts/${fileName}`;
-  const audioUrl = `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_BUCKET}/${uploadPath}`;
 
   // ✅ 1. 캐시 확인
   const cacheRes = await fetch(`${SUPABASE_URL}/rest/v1/tts_cache?select=audio_url&scripture_id=eq.${scripture_id}&line_index=eq.${line_index}&text_hash=eq.${textHash}`, {
