@@ -331,13 +331,33 @@ const handlePlay = async () => {
       });
 
       const textResponse = await res.text();
-      const data = JSON.parse(textResponse);
-      return data.url || null;
+      try {
+        const data = JSON.parse(textResponse);
+        return data.url || null;
+      } catch {
+        console.error('❌ JSON 파싱 실패: HTML 반환 가능성');
+        console.warn(textResponse.slice(0, 100));
+        return null;
+      }
     } catch (err) {
-      console.error('❌ TTS fetch 에러:', err);
+      console.error('❌ fetchTTS 네트워크 오류:', err);
       return null;
     }
   };
+
+  const fetchWithRetry = async (text: string, idx: number, maxRetries = 5, delay = 500): Promise<string | null> => {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      const url = await fetchTTS(text, idx);
+      if (url) {
+        return url;
+      }
+      console.warn(`⏳ fetchTTS 재시도 중 (${attempt + 1}/${maxRetries})`);
+      await new Promise(r => setTimeout(r, delay));
+    }
+    console.error('❌ fetchTTS 최종 실패');
+    return null;
+  };
+  
 
   const playSentence = async () => {
     if (index >= ttsSentences.length) {
@@ -348,13 +368,15 @@ const handlePlay = async () => {
 
     setCurrentIndex(index);
 
+    // ✅ 이건 요청한대로 절대 변경 안함
     sentenceRefs.current[index]?.scrollIntoView({
       behavior: 'smooth',
-      block: 'center',  // ✅ 요기
+      block: 'center',
     });
-    
-    const audioUrl = await fetchTTS(ttsSentences[index], index);
+
+    const audioUrl = await fetchWithRetry(ttsSentences[index], index);
     if (!audioUrl) {
+      console.error('❌ fetchTTS 실패: url 없음');
       await stopTTS();
       setIsLocked(false);
       return;
@@ -363,27 +385,41 @@ const handlePlay = async () => {
     const audio = new Audio(audioUrl);
     audioRef.current = audio;
 
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 200)); // iOS 안정 대기
-      await audio.play();
+    let retries = 3;
 
-      audio.addEventListener('ended', async () => {
-        await new Promise((resolve) => setTimeout(resolve, 300)); // 자연스러운 문장간 텀
-        index++;
-        playSentence();
-      });
+    const tryPlay = async () => {
+      try {
+        await new Promise((r) => setTimeout(r, 200)); // 안정성 대기
+        await audio.play();
+        console.log('✅ 재생 성공');
+      } catch (err) {
+        console.warn('⚠️ 재생 실패, 재시도 남음:', retries, err);
+        retries--;
+        if (retries > 0) {
+          await new Promise((r) => setTimeout(r, 300));
+          await tryPlay();
+        } else {
+          console.error('❌ 재생 최종 실패');
+          await stopTTS();
+          setIsLocked(false);
+        }
+      }
+    };
 
-      audio.addEventListener('error', async () => {
-        console.error('❌ 오디오 재생 오류 발생');
-        await stopTTS();
-        setIsLocked(false);
-      });
+    audio.onended = async () => {
+      console.log('✅ 재생 끝, 다음 문장');
+      index++;
+      await new Promise((r) => setTimeout(r, 300));
+      await playSentence();
+    };
 
-    } catch (err) {
-      console.error('❌ 오디오 재생 중 에러:', err);
+    audio.onerror = async () => {
+      console.error('❌ audio 재생 중 에러 발생');
       await stopTTS();
       setIsLocked(false);
-    }
+    };
+
+    await tryPlay();
   };
 
   playSentence();
