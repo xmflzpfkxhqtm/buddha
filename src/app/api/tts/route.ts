@@ -101,22 +101,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'URL 생성 실패' }, { status: 500 });
   }
 
-  // ✅ 4. DB insert
+  // ✅ 4. DB insert (insert 실패 무시하는 버전)
   console.time('3️⃣ Supabase DB insert');
-  const { error: insertError } = await supabase.from('tts_cache').insert({
-    scripture_id,
-    line_index,
-    text_original: text,
-    text_hash: textHash,
-    audio_url: audioUrl,
-  });
-  console.timeEnd('3️⃣ Supabase DB insert');
+
+  const { error: insertError } = await supabase
+    .from('tts_cache')
+    .insert({
+      scripture_id,
+      line_index,
+      text_original: text,
+      text_hash: textHash,
+      audio_url: audioUrl,
+    });
 
   if (insertError) {
-    console.error('❌ DB insert 실패:', insertError);
-    return NextResponse.json({ error: 'DB 삽입 실패', detail: insertError }, { status: 500 });
+    // 🎯 이미 존재하는 경우는 무시하고 넘어간다
+    if (insertError.code !== '23505') { // 23505 = unique violation
+      console.error('❌ DB insert 실패:', insertError);
+      return NextResponse.json({ error: 'DB 삽입 실패', detail: insertError }, { status: 500 });
+    }
   }
 
+  console.timeEnd('3️⃣ Supabase DB insert');
   console.timeEnd('TTS 전체');
+
   return NextResponse.json({ url: audioUrl });
 }

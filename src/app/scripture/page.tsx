@@ -381,7 +381,7 @@ const playSentence = async () => {
   setCurrentIndex(index);
   sentenceRefs.current[index]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-  let audioUrl = nextAudioUrl || await fetchUntilSuccess(ttsSentences[index], index);
+  const audioUrl = nextAudioUrl || await fetchUntilSuccess(ttsSentences[index], index);
   setNextAudioUrl(null); // 다음 문장용 preload 초기화
 
   const audio = new Audio(audioUrl);
