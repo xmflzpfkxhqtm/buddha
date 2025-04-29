@@ -8,21 +8,17 @@ export default function DeepLinkHandler() {
   const router = useRouter();
 
   useEffect(() => {
-    let removeListener: () => void;
+    const setupDeepLink = async () => {
+      App.addListener('appUrlOpen', ({ url }) => {
+        console.log('앱 딥링크 복귀 URL:', url); // ✅ 여기 찍히는지 보자
 
-    App.addListener('appUrlOpen', ({ url }) => {
-      if (url?.startsWith('yeondeung://auth/callback')) {
-        router.push('/auth/callback');
-      }
-    }).then((listener) => {
-      removeListener = () => {
-        listener.remove();
-      };
-    });
-
-    return () => {
-      removeListener?.();
+        if (url?.startsWith('yeondeung://auth/callback')) {
+          router.push('/auth/callback' + (url.split('auth/callback')[1] || ''));
+        }
+      });
     };
+
+    setupDeepLink();
   }, [router]);
 
   return null;
