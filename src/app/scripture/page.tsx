@@ -368,19 +368,31 @@ const handlePlay = async () => {
     
 
   // ✅ Audio가 준비될 때까지 기다리는 함수
+// ✅ Audio가 준비될 때까지 기다리는 함수
 const waitForCanPlay = (audio: HTMLAudioElement) =>
-new Promise<void>((res, rej) => {
-  const t = setTimeout(() => rej('timeout'), 8000); // 8초 제한
-  const handler = () => {
-    clearTimeout(t);
-    audio.removeEventListener('canplaythrough', handler);
-    res();
-  };
-  audio.addEventListener('canplaythrough', handler);
-});
+  new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => reject('Timeout while waiting for canplaythrough'), 8000);
+    const handler = () => {
+      clearTimeout(timeout);
+      audio.removeEventListener('canplaythrough', handler);
+      resolve();
+    };
+    audio.addEventListener('canplaythrough', handler);
+    audio.load(); // ✅ 명시적으로 load() 호출
+  });
 
+// ✅ play()를 안전하게 호출하는 함수
+const safePlay = async (audio: HTMLAudioElement) => {
+  try {
+    await audio.play();
+  } catch (err) {
+    console.warn('🔁 play() 실패, 300ms 후 재시도', err);
+    await new Promise((r) => setTimeout(r, 300));
+    await audio.play();
+  }
+};
 
-// 🔥 playSentence
+// 🔥 완전 개선된 playSentence 함수
 const playSentence = async () => {
   if (index >= ttsSentences.length) {
     await stopTTS();
@@ -392,7 +404,7 @@ const playSentence = async () => {
   sentenceRefs.current[index]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
   const audioUrl = nextAudioUrl || await fetchUntilSuccess(ttsSentences[index], index);
-  setNextAudioUrl(nextNextAudioUrl ?? null); // 안전하게 null 방어
+  setNextAudioUrl(nextNextAudioUrl ?? null);
   setNextNextAudioUrl(null);
 
   try {
@@ -405,31 +417,30 @@ const playSentence = async () => {
     audio.preload = 'auto';
 
     await waitForCanPlay(audio);
-    await audio.play();
+    await safePlay(audio); // ✅ play() 실패해도 다시 재시도
     console.log('✅ 재생 성공');
 
-    // ✅ 재생 성공 이후에 이벤트 핸들러 등록
     audio.onended = async () => {
-      console.log('✅ 재생 끝, 다음 문장');
-      URL.revokeObjectURL(audio.src); // ✅ blob 메모리 해제
+      console.log('✅ 재생 완료, 다음 문장으로');
+      URL.revokeObjectURL(audio.src);
       index++;
       await new Promise((r) => setTimeout(r, 200));
       await playSentence();
     };
-    
+
     audio.onerror = async () => {
-      console.error('❌ 재생 중 오류 발생, 다음 문장으로 넘어감');
-      URL.revokeObjectURL(audio.src); // ✅ blob 메모리 해제
+      console.error('❌ 재생 오류 발생, 다음 문장으로 넘어감');
+      URL.revokeObjectURL(audio.src);
       index++;
+      await new Promise((r) => setTimeout(r, 300));
       await playSentence();
     };
-    
+
   } catch (err) {
-    console.warn('⚠️ 재생 실패, 건너뜀:', err);
+    console.error('⚠️ 재생 준비 실패, 건너뜀:', err);
     index++;
     await new Promise((r) => setTimeout(r, 300));
     await playSentence();
-    return;
   }
 
   // ✅ 다음 문장 preload
@@ -438,7 +449,6 @@ const playSentence = async () => {
       setNextAudioUrl(url);
     });
   }
-
   if (index + 2 < ttsSentences.length) {
     fetchUntilSuccess(ttsSentences[index + 2], index + 2).then((url) => {
       setNextNextAudioUrl(url);
