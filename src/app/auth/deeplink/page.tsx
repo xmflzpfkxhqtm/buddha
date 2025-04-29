@@ -23,9 +23,10 @@ export default function AuthDeepLinkPage() {
           console.error('DeepLink error:', err);
         }
       } else {
-        // ✅ 웹이면 2초 후 홈(/)으로 이동
+        // ✅ 웹에서는 hash를 완전히 제거하고 /로 이동
         setTimeout(() => {
-          window.location.href = '/';
+          const cleanUrl = window.location.origin + '/';
+          window.location.replace(cleanUrl);
         }, 2000);
       }
     };
@@ -40,7 +41,6 @@ export default function AuthDeepLinkPage() {
   );
 }
 
-// ✅ isNativeApp는 단순히 Capacitor 객체 존재만 확인
 function isNativeApp() {
   if (typeof window === 'undefined') return false;
   // @ts-expect-error Capacitor global object
