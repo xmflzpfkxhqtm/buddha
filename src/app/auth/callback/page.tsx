@@ -1,11 +1,11 @@
 'use client';
-export const dynamic = 'force-dynamic'; // or 'force-no-static'
+export const dynamic = 'force-dynamic'; // ✅ CSR 강제
 
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 
-export default function AuthCallbackPage() {
+function CallbackInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -41,5 +41,13 @@ export default function AuthCallbackPage() {
     <main className="flex justify-center items-center min-h-screen">
       <p>로그인 처리 중...</p>
     </main>
+  );
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={<div>잠시만 기다려주세요...</div>}>
+      <CallbackInner />
+    </Suspense>
   );
 }
