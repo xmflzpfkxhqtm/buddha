@@ -174,6 +174,7 @@ export default function ScripturePage() {
 
     const loadScripture = async () => {
       const actual = resolveActualTitle(selected, list);
+      setCurrentIndex(0);
     
       if (!actual) {
         console.warn('❌ 해당 경전을 찾을 수 없습니다:', selected);
@@ -343,8 +344,21 @@ useEffect(() => {
 
 // ✅ selected, modalTab, showModal 바뀔 때도 재생 정지
 useEffect(() => {
+  // 재생 중이면 멈춤
   stopTTS();
-}, [selected, modalTab, showModal]);
+
+  // 인덱스·스크롤 초기화
+  setCurrentIndex(0);
+  window.scrollTo({ top: 0, behavior: 'instant' });
+
+  // 책갈피 배열도 비워 두고, 곧바로 Supabase에서 새 책갈피를 받음
+  setBookmarkedIndexes([]);
+}, [selected]);
+
+/* 2) 모달 탭·열림 상태가 바뀔 때는 재생만 멈추기 -------------- */
+useEffect(() => {
+  stopTTS();
+}, [modalTab, showModal]);
 
 const handlePlay = async () => {
   // 이미 재생 중이라면 → 일시정지
