@@ -113,7 +113,19 @@ export async function POST(req: NextRequest) {
    console.error('❌ Storage 업로드 실패', errText);
    return NextResponse.json({ error: 'upload_failed', detail: errText }, { status: 502 });
  }
-  
+ let headOk = false;
+ for (let i = 0; i < 5; i++) {
+   const head = await fetch(`${SUPABASE_URL}/storage/v1/object/${SUPABASE_BUCKET}/${uploadPath}`, {
+     method: 'HEAD',
+     headers: { Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` },
+   });
+   if (head.ok) { headOk = true; break; }
+   await new Promise(r => setTimeout(r, 300));
+ }
+ if (!headOk) {
+   return NextResponse.json({ error: 'propagation_timeout' }, { status: 504 });
+ }
+ 
 // ── 3-b. 서명 URL 발급 (버킷이 public 이어도 사용) ──────────────
 // ── 3-b. 서명 URL 발급 ─────────────────────────────
 const signRes = await fetchWithRetry(`${SUPABASE_URL}/storage/v1/object/sign/${SUPABASE_BUCKET}/${uploadPath}`, {

@@ -307,13 +307,15 @@ const fetchBlob = async (url: string): Promise<Blob> => {
   for (let attempt = 0; attempt < 8; attempt++) {
     const res = await fetch(url);
     if (res.ok) return res.blob();
-    if (res.status === 400 || res.status === 404) {
-      await new Promise(r => setTimeout(r, 500));   // 0.5 s
+
+    // 전파 지연: 400·404·504 → 0.5초 뒤 재시도
+    if ([400, 404, 504].includes(res.status)) {
+      await new Promise(r => setTimeout(r, 500));
       continue;
     }
     throw new Error(`fetchBlob ${res.status}`);
   }
-  throw new Error('blob not ready after 8 retries');
+  throw new Error('skip');   // 8회 실패 → 문장 건너뜀 신호
 };
 
 
@@ -401,38 +403,41 @@ const handlePlay = async () => {
     });
 
     // ---- 오디오 재생 ----
-    const blob   = await fetchBlob(url);
-    const blobId = URL.createObjectURL(blob);
-    const audio  = new Audio(blobId);
-    audioRef.current = audio;
+  // ---- 오디오 재생 & 예외 처리 ----
+try {
+  const blob   = await fetchBlob(url);          // 404·504 재시도 포함
+  const blobId = URL.createObjectURL(blob);
+  const audio  = new Audio(blobId);
+  audioRef.current = audio;
 
-    let played = false;
-    for (let t = 0; t < 3; t++) {             // 최대 3회, 약 1초 시도
-      try {
-        await audio.play();
-        played = true;
-        break;                                // 성공하면 탈출
-      } catch {
-        await new Promise(r => setTimeout(r, 300));  // 0.3초 기다렸다 재시도
-      }
-    }
-    if (!played) {
-      console.warn('play() 3회 실패 – 문장 건너뜀');
-      URL.revokeObjectURL(blobId);
-      preloadMap.current.delete(idx);
-      indexRef.current += 1;
-      continue;                                // 다음 문장
-    }
-    
-    // 끝날 때까지 대기
-    await new Promise<void>((resolve) => {
-      audio.onended = () => resolve();        // 매개변수 무시하고 호출
-      audio.onerror = () => resolve();        // ↑ 같은 래퍼 함수
-    });
-        URL.revokeObjectURL(blobId);
-    preloadMap.current.delete(idx);   // 메모리 해제
+  /* play() 최대 3회 재시도 */
+  let ok = false;
+  for (let t = 0; t < 3; t++) {
+    try { await audio.play(); ok = true; break; }
+    catch { await new Promise(r => setTimeout(r, 300)); }
+  }
+  if (!ok) throw new Error('play_fail');
 
-    indexRef.current += 1;
+  /* 재생 완료까지 대기 */
+  await new Promise<void>(res => {
+    audio.onended  = () => res();
+    audio.onerror  = () => res();
+  });
+
+  URL.revokeObjectURL(blobId);
+  preloadMap.current.delete(idx);
+} catch (err) {
+  const msg = (err as Error).message;
+  if (msg === 'skip' || msg === 'play_fail') {
+    console.warn('건너뜀:', msg, idx);
+    indexRef.current += 1;   // 다음 문장 인덱스
+    continue;                // while 루프 다음 사이클
+  }
+  throw err;                 // 다른 오류는 중단
+}
+
+indexRef.current += 1;        // 정상 재생 끝 → 다음 문장
+
   }
 
   await stopTTS();
