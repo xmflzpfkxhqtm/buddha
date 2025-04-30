@@ -373,6 +373,11 @@ const handlePlay = async () => {
     const idx  = indexRef.current;
     const text = ttsSentences[idx];
 
+    console.log('[TTS] idx', idx, {
+      ttsReq: Date.now(),
+    });
+    
+
     // 화면 스크롤 & 인덱스 동기화
     setCurrentIndex(idx);
     sentenceRefs.current[idx]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
