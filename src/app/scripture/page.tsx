@@ -252,7 +252,7 @@ export default function ScripturePage() {
           console.log(`[Scroll Sync] Setting index to ${closestIndex}`);
           setCurrentIndex(closestIndex);
         }
-      }, 150);
+      }, 50);
     };
 
     window.addEventListener('scroll', onScroll, { passive: true });
