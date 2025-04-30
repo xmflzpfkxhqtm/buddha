@@ -6,20 +6,32 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 
+interface TTSRequest {
+  scripture_id: string;
+  line_index:  number;
+  text:        string;
+  voice?:      string;
+}
+
+
+
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!   // SERVICE  KEY!
 );
 
-function makeKey({ scripture_id, line_index, voice = 'ko-KR-Wavenet-C' }: any) {
-  return crypto.createHash('sha1')
+function makeKey({ scripture_id, line_index, voice = 'ko-KR-Wavenet-C' }: TTSRequest) {
+  return crypto
+    .createHash('sha1')
     .update(`${scripture_id}:${line_index}:${voice}`)
     .digest('hex') + '.mp3';
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();      // {scripture_id,line_index,text,voice?}
-  const key  = makeKey(body);
+  const body: TTSRequest = await req.json();
+  const key = makeKey(body);
+  /* 이하 동일 */
 
   /* 1) 이미 스토리지에 있으면 → URL만 바로 리턴 */
   const { data: hit } = await supabase
