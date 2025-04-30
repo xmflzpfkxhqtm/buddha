@@ -10,6 +10,7 @@ interface GlobalSearchResult {
 
 interface ScriptureModalProps {
   selected: string;
+  smoothCenter: (idx: number, instant?: boolean) => void;
   setSelected: (title: string) => void;
   onClose: () => void;
   search: string;
