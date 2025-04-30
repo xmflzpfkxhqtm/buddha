@@ -27,29 +27,27 @@ async function googleTTS(text: string, voice: string) {
 }
 
 serve(async () => {
-  /* ① ready=false 한 건 가져오기 */
-  const { data: job } = await supabase
-    .from('tts_queue')
-    .select('*')
-    .eq('ready', false)
-    .limit(1)
-    .maybeSingle();
-
-  if (!job) return new Response('no job');
-
-  const { key, text, voice } = job;
-
-  /* ② Google TTS */
-  const mp3 = await googleTTS(text, voice || 'ko-KR-Wavenet-C');
-
-  /* ③ presigned PUT 업로드 */
-  const { data: up } = await supabase
-    .storage.from('tts-audios')
-    .createSignedUploadUrl(key);
-  await fetch(up!.signedUrl, { method: 'PUT', body: mp3 });
-
-  /* ④ ready=true 로 업데이트 */
-  await supabase.from('tts_queue').update({ ready: true }).eq('key', key);
-
-  return new Response('done');
-});
+    for (;;) {                              // ★ while 루프
+      const { data: job } = await supabase
+        .from('tts_queue').select('*')
+        .eq('ready', false).limit(1)
+        .maybeSingle();
+  
+      if (!job) break;                      // 큐가 비면 종료
+  
+      const { key, text, voice } = job;
+      const mp3 = await googleTTS(text, voice ?? 'ko-KR-Wavenet-C');
+  
+      const { data: up } = await supabase
+        .storage.from('tts-audios')
+        .createSignedUploadUrl(key);
+      await fetch(up!.signedUrl, { method: 'PUT', body: mp3 });
+  
+      await supabase
+        .from('tts_queue')
+        .update({ ready: true })
+        .eq('key', key);
+    }
+    return new Response('done');
+  });
+  

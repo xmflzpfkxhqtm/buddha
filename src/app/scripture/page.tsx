@@ -299,7 +299,7 @@ const fetchTTSUrl = async (text: string, idx: number): Promise<string> => {
       const j   = JSON.parse(raw);
       if (j?.url) return j.url;
     } catch {/* ignore */}
-    await new Promise(r => setTimeout(r, 400));
+    await new Promise(r => setTimeout(r, 200));
   }
 };
 
