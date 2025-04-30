@@ -5,6 +5,7 @@ export const maxDuration = 60;       // 60 s (안전)
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;  // 느낌표로 non-null 단언
 
 interface TTSRequest {
   scripture_id: string;
