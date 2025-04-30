@@ -81,6 +81,16 @@ export default function ScripturePage() {
     });
   }, []); // 의존성 없음
 
+  useEffect(() => {
+    if (selected) {
+      console.log('📌 경전 선택 변경 감지 → currentIndex 0으로 초기화');
+      setCurrentIndex(0);
+    }
+  }, [selected]);
+  
+
+
+
   // 사용자 정보 로딩
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -222,45 +232,45 @@ export default function ScripturePage() {
 
   // 스크롤 위치에 따른 현재 인덱스 동기화
   useEffect(() => {
-    let scrollTimeout: NodeJS.Timeout | null = null;
-    // isSpeaking 상태를 TTSPlayer로부터 받아오지 않으므로, 스크롤 시 인덱스 변경 허용
     const onScroll = () => {
+      // TTS 재생 중에는 스크롤 동기화 무시
       if (isTTSSpeaking) {
-        // console.log('[Scroll Sync] TTS is speaking, ignoring scroll sync.');
         return;
       }
 
-      if (scrollTimeout) clearTimeout(scrollTimeout);
-      scrollTimeout = setTimeout(() => {
-        const centerY = window.innerHeight / 2;
-        let closestIndex = -1;
-        let closestDistance = Infinity;
+      // 즉시 중앙 인덱스 계산
+      const centerY = window.innerHeight / 2;
+      let closestIndex = -1;
+      let closestDistance = Infinity;
 
-        sentenceRefs.current.forEach((el, i) => {
-          if (!el) return;
-          const rect = el.getBoundingClientRect();
-          const elementCenter = rect.top + rect.height / 2;
-          const distance = Math.abs(elementCenter - centerY);
-          if (distance < closestDistance) {
-            closestIndex = i;
-            closestDistance = distance;
-          }
-        });
+      if (!sentenceRefs.current || sentenceRefs.current.length === 0) {
+          return;
+      }
 
-        // currentIndex와 다를 때만 업데이트
-        if (closestIndex !== -1 && closestIndex !== currentIndex) {
-          console.log(`[Scroll Sync] Setting index to ${closestIndex}`);
-          setCurrentIndex(closestIndex);
+      sentenceRefs.current.forEach((el, i) => {
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        if (rect.bottom < 0 || rect.top > window.innerHeight) {
+            return;
         }
-      }, 50);
+        const elementCenter = rect.top + rect.height / 2;
+        const distance = Math.abs(elementCenter - centerY);
+        if (distance < closestDistance) {
+          closestIndex = i;
+          closestDistance = distance;
+        }
+      });
+
+      if (closestIndex !== -1 && closestIndex !== currentIndex) {
+        // console.log(`[Scroll Sync] Setting index to ${closestIndex}`);
+        setCurrentIndex(closestIndex);
+      }
     };
 
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-      if (scrollTimeout) clearTimeout(scrollTimeout);
-    };
-  }, [currentIndex, isTTSSpeaking]);
+    return () => window.removeEventListener('scroll', onScroll);
+
+  }, [currentIndex, isTTSSpeaking]); // 의존성 확인
 
   // 북마크 핸들러 (변경 없음)
   const handleBookmark = async () => {
@@ -352,7 +362,7 @@ export default function ScripturePage() {
                   key={globalIndex}
                   data-index={globalIndex}
                   ref={(el) => { sentenceRefs.current[globalIndex] = el }}
-                  className={`block transition-colors duration-300 ${globalIndex === currentIndex ? 'bg-amber-200' : ''} ${bookmarkedIndexes.includes(globalIndex) ? 'underline' : ''}`}
+                  className={`block transition-colors duration-150 ${globalIndex === currentIndex ? 'bg-amber-200' : ''} ${bookmarkedIndexes.includes(globalIndex) ? 'underline' : ''}`}
                 >
                   {s}
                 </span>
