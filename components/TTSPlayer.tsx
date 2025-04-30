@@ -4,11 +4,11 @@ import { Play, Pause } from 'lucide-react';
 import { KeepAwake } from '@capacitor-community/keep-awake';
 
 interface TTSPlayerProps {
-  sentences: string[]; // 전체 문장 목록
-  currentIndex: number; // 부모 컴포넌트가 관리하는 현재 문장 인덱스
-  setCurrentIndex: (index: number) => void; // 현재 인덱스 업데이트 함수
-  onPlaybackStateChange?: (isPlaying: boolean) => void; // 재생 상태 변경 시 부모에게 알림 (선택 사항)
-  smoothCenter: (index: number) => void; // 스크롤 함수
+  sentences: string[];
+  currentIndex: number;
+  setCurrentIndex: (index: number) => void;
+  onPlaybackStateChange?: (isPlaying: boolean) => void;
+  smoothCenter: (index: number) => void;
 }
 
 const TTSPlayer: React.FC<TTSPlayerProps> = ({
@@ -18,146 +18,189 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
   onPlaybackStateChange,
   smoothCenter,
 }) => {
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const [isSpeakingState, setIsSpeakingState] = useState(false); // 내부 재생 상태
   const synth = useRef<SpeechSynthesis | null>(null);
-  const stopRequested = useRef(false); // 중지 요청 플래그
+  const currentUtterance = useRef<SpeechSynthesisUtterance | null>(null);
+  const requestedIndex = useRef<number>(currentIndex); // 재생 요청된 인덱스
+  const stopRequested = useRef<boolean>(false); // 사용자가 중지 눌렀는지
 
-  // SpeechSynthesis 초기화
+  // --- 초기화 ---
   useEffect(() => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       synth.current = window.speechSynthesis;
-      // 컴포넌트 언마운트 시 정리
-      return () => {
-        if (synth.current?.speaking) {
-          synth.current.cancel();
-        }
-      };
+      // 페이지 로드/새로고침 시 남아있을 수 있는 발화 정리
+      synth.current?.cancel();
+      // 목소리 로드 감지 (선택적)
+      const logVoices = () => console.log('Voices changed/loaded.');
+      if (synth.current?.onvoiceschanged !== undefined) {
+        synth.current.onvoiceschanged = logVoices;
+      }
     } else {
       console.warn('Web Speech API (SpeechSynthesis) is not supported.');
     }
+    // 언마운트 시 정리
+    return () => {
+      if (synth.current) {
+        synth.current.cancel();
+        synth.current.onvoiceschanged = null;
+      }
+      KeepAwake.allowSleep().catch(); // 화면 꺼짐 허용
+    };
   }, []);
 
-  // isSpeaking 상태 변경 시 부모에게 알림
+  // --- 외부 인덱스 변경 감지 (단순화) ---
+  // 외부에서 currentIndex가 바뀌면 일단 요청 인덱스 업데이트
   useEffect(() => {
-    onPlaybackStateChange?.(isSpeaking);
-  }, [isSpeaking, onPlaybackStateChange]);
-
-   // 외부에서 currentIndex가 변경되었을 때 (예: 스크롤 동기화), 재생 중이면 멈춤
-   const prevIndexRef = useRef(currentIndex);
-   useEffect(() => {
-       if (synth.current?.speaking && currentIndex !== prevIndexRef.current) {
-           console.log('[TTSPlayer] Index changed externally, stopping playback.');
-           stopTTS();
-       }
-       prevIndexRef.current = currentIndex;
-   }, [currentIndex]); // stopTTS를 의존성에 넣으면 무한루프 가능성, 내부에서 직접 호출
-
-  // TTS 중지 함수
-  const stopTTS = useCallback(() => {
-    stopRequested.current = true; // 중지 요청 플래그 설정
-    if (synth.current?.speaking) {
-      console.log('[TTSPlayer] Stopping speech synthesis via cancel().');
-      synth.current.cancel(); // 즉시 중지
+    console.log(`[TTSPlayer] currentIndex prop changed to: ${currentIndex}`);
+    // 재생 중이고 외부에서 인덱스가 바뀌었다면 멈춤 (스크롤 동기화 등)
+    // 주의: 부모에서 isTTSSpeaking을 관리하고 스크롤 동기화를 막는다면 이 로직 불필요
+    if (isSpeakingState && currentIndex !== requestedIndex.current) {
+        console.log('[TTSPlayer] External index change detected while speaking, stopping.');
+        stopSpeech(); // 재생 중지
     }
-    setIsSpeaking(false);
-    utteranceRef.current = null;
-    KeepAwake.allowSleep().catch(e => console.warn('[TTSPlayer] KeepAwake.allowSleep error:', e));
-  }, []); // 의존성 없음
+    requestedIndex.current = currentIndex; // 요청 인덱스 업데이트
+  }, [currentIndex, isSpeakingState]); // isSpeakingState 추가
 
-  // 재생/일시정지 핸들러
-  const handlePlayPause = useCallback(() => {
-    if (!synth.current) {
-      console.error('SpeechSynthesis not available.');
-      // 사용자에게 알림 (부모 컴포넌트에서 처리하는 것이 좋을 수 있음)
+  // --- 재생 상태 변경 시 콜백 호출 ---
+  useEffect(() => {
+    onPlaybackStateChange?.(isSpeakingState);
+  }, [isSpeakingState, onPlaybackStateChange]);
+
+
+  // --- 중지 함수 ---
+  const stopSpeech = useCallback(() => {
+    stopRequested.current = true; // 중지 플래그 설정
+    console.log('[TTSPlayer] stopSpeech called.');
+    // 이벤트 리스너 먼저 제거 (중요!)
+    if (currentUtterance.current) {
+      currentUtterance.current.onstart = null;
+      currentUtterance.current.onend = null;
+      currentUtterance.current.onerror = null;
+      currentUtterance.current = null;
+    }
+    if (synth.current) {
+      synth.current.cancel(); // 발화 취소
+    }
+    if (isSpeakingState) { // 상태가 true일 때만 false로 변경
+       setIsSpeakingState(false);
+    }
+    KeepAwake.allowSleep().catch();
+  }, [isSpeakingState]);
+
+
+  // --- 재생 함수 ---
+  const playSpeech = useCallback((index: number) => {
+    if (!synth.current || index >= sentences.length || stopRequested.current) {
+      console.warn(`[TTSPlayer] playSpeech condition not met: index=${index}, stopRequested=${stopRequested.current}`);
+      stopSpeech(); // 조건 안 맞으면 확실히 중지
       return;
     }
 
-    if (isSpeaking) {
-      stopTTS();
-    } else {
-      if (currentIndex >= sentences.length) {
-        console.log('[TTSPlayer] Already at the end of sentences.');
-        return;
-      }
+    console.log(`[TTSPlayer] playSpeech called for index: ${index}`);
+    // 이전 발화 확실히 취소 후 잠시 대기 (이벤트 루프 틱)
+    synth.current.cancel();
 
-      stopRequested.current = false; // 재생 시작 시 중지 요청 플래그 초기화
-      setIsSpeaking(true);
-      KeepAwake.keepAwake().catch(e => console.warn('[TTSPlayer] KeepAwake.keepAwake error:', e));
-
-      const playSentence = (index: number) => {
-        // 중지 요청 플래그 확인 또는 문장 끝 도달 시 종료
-        if (stopRequested.current || index >= sentences.length) {
-          if (isSpeaking) { // 재생 중이었다면 최종 상태 정리
-             setIsSpeaking(false); // 여기서 isSpeaking을 false로 설정
-             KeepAwake.allowSleep().catch(e => console.warn('[TTSPlayer] KeepAwake.allowSleep error:', e));
-          }
-          return;
+    setTimeout(() => {
+        // setTimeout 콜백 시점에 다시 조건 확인
+        if (stopRequested.current) {
+            console.log('[TTSPlayer] Play cancelled during timeout.');
+            stopSpeech();
+            return;
         }
 
-        const textToSpeak = sentences[index];
-        console.log(`[TTSPlayer] Speaking index ${index}`);
-        setCurrentIndex(index); // 부모의 인덱스 업데이트
+        requestedIndex.current = index; // 현재 재생하려는 인덱스 기록
+        setCurrentIndex(index); // 부모 UI 업데이트
         smoothCenter(index);    // 스크롤
 
+        const textToSpeak = sentences[index];
         const utterance = new SpeechSynthesisUtterance(textToSpeak);
-        utterance.lang = 'ko-KR';
+        currentUtterance.current = utterance; // 현재 발화 객체 참조
 
+        utterance.lang = 'ko-KR';
+        // ... (목소리 선택 로직 - 이전과 동일) ...
         const voices = synth.current?.getVoices();
-        if (voices) {
-          const koreanVoice = voices.find(voice => voice.lang === 'ko-KR');
-          if (koreanVoice) utterance.voice = koreanVoice;
+        let selectedVoice: SpeechSynthesisVoice | null = null;
+        if (voices && voices.length > 0) {
+            const koreanVoices = voices.filter(voice => voice.lang === 'ko-KR');
+            selectedVoice = koreanVoices.find(voice => voice.name.includes('Yuna')) ?? null;
+            if (!selectedVoice) selectedVoice = koreanVoices.find(voice => voice.name.includes('Google 한국')) ?? null;
+            if (!selectedVoice) selectedVoice = koreanVoices.find(voice => voice.default === true) ?? null;
+            if (!selectedVoice && koreanVoices.length > 0) selectedVoice = koreanVoices[0];
         }
+        if (selectedVoice) utterance.voice = selectedVoice;
+        utterance.rate = 0.9;
+        utterance.pitch = 1.0;
+
+        utterance.onstart = () => {
+            console.log(`[TTSPlayer] onstart: index ${index}`);
+             // 시작 시점에 stopRequested 확인
+             if(stopRequested.current) {
+                 stopSpeech();
+                 return;
+             }
+             if (!isSpeakingState) { // 혹시 상태가 false면 true로 (동기화)
+                 setIsSpeakingState(true);
+             }
+        };
 
         utterance.onend = () => {
-          console.log(`[TTSPlayer] Finished index ${index}`);
-          utteranceRef.current = null;
-          // 중지 요청이 없었으면 다음 문장 재생
-          if (!stopRequested.current) {
-            playSentence(index + 1);
+          console.log(`[TTSPlayer] onend: index ${index}`);
+          // 현재 참조가 맞는지, 중지 요청이 없었는지 확인
+          if (currentUtterance.current === utterance && !stopRequested.current) {
+            currentUtterance.current = null; // 참조 해제
+            const nextIndex = index + 1;
+            if (nextIndex < sentences.length) {
+              console.log(`[TTSPlayer] Requesting next index: ${nextIndex}`);
+              playSpeech(nextIndex); // 다음 문장 재생 요청
+            } else {
+              console.log('[TTSPlayer] Finished all sentences.');
+              stopSpeech(); // 완료 후 중지
+            }
           } else {
-              setIsSpeaking(false); // onend에서 stop 상태 반영
-              KeepAwake.allowSleep().catch(e => console.warn('[TTSPlayer] KeepAwake.allowSleep error:', e));
+              console.log('[TTSPlayer] onend ignored: utterance mismatch or stop requested.');
           }
         };
 
         utterance.onerror = (event) => {
-          console.error(`[TTSPlayer] Error at index ${index}:`, event.error);
-          utteranceRef.current = null;
-          stopTTS(); // 오류 시 중지
-          // 오류 메시지 알림 (부모에게 전달)
+          console.error(`[TTSPlayer] onerror: index ${index}`, event.error);
+          if (currentUtterance.current === utterance) { // 현재 발화에 대한 에러인지 확인
+             stopSpeech(); // 에러 시 중지
+          }
         };
 
-        utteranceRef.current = utterance;
+        // speak 호출
+        console.log(`[TTSPlayer] Calling synth.speak for index ${index}`);
+        synth.current?.speak(utterance);
 
-        // speak 호출 전에 이전 발화가 완전히 취소되도록 잠시 대기 (선택적 안정화)
-        setTimeout(() => {
-           if (!stopRequested.current && synth.current) { // 그 사이에 중지되지 않았는지 확인
-              synth.current.speak(utterance);
-           } else if (!stopRequested.current) {
-               console.warn("[TTSPlayer] Synth not ready for speak call.");
-               stopTTS(); // synth 없으면 중지
-           }
-        }, 50); // 짧은 지연
-      };
+    }, 0); // cancel 후 이벤트 루프가 처리할 시간을 줌 (0ms)
 
-       // 목소리 로딩 지연 고려 및 재생 시작
-       setTimeout(() => {
-          if (!stopRequested.current) { // 그 사이에 중지되지 않았는지 확인
-             playSentence(currentIndex);
-          }
-       }, 100);
+  }, [sentences, setCurrentIndex, smoothCenter, stopSpeech, isSpeakingState]); // isSpeakingState 추가
+
+
+  // --- 버튼 핸들러 ---
+  const handlePlayPause = useCallback(() => {
+    if (!synth.current) return;
+
+    if (isSpeakingState) {
+      stopSpeech();
+    } else {
+      stopRequested.current = false; // 재생 시작 시 중지 요청 리셋
+      setIsSpeakingState(true);     // 즉시 재생 상태로 (UI 반응성)
+      KeepAwake.keepAwake().catch();
+      console.log(`[TTSPlayer] User clicked play, starting from index: ${requestedIndex.current}`);
+      playSpeech(requestedIndex.current); // 현재 요청된 인덱스부터 재생 시작
     }
-  }, [isSpeaking, currentIndex, sentences, setCurrentIndex, smoothCenter, stopTTS]); // stopTTS 추가
+  }, [isSpeakingState, playSpeech, stopSpeech]);
+
 
   return (
     <button
       onClick={handlePlayPause}
       className="fixed bottom-[84px] left-1/2 -translate-x-1/2 bg-red-light text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg z-50"
-      aria-label={isSpeaking ? '일시정지' : '재생'}
-      disabled={!synth.current} // TTS 사용 불가 시 비활성화
+      aria-label={isSpeakingState ? '일시정지' : '재생'}
+      disabled={!synth.current}
     >
-      {isSpeaking ? <Pause size={32} /> : <Play size={32} />}
+      {isSpeakingState ? <Pause size={32} /> : <Play size={32} />}
     </button>
   );
 };

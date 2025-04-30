@@ -44,6 +44,7 @@ function formatDisplayTitle(rawTitle: string): string {
 
 export default function ScripturePage() {
   // 상태 변수들 (TTS 관련 상태 제거)
+  const [isTTSSpeaking, setIsTTSSpeaking] = useState(false);
   const [displayParagraphs, setDisplayParagraphs] = useState<string[][]>([]);
   const router = useRouter();
   const [list, setList] = useState<string[]>([]);
@@ -224,6 +225,11 @@ export default function ScripturePage() {
     let scrollTimeout: NodeJS.Timeout | null = null;
     // isSpeaking 상태를 TTSPlayer로부터 받아오지 않으므로, 스크롤 시 인덱스 변경 허용
     const onScroll = () => {
+      if (isTTSSpeaking) {
+        // console.log('[Scroll Sync] TTS is speaking, ignoring scroll sync.');
+        return;
+      }
+
       if (scrollTimeout) clearTimeout(scrollTimeout);
       scrollTimeout = setTimeout(() => {
         const centerY = window.innerHeight / 2;
@@ -254,7 +260,7 @@ export default function ScripturePage() {
       window.removeEventListener('scroll', onScroll);
       if (scrollTimeout) clearTimeout(scrollTimeout);
     };
-  }, [currentIndex]); // isSpeaking 제거
+  }, [currentIndex, isTTSSpeaking]);
 
   // 북마크 핸들러 (변경 없음)
   const handleBookmark = async () => {
@@ -365,6 +371,7 @@ export default function ScripturePage() {
           currentIndex={currentIndex}
           setCurrentIndex={setCurrentIndex}
           smoothCenter={smoothCenter}
+          onPlaybackStateChange={setIsTTSSpeaking}
           // onPlaybackStateChange={(playing) => console.log('TTS Playing:', playing)} // 필요시 콜백 활성화
         />
       )}
