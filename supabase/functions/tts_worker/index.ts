@@ -5,7 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // 환경 변수는 Supabase 프로젝트 설정에 저장
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_KEY')!
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!  // ← 이름 통일
 );
 
 async function googleTTS(text: string, voice: string) {
