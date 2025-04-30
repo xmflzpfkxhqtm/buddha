@@ -8,7 +8,6 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import ScriptureModal from '../../../components/ScriptureModal'; // ✅ 추가
 import { KeepAwake } from '@capacitor-community/keep-awake';
-import { ttsLimit } from '@/lib/limit';
 import pLimit from 'p-limit';
 
 interface GlobalSearchResult {
