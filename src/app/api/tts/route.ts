@@ -134,13 +134,6 @@ if (!signRes.ok) {
 }
 
 
-for (let k = 0; k < 8; k++) {                 // 최대 3.2 s 대기
-  const head = await fetch(`${SUPABASE_URL}/storage/v1/object/public/${uploadPath}`, { method: 'HEAD' });
-  if (head.ok) break;
-  await new Promise(r => setTimeout(r, 400));
-}
-
-
 
 
 const { signedURL } = await signRes.json();          // eg. /object/sign/...
