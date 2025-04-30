@@ -328,7 +328,6 @@ export default function ScripturePage() {
       {/* 본문 */}
       <div className={`whitespace-pre-wrap font-maruburi bg-white rounded-xl ${fontSizeClass} leading-relaxed`}>
         {/* 안내 문구 */}
-        {currentIndex < 10 && displaySentences.length > 0 && ( // 문장 로드 후 표시
            <div style={{ minHeight: '40vh' }} className="flex flex-col justify-center gap-3 text-red-dark pt-4 pb-8"> {/* 높이 확보 및 패딩 조정 */}
             <p className="text-lg font-bold">{formatDisplayTitle(selected)}</p>
             <p className="text-base leading-relaxed">
@@ -342,7 +341,6 @@ export default function ScripturePage() {
               <li className="flex items-start"><span className="mr-2">-</span> 재생 버튼으로 문장을 낭독</li>
             </ul>
           </div>
-        )}
 
         {/* 문단/문장 렌더링 */}
         {displayParagraphs.map((sentences, pIdx) => (

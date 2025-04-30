@@ -140,7 +140,7 @@ export default function Home() {
             />
             <div className="flex flex-col">
               <p className="mb-0 text-base font-medium text-white text-start">
-                「부처님께 여쭙기」 기능이 출시되었습니다
+                부처님께 여쭙기 AI 기능이 출시되었습니다
               </p>
               <p className="mt-0 text-base font-base text-pink-light text-start">
                 클릭하여 자세히 알아보세요
@@ -181,7 +181,7 @@ export default function Home() {
                   오늘의 법문 📖 
                 </p>
                 <p className="mb-0 text-base font-medium text-white text-start">
-                   "{sentence}"
+                &ldquo;{sentence}&rdquo;
                 </p>
 
                 <p className="mt-0 text-sm font-base text-pink-light text-left">
