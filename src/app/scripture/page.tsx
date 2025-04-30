@@ -9,13 +9,14 @@ import { useRouter } from 'next/navigation';
 import ScriptureModal from '../../../components/ScriptureModal'; // ✅ 추가
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import { ttsLimit } from '@/lib/limit';
-
+import pLimit from 'p-limit';
 
 interface GlobalSearchResult {
   title: string;
   index: number;
   text: string;
 }
+const limit = pLimit(1); // 한 번에 최대 1개의 fetchTTSUrl 작업만 허용
 
 const getChosung = (char: string): string => {
   const code = char.charCodeAt(0) - 44032;
@@ -296,35 +297,85 @@ useEffect(() => {
 
 // ── TTS URL 받아오기 (요청 실패 시 재시도) ─────────────────────────
 const fetchTTSUrl = async (text: string, idx: number): Promise<string> => {
-  while (true) {
+  const MAX_ATTEMPTS = 20; // 최대 20번 시도 (약 20초 대기)
+  const POLLING_INTERVAL = 1000; // 1초 간격으로 폴링
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    if (shouldStop.current) throw new Error('stopped'); // 중간에 중지되면 에러 발생
+
     try {
-      const r   = await fetch('/api/tts', {
+      console.log(`[fetchTTSUrl] Attempt ${attempt + 1} for index ${idx}`);
+      const response = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:   JSON.stringify({ scripture_id: selected, line_index: idx, text })
+        body: JSON.stringify({ scripture_id: selected, line_index: idx, text })
       });
-      const raw = await r.text();
-      const j   = JSON.parse(raw);
-      if (j?.url) return j.url;
-    } catch {/* ignore */}
-    await new Promise(r => setTimeout(r, 200));
+
+      if (!response.ok) {
+        // 5xx 서버 에러 등 처리
+        console.error(`[fetchTTSUrl] API error for index ${idx}: ${response.status}`);
+        // 심각한 오류 시 재시도 중단 또는 다른 처리 가능
+        if (response.status >= 500) {
+           await new Promise(resolve => setTimeout(resolve, POLLING_INTERVAL * 2)); // 서버 부하 줄이기 위해 더 길게 대기
+           continue; // 5xx 에러는 재시도
+        }
+        throw new Error(`API Error: ${response.status}`); // 4xx 등 클라이언트 오류는 즉시 중단
+      }
+
+      const result = await response.json();
+
+      if (result.url) {
+        console.log(`[fetchTTSUrl] URL received for index ${idx}: ${result.url.substring(0, 50)}...`);
+        return result.url; // 성공! URL 반환
+      }
+
+      if (result.status === 'processing' || result.status === 'pending') {
+        // 아직 처리 중 또는 큐에 막 들어감 -> 잠시 후 재시도
+        console.log(`[fetchTTSUrl] Status for index ${idx}: ${result.status}. Retrying...`);
+        await new Promise(resolve => setTimeout(resolve, POLLING_INTERVAL));
+        continue; // 다음 시도
+      }
+
+      // 예상치 못한 응답
+      console.error(`[fetchTTSUrl] Unexpected response for index ${idx}:`, result);
+      throw new Error('Unexpected API response');
+
+    } catch (error) {
+      // 네트워크 오류 또는 JSON 파싱 오류 등
+      console.error(`[fetchTTSUrl] Error during fetch for index ${idx}:`, error);
+      // 중단해야 하는 에러인지, 재시도해야 하는 에러인지 판단 필요
+      if ((error as Error).message === 'stopped') throw error; // 중지 시 전파
+      await new Promise(resolve => setTimeout(resolve, POLLING_INTERVAL)); // 일단 재시도
+    }
   }
+
+  // 최대 시도 횟수 초과
+  console.error(`[fetchTTSUrl] Failed to get URL for index ${idx} after ${MAX_ATTEMPTS} attempts.`);
+  throw new Error('timeout'); // 타임아웃 에러 발생
 };
 
-// ── 실제 mp3(blob) 다운로드 ─────────────────────────────
+// fetchBlob 함수는 그대로 사용해도 좋습니다.
 const fetchBlob = async (url: string): Promise<Blob> => {
   for (let attempt = 0; attempt < 8; attempt++) {
-    const res = await fetch(url);
-    if (res.ok) return res.blob();
+    try {
+      const res = await fetch(url);
+      if (res.ok) return res.blob();
 
-    // 전파 지연: 400·404·504 → 0.5초 뒤 재시도
-    if ([400, 404, 504].includes(res.status)) {
-      await new Promise(r => setTimeout(r, 500));
-      continue;
+      console.warn(`[fetchBlob] Failed attempt ${attempt + 1} for url ${url.substring(0,50)}... Status: ${res.status}`);
+      if ([400, 403, 404, 504].includes(res.status)) {
+        await new Promise(r => setTimeout(r, 500 + attempt * 100)); // 재시도 간격 약간 늘리기
+        continue;
+      }
+      // 복구 불가능한 에러 (예: 401 Unauthorized)
+       throw new Error(`fetchBlob ${res.status}`);
+    } catch (err) {
+        console.error(`[fetchBlob] Network or other error fetching blob:`, err);
+         // 네트워크 불안정 등 잠시 후 재시도
+         await new Promise(r => setTimeout(r, 500 + attempt * 100));
     }
-    throw new Error(`fetchBlob ${res.status}`);
   }
-  throw new Error('skip');   // 8회 실패 → 문장 건너뜀 신호
+  console.error(`[fetchBlob] Failed to fetch blob after multiple attempts for url: ${url.substring(0,50)}...`);
+  throw new Error('skip'); // 8회 실패 → 건너뜀 신호
 };
 
 
@@ -369,87 +420,152 @@ useEffect(() => {
 }, [modalTab, showModal]);
 
 const handlePlay = async () => {
-  // 이미 재생 중이라면 → 일시정지
-  if (isSpeaking) { await stopTTS(); return; }
+  if (isSpeaking) {
+    await stopTTS();
+    return;
+  }
 
-  // 초기화
-  await stopTTS();
+  // 초기화 (stopTTS 내부에서 일부 처리됨)
+  await stopTTS(); // 기존 오디오 정리 및 상태 초기화
   shouldStop.current = false;
   setIsSpeaking(true);
   await KeepAwake.keepAwake();
-  indexRef.current = currentIndex;
+  indexRef.current = currentIndex; // 재생 시작 인덱스 설정
 
-  // ===== 메인 while 루프 =====
-  while (indexRef.current < ttsSentences.length && !shouldStop.current) {
-    const idx  = indexRef.current;
-    const text = ttsSentences[idx];
+  console.log(`[TTS Play] Starting playback from index ${indexRef.current}`);
 
-    console.log('[TTS] idx', idx, {
-      ttsReq: Date.now(),
-    });
-    
+  // 전체 재생 루프를 try...finally로 감싸서 최종 정리를 보장
+  try {
+    while (indexRef.current < ttsSentences.length && !shouldStop.current) {
+      const idx = indexRef.current;
+      const text = ttsSentences[idx];
+      console.log(`[TTS Play] === Processing index ${idx} ===`);
 
-    // 화면 스크롤 & 인덱스 동기화
-    setCurrentIndex(idx);
-    smoothCenter(idx);       
-    // ---- URL 가져오기 (캐시 우선) ----
-    let url: string;
-    if (preloadMap.current.has(idx)) {
-      url = preloadMap.current.get(idx)!;
-    } else {
-      url = await ttsLimit(() => fetchTTSUrl(text, idx));    }
+      setCurrentIndex(idx); // UI 업데이트 (현재 재생 문장 하이라이트)
+      smoothCenter(idx);    // 현재 문장으로 스크롤
 
-    // ---- 다음 2문장 프리로드 ----
-    [1, 2].forEach(offset => {
-      const next = idx + offset;
-      if (next < ttsSentences.length && !preloadMap.current.has(next)) {
-        ttsLimit(() => fetchTTSUrl(ttsSentences[next], next))
-                  .then(u => preloadMap.current.set(next, u))
-          .catch(() => {/* ignore */});
+      let audio: HTMLAudioElement | null = null;
+      let blobId: string | null = null;
+
+      try {
+        // --- 1. Fetch TTS URL (p-limit 적용) ---
+        console.log(`[TTS Play] Requesting URL for index ${idx} (Concurrency Limit: ${limit.activeCount}/${limit.pendingCount})`);
+        // !!! limit() 으로 fetchTTSUrl 호출을 감쌉니다 !!!
+        const url = await limit(() => fetchTTSUrl(text, idx));
+        console.log(`[TTS Play] Successfully got URL for index ${idx}`);
+
+        if (!url) {
+          // fetchTTSUrl이 null을 반환하는 경우는 없어야 하지만, 방어적으로 처리
+          throw new Error('url_missing');
+        }
+
+        // --- 2. Fetch Audio Blob ---
+        console.log(`[TTS Play] Fetching audio blob for index ${idx}`);
+        const blob = await fetchBlob(url); // fetchBlob 내부에 재시도 로직 포함
+        blobId = URL.createObjectURL(blob);
+        console.log(`[TTS Play] Successfully got blob for index ${idx}`);
+
+        // --- 3. Play Audio & Wait for Completion ---
+        audio = new Audio(blobId);
+        audioRef.current = audio; // 현재 오디오 참조 저장
+
+        console.log(`[TTS Play] Attempting to play audio for index ${idx}`);
+        // 오디오 재생 시도 (최대 3회)
+        let playSuccess = false;
+        for (let t = 0; t < 3; t++) {
+          try {
+            await audio.play();
+            playSuccess = true;
+            console.log(`[TTS Play] Audio playback started for index ${idx}`);
+            break;
+          } catch (playError) {
+            console.warn(`[TTS Play] Audio play failed (attempt ${t + 1}) for index ${idx}:`, playError);
+            if (t < 2) await new Promise(r => setTimeout(r, 300)); // 마지막 시도 전 잠시 대기
+          }
+        }
+        if (!playSuccess) {
+          throw new Error('play_fail'); // 3회 시도 모두 실패
+        }
+
+        // 오디오 재생 완료 대기 (onended 이벤트 활용)
+        await new Promise<void>((resolve, reject) => {
+          let intervalId: ReturnType<typeof setInterval> | null = null; // NodeJS.Timeout 대신 ReturnType 사용 (브라우저 호환)
+
+          const cleanup = () => {
+            if (intervalId) clearInterval(intervalId);
+            // 이벤트 리스너 제거 (메모리 누수 방지)
+            if(audio) {
+                audio.onended = null;
+                audio.onerror = null;
+            }
+          };
+
+          audio!.onended = () => {
+            console.log(`[TTS Play] Audio ended naturally for index ${idx}`);
+            cleanup();
+            resolve();
+          };
+          audio!.onerror = (e) => {
+            console.error(`[TTS Play] Audio playback error for index ${idx}:`, e);
+            cleanup();
+            reject(new Error('playback_error'));
+          };
+
+          // 주기적으로 중지 신호 확인
+          intervalId = setInterval(() => {
+            if (shouldStop.current) {
+              cleanup();
+              audio?.pause(); // 즉시 중지 시도
+              console.log(`[TTS Play] Playback stopped by user signal during wait for index ${idx}`);
+              reject(new Error('stopped')); // 중지 에러 전파
+            }
+          }, 100); // 0.1초 간격 확인
+        });
+
+        // --- 4. 성공적으로 완료 시 다음 문장 인덱스로 ---
+        indexRef.current += 1;
+
+      } catch (err) {
+        const error = err as Error;
+        console.error(`[TTS Play] Error processing index ${idx}: ${error.message}`);
+
+        if (error.message === 'stopped') {
+          // 사용자가 중지한 경우, 루프 탈출
+          break;
+        }
+
+        // 건너뛸 수 있는 오류 처리 (다음 문장으로 이동)
+        if (['timeout', 'skip', 'play_fail', 'url_missing', 'playback_error'].includes(error.message)) {
+          console.warn(`[TTS Play] Skipping index ${idx} due to error: ${error.message}`);
+          indexRef.current += 1; // 다음 문장으로 강제 이동
+          await new Promise(r => setTimeout(r, 200)); // 잠시 멈춤 (오류 연속 방지)
+          continue; // while 루프의 다음 반복으로 넘어감
+        }
+
+        // 복구 불가능한 오류 (예: 심각한 API 오류) -> 재생 중단
+        console.error('[TTS Play] Unrecoverable error encountered, stopping TTS playback.', error);
+        setMessage(`오류가 발생하여 재생을 중단합니다: ${error.message}`);
+        setShowMessage(true);
+        break; // while 루프 탈출
+
+      } finally {
+        // --- 5. 현재 문장에 대한 뒷정리 (성공/실패/중단 모두 실행) ---
+        if (blobId) {
+          URL.revokeObjectURL(blobId);
+          console.log(`[TTS Play] Revoked Object URL for index ${idx}`);
+        }
+        // audioRef는 stopTTS에서 최종적으로 null 처리될 것이므로 여기서 꼭 할 필요는 없음
+        // if (audioRef.current === audio) { // 현재 참조가 맞는지 확인 후 null 처리 (선택 사항)
+        //   audioRef.current = null;
+        // }
       }
-    });
-
-    // ---- 오디오 재생 ----
-  // ---- 오디오 재생 & 예외 처리 ----
-try {
-  const blob   = await fetchBlob(url);          // 404·504 재시도 포함
-  const blobId = URL.createObjectURL(blob);
-  const audio  = new Audio(blobId);
-  audioRef.current = audio;
-
-  /* play() 최대 3회 재시도 */
-  let ok = false;
-  for (let t = 0; t < 3; t++) {
-    try { await audio.play(); ok = true; break; }
-    catch { await new Promise(r => setTimeout(r, 300)); }
+    } // end while loop
+  } finally {
+    // --- 최종 정리 (루프 정상 종료 또는 break 후 실행) ---
+    console.log('[TTS Play] Playback loop finished or was interrupted. Running final cleanup.');
+    await stopTTS(); // isSpeaking=false, KeepAwake 해제 등 최종 정리
   }
-  if (!ok) throw new Error('play_fail');
-
-  /* 재생 완료까지 대기 */
-  await new Promise<void>(res => {
-    audio.onended  = () => res();
-    audio.onerror  = () => res();
-  });
-
-  URL.revokeObjectURL(blobId);
-  preloadMap.current.delete(idx);
-} catch (err) {
-  const msg = (err as Error).message;
-  if (msg === 'skip' || msg === 'play_fail') {
-    console.warn('건너뜀:', msg, idx);
-    indexRef.current += 1;   // 다음 문장 인덱스
-    continue;                // while 루프 다음 사이클
-  }
-  throw err;                 // 다른 오류는 중단
-}
-
-indexRef.current += 1;        // 정상 재생 끝 → 다음 문장
-
-  }
-
-  await stopTTS();
 };
-
 
 
   const handleBookmark = async () => {
