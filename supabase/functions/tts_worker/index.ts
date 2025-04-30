@@ -44,7 +44,7 @@ serve(async () => {
 
   /* ③ presigned PUT 업로드 */
   const { data: up } = await supabase
-    .storage.from('tts')
+    .storage.from('tts-audios')
     .createSignedUploadUrl(key);
   await fetch(up!.signedUrl, { method: 'PUT', body: mp3 });
 

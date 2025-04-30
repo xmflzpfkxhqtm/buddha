@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
   /* 1) 이미 스토리지에 있으면 → URL만 바로 리턴 */
   const { data: hit } = await supabase
-    .storage.from('tts')
+    .storage.from('tts-audios')
     .createSignedUrl(key, 60);
   if (hit?.signedUrl) {
     return NextResponse.json({ url: hit.signedUrl });
