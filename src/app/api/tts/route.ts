@@ -42,7 +42,15 @@ export async function POST(req: NextRequest) {
   }
 
   /* 2) 없으면 큐 테이블에 upsert (중복 insert 방지) */
-  await supabase.from('tts_queue').upsert({ key, ...body });
+  await supabase.from('tts_queue').upsert({ key,
+    ready: false,                        // ★ 추가 ①
+    ...body });
+
+  /* 3) 방금 만든 잡을 바로 처리하도록 워커 호출 */
+  fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/tts_worker`, {
+    method: 'POST',                      // ★ 추가 ②
+  });
+
 
   /* 3) 202 Accepted + 더미 2 KB → Edge 25 s 룰 회피 */
   return new Response(
