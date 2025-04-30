@@ -127,9 +127,9 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
             if (!selectedVoice) selectedVoice = koreanVoices.find(voice => voice.default === true) ?? null;
             if (!selectedVoice && koreanVoices.length > 0) selectedVoice = koreanVoices[0];
         }
-        if (selectedVoice) utterance.voice = selectedVoice;
+        // if (selectedVoice) utterance.voice = selectedVoice;
         utterance.rate = 0.9;
-        utterance.pitch = 1.0;
+        utterance.pitch = 0.5;
 
         utterance.onstart = () => {
             console.log(`[TTSPlayer] onstart: index ${index}`);
