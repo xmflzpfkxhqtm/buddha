@@ -1,5 +1,5 @@
 // app/api/tts/route.ts
-export const runtime     = 'edge';   // Edge 런타임
+export const runtime = 'nodejs';
 export const maxDuration = 60;       // 60 s (안전)
 
 import { NextRequest, NextResponse } from 'next/server';
