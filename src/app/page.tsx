@@ -92,7 +92,7 @@ export default function Home() {
         {/* 배경 이미지 (투명도 + 혼합 모드) */}
         <Image
           src="/bg_loading.png"
-          alt="로딩배경"
+          alt="로딩 배경"
           fill
           className="absolute inset-0 object-cover opacity-40 mix-blend-luminosity pointer-events-none z-0"
           priority
