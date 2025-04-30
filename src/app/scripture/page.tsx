@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import ScriptureModal from '../../../components/ScriptureModal'; // ✅ 추가
 import { KeepAwake } from '@capacitor-community/keep-awake';
+import { ttsLimit } from '@/lib/limit';
 
 
 interface GlobalSearchResult {
@@ -389,15 +390,14 @@ const handlePlay = async () => {
     if (preloadMap.current.has(idx)) {
       url = preloadMap.current.get(idx)!;
     } else {
-      url = await fetchTTSUrl(text, idx);
-    }
+      url = await ttsLimit(() => fetchTTSUrl(text, idx));    }
 
     // ---- 다음 2문장 프리로드 ----
     [1, 2].forEach(offset => {
       const next = idx + offset;
       if (next < ttsSentences.length && !preloadMap.current.has(next)) {
-        fetchTTSUrl(ttsSentences[next], next)
-          .then(u => preloadMap.current.set(next, u))
+        ttsLimit(() => fetchTTSUrl(ttsSentences[next], next))
+                  .then(u => preloadMap.current.set(next, u))
           .catch(() => {/* ignore */});
       }
     });
