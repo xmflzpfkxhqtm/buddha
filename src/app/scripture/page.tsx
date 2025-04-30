@@ -83,6 +83,14 @@ export default function ScripturePage() {
   const shouldStop  = useRef(false);            // 이름 단순화
   const preloadMap  = useRef<Map<number,string>>(new Map()); // 새 Map
   const sentenceRefs = useRef<(HTMLSpanElement | null)[]>([]);
+  const smoothCenter = (idx: number, instant = false) => {
+    sentenceRefs.current[idx]?.scrollIntoView({
+      block: 'center',          // 중앙 정렬
+      inline: 'nearest',
+      behavior: instant ? 'instant' : 'smooth',
+    });
+  };
+  
   const audioRef     = useRef<HTMLAudioElement | null>(null);
   const indexRef     = useRef(currentIndex);
     
@@ -247,7 +255,7 @@ export default function ScripturePage() {
       console.log('✅ Bookmark Pending 처리:', bookmarkPending);
       setCurrentIndex(bookmarkPending.index);
       setTimeout(() => {
-        sentenceRefs.current[bookmarkPending.index]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+         smoothCenter(bookmarkPending.index, true);       // ✨변경
         clearBookmark();  // ✅ 이동 끝난 뒤에 clear
         setBookmarkPending(null);
       }, 200);  // ✅ scrollIntoView 한 직후에 clear
@@ -383,8 +391,7 @@ const handlePlay = async () => {
 
     // 화면 스크롤 & 인덱스 동기화
     setCurrentIndex(idx);
-    sentenceRefs.current[idx]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
+    smoothCenter(idx);       
     // ---- URL 가져오기 (캐시 우선) ----
     let url: string;
     if (preloadMap.current.has(idx)) {
