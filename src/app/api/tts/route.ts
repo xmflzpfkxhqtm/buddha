@@ -59,10 +59,13 @@ export async function POST(req: NextRequest) {
     ...body });
 
   /* 3) 방금 만든 잡을 바로 처리하도록 워커 호출 */
-  fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/tts_worker`, {
-    method: 'POST',                      // ★ 추가 ②
-  });
-
+   void fetch(`${SUPABASE_URL}/functions/v1/tts_worker`, {
+      method : 'POST',
+      // keepalive 옵션을 주면 커넥션을 백그라운드에 맡기고
+      // 현재 이벤트 루프 핸들을 잡아먹지 않습니다.
+      keepalive : true,
+    }).catch(() => {/* 로그만 */});
+  
 
   /* 3) 202 Accepted + 더미 2 KB → Edge 25 s 룰 회피 */
   return new Response(
