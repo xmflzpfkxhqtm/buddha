@@ -152,8 +152,10 @@ export default function Home() {
           <div className="w-full rounded-xl flex flex-col items-start pl-1 justify-start">
           <p className="font-semibold text-white text-center mt-4">
   어서오세요, {!!userName?.trim() ? `${userName}님` : '불자님'}
-</p>
+</p>          
+
           </div>
+          
 
           {typeof title === 'string' &&
  title.length > 0 &&
@@ -173,12 +175,17 @@ export default function Home() {
                 height={48}
                 className="object-contain border-beige mx-2"
               />
+              
               <div className="flex flex-col">
-                <p className="mb-0 text-base font-medium text-white text-start">
-                  오늘의 법문 - {sentence}
+                <p className="mb-0 text-base font-semibold text-white text-start">
+                  오늘의 법문 📖 
                 </p>
-                <p className="mt-0 text-base font-base text-pink-light text-start">
-  {formatDisplayTitle(title) || '내용을 불러오는 중입니다.'}
+                <p className="mb-0 text-base font-medium text-white text-start">
+                   "{sentence}"
+                </p>
+
+                <p className="mt-0 text-sm font-base text-pink-light text-left">
+  {formatDisplayTitle(title) || '내용을 불러오는 중입니다.'} 
 </p>
               </div>
             </div>
