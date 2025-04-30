@@ -37,16 +37,29 @@ serve(async () => {
   
       const { key, text, voice } = job;
       const mp3 = await googleTTS(text, voice ?? 'ko-KR-Wavenet-C');
-  
-      const { data: up } = await supabase
+
+      const { data: up, error: upErr } = await supabase          // ✏️ 수정
         .storage.from('tts-audios')
         .createSignedUploadUrl(key);
-      await fetch(up!.signedUrl, { method: 'PUT', body: mp3 });
-  
+
+      /* ─── ① 이미 같은 파일이 있을 때 처리 ───────────────── */
+      if (upErr?.statusCode === '409' /* AlreadyExists */ || !up) {
+        await supabase
+          .from('tts_queue')
+          .update({ ready: true })
+          .eq('key', key);          // 큐만 ready=true 로 바꾸고
+        continue;                   // 다음 문장으로
+      }
+
+      /* ─── ② 새 파일이면 업로드 ───────────────────────────── */
+      await fetch(up.signedUrl, { method: 'PUT', body: mp3 });
+
+      /* ─── ③ 완료 표시 ──────────────────────────────────── */
       await supabase
         .from('tts_queue')
         .update({ ready: true })
         .eq('key', key);
+
     }
     return new Response('done');
   });

@@ -33,6 +33,18 @@ export async function POST(req: NextRequest) {
   const key = makeKey(body);
   /* 이하 동일 */
 
+  const { data: row } = await supabase
+    .from('tts_queue')
+    .select('url')          // url 컬럼만
+    .eq('key', key)
+    .maybeSingle();
+
+  if (row?.url) {
+    return NextResponse.json({ url: row.url });   // 캐시 HIT
+  }
+
+
+
   /* 1) 이미 스토리지에 있으면 → URL만 바로 리턴 */
   const { data: hit } = await supabase
     .storage.from('tts-audios')
