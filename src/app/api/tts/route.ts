@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         input: { text },
-        voice: { languageCode: 'ko-KR', name: 'ko-KR-Neural2-C' },
+        voice: { languageCode: 'ko-KR', name: 'ko-KR-Standard-C' },
         audioConfig: { audioEncoding: 'MP3', speakingRate: 0.85, pitch: -5.0 },
       }),
     });

@@ -304,25 +304,18 @@ const fetchTTSUrl = async (text: string, idx: number): Promise<string> => {
 
 // ── 실제 mp3(blob) 다운로드 ─────────────────────────────
 const fetchBlob = async (url: string): Promise<Blob> => {
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      const res = await fetch(url);
-      if (res.ok) {
-        return await res.blob();           // ✅ 성공!
-      }
-      // public 버킷인데 막 업로드돼서 아직 전파 전이면 400/404
-      if (res.status === 400 || res.status === 404) {
-        await new Promise(r => setTimeout(r, 300)); // 0.3초 기다렸다 재시도
-        continue;
-      }
-      // 그 외 상태코드는 즉시 에러 처리
-      throw new Error(`fetchBlob ${res.status}`);
-    } catch (err) {
-      if (attempt === 2) throw err;        // 3번 해도 안 되면 포기
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const res = await fetch(url);
+    if (res.ok) return res.blob();
+    if (res.status === 400 || res.status === 404) {
+      await new Promise(r => setTimeout(r, 500));   // 0.5 s
+      continue;
     }
+    throw new Error(`fetchBlob ${res.status}`);
   }
-  throw new Error('blob not ready');
+  throw new Error('blob not ready after 8 retries');
 };
+
 
 
 
