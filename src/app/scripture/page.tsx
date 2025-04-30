@@ -406,9 +406,24 @@ const handlePlay = async () => {
     const audio  = new Audio(blobId);
     audioRef.current = audio;
 
-    try { await audio.play(); }
-    catch { await new Promise(r => setTimeout(r, 300)); await audio.play(); }
-
+    let played = false;
+    for (let t = 0; t < 3; t++) {             // 최대 3회, 약 1초 시도
+      try {
+        await audio.play();
+        played = true;
+        break;                                // 성공하면 탈출
+      } catch {
+        await new Promise(r => setTimeout(r, 300));  // 0.3초 기다렸다 재시도
+      }
+    }
+    if (!played) {
+      console.warn('play() 3회 실패 – 문장 건너뜀');
+      URL.revokeObjectURL(blobId);
+      preloadMap.current.delete(idx);
+      indexRef.current += 1;
+      continue;                                // 다음 문장
+    }
+    
     // 끝날 때까지 대기
     await new Promise<void>((resolve) => {
       audio.onended = () => resolve();        // 매개변수 무시하고 호출
