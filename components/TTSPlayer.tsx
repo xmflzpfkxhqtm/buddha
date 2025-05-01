@@ -138,8 +138,8 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
           await TextToSpeech.speak({
             text,
             lang: 'ko-KR',
-            rate: 1.0,
-            pitch: 1.0,
+            rate: 0.7,
+            pitch: 0.7,
             volume: 1.0,
             category: 'ambient',
           });
