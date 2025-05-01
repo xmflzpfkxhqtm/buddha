@@ -33,25 +33,22 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
     if (!isNative.current && typeof window !== 'undefined' && 'speechSynthesis' in window) {
       synth.current = window.speechSynthesis;
       synth.current.getVoices();
-      console.log('[TTSPlayer] Web SpeechSynthesis initialized');
     }
   }, []);
 
-  /* ---------- 외부에 상태 반영 ---------- */
-  useEffect(() => {
-    onPlaybackStateChange?.(isSpeakingState);
-  }, [isSpeakingState, onPlaybackStateChange]);
+  /* ---------- 외부 상태 전달 ---------- */
+  useEffect(() => onPlaybackStateChange?.(isSpeakingState), [isSpeakingState, onPlaybackStateChange]);
 
-  /* ---------- 재생·정지 ---------- */
+  /* ---------- 즉시 정지 ---------- */
   const stopSpeech = useCallback((updateParentIndex = true) => {
     stopRequested.current = true;
 
-    // ⛔️ 네이티브 TTS 즉시 중단
+    // ➡️ 네이티브(WebView)  
     if (isNative.current) {
       TextToSpeech.stop().catch(() => {});
     }
 
-    // ⛔️ 웹 TTS 즉시 중단
+    // ➡️ 웹
     if (!isNative.current && currentUtterance.current) {
       currentUtterance.current.onend = null;
       currentUtterance.current.onerror = null;
@@ -69,13 +66,13 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
     KeepAwake.allowSleep().catch();
   }, [setParentCurrentIndex, onPlaybackStateChange]);
 
+  /* ---------- 말하기 ---------- */
   const speakText = (
     text: string,
     index: number,
     onEnd: () => void
   ) => {
     if (isNative.current) {
-      /* ----- Native (Capacitor) ----- */
       stopRequested.current = false;
       setIsSpeakingState(true);
       onPlaybackStateChange?.(true);
@@ -97,17 +94,15 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
           onPlaybackStateChange?.(false);
           onEnd();
         })
-        .catch(e => {
-          console.error('[TTSPlayer] Native TTS Error:', e);
+        .catch((e) => {
+          console.error('[TTS] native error', e);
           stopSpeech();
         });
     } else {
-      /* ----- Web SpeechSynthesis ----- */
       const utterance = new SpeechSynthesisUtterance(text);
       currentUtterance.current = utterance;
       utterance.lang = 'ko-KR';
       utterance.rate = 0.9;
-      utterance.pitch = 1.0;
 
       utterance.onstart = () => {
         if (stopRequested.current) {
@@ -129,37 +124,37 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
       };
 
       utterance.onerror = (e) => {
-        console.error('[TTSPlayer] Web TTS Error:', e);
+        console.error('[TTS] web error', e);
         stopSpeech();
       };
 
       if (synth.current?.speaking || synth.current?.pending) {
         synth.current.cancel();
-        setTimeout(() => synth.current?.speak(utterance), 100);
+        setTimeout(() => synth.current?.speak(utterance), 80);
       } else {
         synth.current?.speak(utterance);
       }
     }
   };
 
-  const playNextSpeech = useCallback((currentIndex: number) => {
-    const nextIndex = currentIndex + 1;
-    if (nextIndex >= sentences.length || stopRequested.current) {
+  /* ---------- 연속 재생 ---------- */
+  const playNextSpeech = useCallback((cur: number) => {
+    const next = cur + 1;
+    if (next >= sentences.length || stopRequested.current) {
       stopSpeech(false);
       return;
     }
-    const nextText = sentences[nextIndex];
+    const nextText = sentences[next];
     if (!nextText?.trim()) {
-      playNextSpeech(nextIndex);
+      playNextSpeech(next);
       return;
     }
-    speakText(nextText, nextIndex, () => {
-      if (!stopRequested.current) {
-        setTimeout(() => playNextSpeech(nextIndex), 120);
-      }
+    speakText(nextText, next, () => {
+      if (!stopRequested.current) setTimeout(() => playNextSpeech(next), 120);
     });
   }, [sentences, stopSpeech]);
 
+  /* ---------- 버튼 ---------- */
   const handlePlayPause = useCallback(() => {
     if (isSpeakingState) {
       stopSpeech();
@@ -171,18 +166,14 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
       if (!text?.trim()) return;
 
       speakText(text, parentCurrentIndex, () => {
-        if (!stopRequested.current) {
-          setTimeout(() => playNextSpeech(parentCurrentIndex), 120);
-        }
+        if (!stopRequested.current) setTimeout(() => playNextSpeech(parentCurrentIndex), 120);
       });
     }
   }, [isSpeakingState, parentCurrentIndex, sentences, stopSpeech, playNextSpeech]);
 
-  /* ---------- sentences 변경·언마운트 시 정지 ---------- */
+  /* ---------- 경전 변경·언마운트 시 강제 정지 ---------- */
   useEffect(() => {
-    if (isSpeakingState) {
-      stopSpeech(false);
-    }
+    if (isSpeakingState) stopSpeech(false);
   }, [sentences, isSpeakingState, stopSpeech]);
 
   useEffect(() => () => stopSpeech(false), [stopSpeech]);
