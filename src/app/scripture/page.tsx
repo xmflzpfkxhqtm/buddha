@@ -324,7 +324,7 @@ export default function ScripturePage() {
             </span>
             <span className="ml-1 text-base text-red-light"> <Search size={24} /></span>
           </div>
-          <span className="text-sm text-red-dark">{`${currentIndex + 1} / ${displaySentences.length}`}</span>
+          <span className="text-sm text-red-dark whitespace-nowrap flex-shrink-0 overflow-visible">{`${currentIndex + 1} / ${displaySentences.length}`}</span>
           <div className="flex items-center gap-2">
             <button onClick={handleBookmark} className="w-24 h-9 bg-red-light text-white rounded-lg font-semibold">
               {isBookmarked ? '책갈피 삭제' : '책갈피 저장'}
