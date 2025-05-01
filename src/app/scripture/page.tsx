@@ -1,14 +1,14 @@
 // src/app/scripture/page.tsx
 
 'use client';
-
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useBookmarkStore } from '../../stores/useBookmarkStore';
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import ScriptureModal from '../../../components/ScriptureModal';
-import TTSPlayer from '../../../components/TTSPlayer'; // TTSPlayer 컴포넌트 import
+import dynamic from 'next/dynamic';
+const TTSPlayer = dynamic(() => import('../../../components/TTSPlayer'), { ssr: false });
 
 interface GlobalSearchResult {
   title: string;
