@@ -142,7 +142,7 @@ export default function Home() {
               <p className="mb-0 text-base font-medium text-white text-start">
                 부처님께 여쭙기 AI 기능이 출시되었습니다
               </p>
-              <p className="mt-0 text-base font-base text-pink-light text-start">
+              <p className="mt-0 text-sm font-base text-pink-light text-start">
                 클릭하여 자세히 알아보세요
               </p>
             </div>
