@@ -153,8 +153,8 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
           const utter = new SpeechSynthesisUtterance(text);
           currentUtterance.current = utter;
           utter.lang = 'ko-KR';
-          utter.rate = 0.7;
-          utter.pitch = 0.5;
+          utter.rate = 0.6;
+          utter.pitch = 0.1;
           
           utter.onend = () => {
             currentUtterance.current = null;
