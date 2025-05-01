@@ -33,7 +33,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
     if (!isNative.current && typeof window !== 'undefined' && 'speechSynthesis' in window) {
       synth.current = window.speechSynthesis;
       synth.current.getVoices();
-      console.log('[TTSPlayer] Synth initialized.');
+      console.log('[TTSPlayer] Web SpeechSynthesis initialized');
     }
   }, []);
 
@@ -43,21 +43,38 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
 
   const stopSpeech = useCallback((updateParentIndex = true) => {
     stopRequested.current = true;
+
     if (!isNative.current && currentUtterance.current) {
       currentUtterance.current.onend = null;
       currentUtterance.current.onerror = null;
     }
+
     if (!isNative.current && synth.current && (synth.current.speaking || synth.current.pending)) {
       synth.current.cancel();
     }
+
     setIsSpeakingState(false);
-    if (updateParentIndex) setParentCurrentIndex(internalCurrentIndex.current);
+    onPlaybackStateChange?.(false);
+
+    if (updateParentIndex) {
+      setParentCurrentIndex(internalCurrentIndex.current);
+    }
+
     KeepAwake.allowSleep().catch();
-  }, [setParentCurrentIndex]);
+  }, [setParentCurrentIndex, onPlaybackStateChange]);
 
   const speakText = async (text: string, index: number, onEnd: () => void) => {
     if (isNative.current) {
       try {
+        console.log(`[TTSPlayer] Native speak: index ${index}`);
+        // 👉 수동 상태 반영
+        stopRequested.current = false;
+        setIsSpeakingState(true);
+        onPlaybackStateChange?.(true);
+        internalCurrentIndex.current = index;
+        setParentCurrentIndex(index);
+        smoothCenter(index);
+
         await TextToSpeech.speak({
           text,
           lang: 'ko-KR',
@@ -66,9 +83,15 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
           volume: 1.0,
           category: 'ambient',
         });
-        onEnd(); // 수동 호출 필요
+
+        setIsSpeakingState(false);
+        onPlaybackStateChange?.(false);
+        onEnd();
+
       } catch (e) {
         console.error('[TTSPlayer] Native TTS Error:', e);
+        setIsSpeakingState(false);
+        onPlaybackStateChange?.(false);
         stopSpeech();
       }
     } else {
@@ -83,7 +106,9 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
           stopSpeech();
           return;
         }
+        console.log(`[TTSPlayer] Web speak: index ${index}`);
         setIsSpeakingState(true);
+        onPlaybackStateChange?.(true);
         internalCurrentIndex.current = index;
         setParentCurrentIndex(index);
         smoothCenter(index);
@@ -91,6 +116,8 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
 
       utterance.onend = () => {
         currentUtterance.current = null;
+        setIsSpeakingState(false);
+        onPlaybackStateChange?.(false);
         onEnd();
       };
 
