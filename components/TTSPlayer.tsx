@@ -132,7 +132,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
       return { rate: 1.0, pitch: 0.7 };
     }
     if (isAndroidWeb.current) {
-      return { rate: 0.9, pitch: 0.2 };
+      return { rate: 3, pitch: 0.2 };
     }
     // PC Chrome 등
     return { rate: 0.8, pitch: 0.2 };
