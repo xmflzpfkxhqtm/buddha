@@ -106,7 +106,9 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
       try {
         if (isNative.current) await TextToSpeech.stop();
         else synth.current?.cancel();
-      } catch (_) {
+      } // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      catch (_) 
+       {
         /* noop */
       } finally {
         if (isMounted.current) {
