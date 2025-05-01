@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Pause } from 'lucide-react';
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import { TextToSpeech } from '@capacitor-community/text-to-speech';
-import { Capacitor } from '@capacitor/core'; // CapacitorHttp는 사용 안 하면 제거
+import { Capacitor } from '@capacitor/core';
 
 interface TTSPlayerProps {
   sentences: string[];
@@ -14,6 +14,33 @@ interface TTSPlayerProps {
   smoothCenter: (index: number) => void;
 }
 
+/* -------------------------------------------------- */
+/* iOS-Web 전용 : voices 로드 대기 & 예열 유틸        */
+/* -------------------------------------------------- */
+function waitUntilVoicesReady(): Promise<void> {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+    return Promise.resolve();
+  }
+  if (speechSynthesis.getVoices().length) return Promise.resolve();
+
+  return new Promise((res) => {
+    const int = setInterval(() => {
+      if (speechSynthesis.getVoices().length) {
+        clearInterval(int);
+        res();
+      }
+    }, 50);
+    speechSynthesis.addEventListener(
+      'voiceschanged',
+      () => {
+        clearInterval(int);
+        res();
+      },
+      { once: true }
+    );
+  });
+}
+
 const TTSPlayer: React.FC<TTSPlayerProps> = ({
   sentences,
   currentIndex: parentCurrentIndex,
@@ -21,286 +48,183 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
   onPlaybackStateChange,
   smoothCenter,
 }) => {
+  /* -------------------------------------------------- */
+  /* refs & states                                      */
+  /* -------------------------------------------------- */
   const [isSpeakingState, setIsSpeakingState] = useState(false);
+
   const synth = useRef<SpeechSynthesis | null>(null);
   const currentUtterance = useRef<SpeechSynthesisUtterance | null>(null);
-  const stopRequested = useRef<boolean>(false);
+  const stopRequested = useRef(false);
   const internalCurrentIndex = useRef<number>(parentCurrentIndex);
-  const platform = useRef<string>(Capacitor.getPlatform());
-  const isNative = useRef<boolean>(platform.current !== 'web');
-  // 👇 !window.MSStream 조건 제거
-  const isIOSWeb = useRef<boolean>(platform.current === 'web' && /iPad|iPhone|iPod/.test(navigator.userAgent));
-  const isMounted = useRef<boolean>(false);
 
+  const platform = useRef(Capacitor.getPlatform());
+  const isNative = useRef(platform.current !== 'web');
+  const isIOSWeb = useRef(
+    platform.current === 'web' && /iPad|iPhone|iPod/.test(navigator.userAgent)
+  );
+  const isMounted = useRef(false);
+
+  /* -------------------------------------------------- */
+  /* mount / unmount                                    */
+  /* -------------------------------------------------- */
   useEffect(() => {
     isMounted.current = true;
-    console.log(`[TTSPlayer] Component mounted. Platform: ${platform.current}, isNative: ${isNative.current}, isIOSWeb: ${isIOSWeb.current}`);
+    console.log(
+      `[TTS] mount – platform=${platform.current}, native=${isNative.current}, iOSWeb=${isIOSWeb.current}`
+    );
 
-    if (!isNative.current && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    if (!isNative.current && 'speechSynthesis' in window) {
       synth.current = window.speechSynthesis;
-      try {
-        const voices = synth.current.getVoices();
-        console.log('[TTSPlayer] Initial voices count:', voices.length);
-      } catch (e) {
-          console.error("[TTSPlayer] Error calling getVoices initially:", e);
+      // iOS Safari 예열용 (무음 한 글자)
+      if (isIOSWeb.current) {
+        const warm = new SpeechSynthesisUtterance(' ');
+        synth.current.speak(warm);
       }
-      if (synth.current.speaking || synth.current.pending) {
-        console.log('[TTSPlayer] Initializing: Cancelling existing web speech');
-        synth.current.cancel();
-      }
-      console.log('[TTSPlayer] Web SpeechSynthesis initialized');
-
-      const handleVoicesChanged = () => {
-          if (synth.current) {
-              console.log('[TTSPlayer] Voices changed. Count:', synth.current.getVoices().length);
-          }
-      };
-      synth.current.onvoiceschanged = handleVoicesChanged;
-
-    } else if (isNative.current) {
-      TextToSpeech.stop().catch(e => console.warn('[TTSPlayer] Initial native stop failed (may be normal):', e));
-      console.log('[TTSPlayer] Native TTS platform detected');
     }
 
     return () => {
       isMounted.current = false;
-      console.log('[TTSPlayer] Component unmounting, stopping speech.');
-       if (synth.current) {
-           synth.current.onvoiceschanged = null;
-       }
       stopSpeech(false);
-      if (isNative.current) {
-        TextToSpeech.stop().catch(e => console.error("Error stopping native TTS on unmount:", e));
-      } else if (synth.current) {
-        synth.current.cancel();
-      }
-      KeepAwake.allowSleep().catch();
-      console.log('[TTSPlayer] Cleanup complete.');
+      if (isNative.current) TextToSpeech.stop().catch(() => {});
+      else synth.current?.cancel();
+      KeepAwake.allowSleep().catch(() => {});
     };
   }, []);
 
+  /* 외부로 재생상태 알리기 */
   useEffect(() => {
-    if (isMounted.current) {
-      onPlaybackStateChange?.(isSpeakingState);
-    }
+    onPlaybackStateChange?.(isSpeakingState);
   }, [isSpeakingState, onPlaybackStateChange]);
 
-  const stopSpeech = useCallback(async (updateParentIndex = true) => {
-    console.log(`[TTSPlayer] stopSpeech called. updateParentIndex: ${updateParentIndex}, current internalIndex: ${internalCurrentIndex.current}, isNative: ${isNative.current}`);
-    stopRequested.current = true;
-
-    try {
-      if (isNative.current) {
-        console.log('[TTSPlayer] Stopping native TTS engine...');
-        await TextToSpeech.stop();
-        console.log('[TTSPlayer] Native TTS engine stopped.');
-      } else {
-        if (currentUtterance.current) {
-          currentUtterance.current.onend = null;
-          currentUtterance.current.onerror = null;
-          currentUtterance.current.onstart = null;
-          currentUtterance.current = null;
-        }
-        if (synth.current && (synth.current.speaking || synth.current.pending)) {
-          console.log('[TTSPlayer] Cancelling web speech synthesis...');
-          synth.current.cancel();
-          console.log('[TTSPlayer] Web speech synthesis cancelled.');
-        }
-      }
-    } catch (e) {
-        console.error('[TTSPlayer] Error during stopSpeech:', e);
-    } finally {
+  /* -------------------------------------------------- */
+  /* stop                                               */
+  /* -------------------------------------------------- */
+  const stopSpeech = useCallback(
+    async (updateParentIndex = true) => {
+      stopRequested.current = true;
+      try {
+        if (isNative.current) await TextToSpeech.stop();
+        else synth.current?.cancel();
+      } catch (_) {
+        /* noop */
+      } finally {
         if (isMounted.current) {
-            setIsSpeakingState(false);
-            if (updateParentIndex) {
-                console.log(`[TTSPlayer] Updating parent index to: ${internalCurrentIndex.current}`);
-                setParentCurrentIndex(internalCurrentIndex.current);
-            } else {
-                 console.log(`[TTSPlayer] Not updating parent index (updateParentIndex: ${updateParentIndex})`);
-            }
+          setIsSpeakingState(false);
+          if (updateParentIndex) setParentCurrentIndex(internalCurrentIndex.current);
         }
-        KeepAwake.allowSleep().catch();
-        console.log('[TTSPlayer] stopSpeech finished.');
-    }
-  }, [setParentCurrentIndex, isNative]);
+        KeepAwake.allowSleep().catch(() => {});
+      }
+    },
+    [setParentCurrentIndex]
+  );
 
-  const speakText = useCallback(async (text: string, index: number, onEndCallback: () => void) => {
-    if (!isMounted.current || stopRequested.current) {
-        console.log(`[TTSPlayer] Speak request cancelled or component unmounted (index: ${index})`);
-        if (isSpeakingState && isMounted.current) setIsSpeakingState(false);
-        return;
-    }
+  /* -------------------------------------------------- */
+  /* speakText                                          */
+  /* -------------------------------------------------- */
+  const speakText = useCallback(
+    async (text: string, index: number, onEnd: () => void) => {
+      if (!isMounted.current || stopRequested.current) return;
 
-    console.log(`[TTSPlayer] Attempting to speak index: ${index}, isNative: ${isNative.current}, isIOSWeb: ${isIOSWeb.current}`);
-    internalCurrentIndex.current = index;
-    if (isMounted.current) {
-        setParentCurrentIndex(index);
-        smoothCenter(index);
-        setIsSpeakingState(true);
-    }
+      internalCurrentIndex.current = index;
+      setParentCurrentIndex(index);
+      smoothCenter(index);
+      setIsSpeakingState(true);
 
-    try {
-      if (isNative.current) {
-        const options = {
+      try {
+        if (isNative.current) {
+          await TextToSpeech.speak({
             text,
             lang: 'ko-KR',
             rate: 1.0,
             pitch: 1.0,
             volume: 1.0,
             category: 'ambient',
-        };
-        console.log(`[TTSPlayer] Calling Native TextToSpeech.speak for index: ${index}`);
-        await TextToSpeech.speak(options);
-        console.log(`[TTSPlayer] Native TextToSpeech.speak finished for index: ${index}`);
-
-        if (isMounted.current && !stopRequested.current) {
-            console.log(`[TTSPlayer] Native speech ended naturally for index: ${index}. Calling onEndCallback.`);
-            onEndCallback();
+          });
+          if (!stopRequested.current && isMounted.current) onEnd();
         } else {
-             console.log(`[TTSPlayer] Native speech ended for index: ${index}, but stop was requested or component unmounted.`);
-             if(isMounted.current && isSpeakingState) setIsSpeakingState(false);
-        }
+          if (!synth.current) {
+            setIsSpeakingState(false);
+            return;
+          }
 
-      } else { // Web SpeechSynthesis
-        if (!synth.current) {
-          console.error('[TTSPlayer] Web SpeechSynthesis not available.');
-          if (isMounted.current) setIsSpeakingState(false);
-          return;
-        }
+          const utter = new SpeechSynthesisUtterance(text);
+          currentUtterance.current = utter;
+          utter.lang = 'ko-KR';
+          utter.rate = 0.9;
 
-        if (synth.current.speaking || synth.current.pending) {
-            console.warn('[TTSPlayer] Web speech was speaking/pending. Cancelling previous.');
-            synth.current.cancel();
-            await new Promise(resolve => setTimeout(resolve, isIOSWeb.current ? 100 : 50));
-        }
-
-        const utterance = new SpeechSynthesisUtterance(text);
-        currentUtterance.current = utterance;
-        utterance.lang = 'ko-KR';
-        utterance.rate = 0.9;
-        utterance.pitch = 1.0;
-
-        utterance.onstart = () => {
-            if (stopRequested.current || !isMounted.current) {
-                console.log(`[TTSPlayer] Web speech start event for index ${index}, but stop requested or unmounted. Cancelling.`);
-                stopSpeech(false);
-                return;
-            }
-            console.log(`[TTSPlayer] Web speech started for index: ${index}`);
-        };
-
-        utterance.onend = () => {
-            console.log(`[TTSPlayer] Web speech ended for index: ${index}`);
+          utter.onend = () => {
             currentUtterance.current = null;
-            if (isMounted.current && !stopRequested.current) {
-                 console.log(`[TTSPlayer] Web speech ended naturally for index: ${index}. Calling onEndCallback.`);
-                onEndCallback();
-            } else {
-                 console.log(`[TTSPlayer] Web speech ended for index: ${index}, but stop was requested or component unmounted.`);
-                 if(isMounted.current && isSpeakingState) setIsSpeakingState(false);
-            }
-        };
+            if (!stopRequested.current && isMounted.current) onEnd();
+          };
+          utter.onerror = () => stopSpeech(false);
 
-        utterance.onerror = (event) => {
-            console.error('[TTSPlayer] Web TTS Error:', event);
-            console.error('Error details:', {
-                error: event.error,
-                type: event.type,
-                charIndex: event.charIndex,
-                elapsedTime: event.elapsedTime,
-                name: event.name,
-                utteranceText: event.utterance?.text.substring(0, 50) + '...'
-            });
-            currentUtterance.current = null;
-            if (isMounted.current) {
-               stopSpeech(false);
-            }
-        };
-
-        console.log(`[TTSPlayer] Calling Web synth.speak for index: ${index}`);
-        synth.current.speak(utterance);
-      }
-    } catch (error) {
-        console.error(`[TTSPlayer] Error during speakText for index ${index}:`, error);
-        if (isMounted.current) {
-           stopSpeech(false);
+          synth.current.speak(utter);
         }
-    }
-  }, [isNative, isIOSWeb, setParentCurrentIndex, smoothCenter, stopSpeech, isSpeakingState]);
-
-  const playNextSpeech = useCallback((currentIndex: number) => {
-    if (!isMounted.current || stopRequested.current) {
-      console.log(`[TTSPlayer] playNextSpeech cancelled or component unmounted. stopRequested: ${stopRequested.current}`);
-      if (isSpeakingState && isMounted.current) setIsSpeakingState(false);
-      return;
-    }
-
-    const nextIndex = currentIndex + 1;
-    console.log(`[TTSPlayer] playNextSpeech: current index ${currentIndex}, trying next index ${nextIndex}`);
-
-    if (nextIndex >= sentences.length) {
-      console.log('[TTSPlayer] Reached end of sentences.');
-      if (isMounted.current) {
-         setIsSpeakingState(false);
-         setParentCurrentIndex(currentIndex);
+      } catch (e) {
+        console.error('[TTS] speak error', e);
+        stopSpeech(false);
       }
-      KeepAwake.allowSleep().catch();
-      return;
-    }
+    },
+    [setParentCurrentIndex, smoothCenter, stopSpeech]
+  );
 
-    const nextText = sentences[nextIndex];
-    if (!nextText?.trim()) {
-      console.log(`[TTSPlayer] Skipping empty sentence at index: ${nextIndex}`);
-      playNextSpeech(nextIndex);
-      return;
-    }
-
-    speakText(nextText, nextIndex, () => {
-        if (!stopRequested.current && isMounted.current) {
-            setTimeout(() => playNextSpeech(nextIndex), 120);
-        }
-    });
-  }, [sentences, speakText, setParentCurrentIndex, isSpeakingState]);
-
-  const handlePlayPause = useCallback(async () => {
-    console.log(`[TTSPlayer] handlePlayPause called. isSpeakingState: ${isSpeakingState}`);
-    if (isSpeakingState) {
-      await stopSpeech();
-    } else {
-      stopRequested.current = false;
-      try {
-          await KeepAwake.keepAwake();
-      } catch(e) {
-          console.warn("Failed to keep awake:", e);
-      }
-
-      const textToSpeak = sentences[parentCurrentIndex];
-      if (!textToSpeak?.trim()) {
-        console.log(`[TTSPlayer] Current sentence at index ${parentCurrentIndex} is empty. Cannot play.`);
-        KeepAwake.allowSleep().catch();
+  /* -------------------------------------------------- */
+  /* playNext                                           */
+  /* -------------------------------------------------- */
+  const playNextSpeech = useCallback(
+    (cur: number) => {
+      const next = cur + 1;
+      if (next >= sentences.length || stopRequested.current) {
+        stopSpeech(false);
         return;
       }
+      const txt = sentences[next];
+      if (!txt?.trim()) {
+        playNextSpeech(next);
+        return;
+      }
+      speakText(txt, next, () => setTimeout(() => playNextSpeech(next), 120));
+    },
+    [sentences, speakText, stopSpeech]
+  );
 
-      speakText(textToSpeak, parentCurrentIndex, () => {
-          if (!stopRequested.current && isMounted.current) {
-              setTimeout(() => playNextSpeech(parentCurrentIndex), 120);
-          } else if (isMounted.current) {
-              setIsSpeakingState(false);
-          }
-      });
+  /* -------------------------------------------------- */
+  /* button handler                                     */
+  /* -------------------------------------------------- */
+  const handlePlayPause = useCallback(async () => {
+    if (isSpeakingState) {
+      stopSpeech();
+      return;
     }
-  }, [isSpeakingState, parentCurrentIndex, sentences, stopSpeech, speakText, playNextSpeech]);
 
+    stopRequested.current = false;
+    KeepAwake.keepAwake().catch(() => {});
+
+    if (isIOSWeb.current) await waitUntilVoicesReady();
+
+    const txt = sentences[parentCurrentIndex];
+    if (!txt?.trim()) return;
+
+    speakText(txt, parentCurrentIndex, () =>
+      setTimeout(() => playNextSpeech(parentCurrentIndex), 120)
+    );
+  }, [isSpeakingState, parentCurrentIndex, sentences, speakText, playNextSpeech, stopSpeech]);
+
+  /* -------------------------------------------------- */
+  /* 외부 index 변경 시 동기화                          */
+  /* -------------------------------------------------- */
   useEffect(() => {
     if (isSpeakingState && parentCurrentIndex !== internalCurrentIndex.current) {
-      console.log(`[TTSPlayer] External index change detected (parent: ${parentCurrentIndex}, internal: ${internalCurrentIndex.current}) while speaking. Stopping.`);
       stopSpeech(false);
-    }
-    else if (!isSpeakingState) {
-         internalCurrentIndex.current = parentCurrentIndex;
+    } else if (!isSpeakingState) {
+      internalCurrentIndex.current = parentCurrentIndex;
     }
   }, [parentCurrentIndex, isSpeakingState, stopSpeech]);
 
+  /* -------------------------------------------------- */
+  /* render                                             */
+  /* -------------------------------------------------- */
   return (
     <button
       onClick={handlePlayPause}
