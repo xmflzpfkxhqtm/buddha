@@ -63,6 +63,9 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
   const isIOSWeb = useRef(
     platform.current === 'web' && /iPad|iPhone|iPod/.test(navigator.userAgent)
   );
+  const isAndroidWeb = useRef(
+    platform.current === 'web' && /Android/.test(navigator.userAgent)
+  );
   const isMounted = useRef(false);
 
   /* -------------------------------------------------- */
@@ -71,7 +74,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
   useEffect(() => {
     isMounted.current = true;
     console.log(
-      `[TTS] mount – platform=${platform.current}, native=${isNative.current}, iOSWeb=${isIOSWeb.current}`
+      `[TTS] mount – platform=${platform.current}, native=${isNative.current}, iOSWeb=${isIOSWeb.current}, AndroidWeb=${isAndroidWeb.current}`
     );
 
     if (!isNative.current && 'speechSynthesis' in window) {
@@ -124,6 +127,17 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
   /* -------------------------------------------------- */
   /* speakText                                          */
   /* -------------------------------------------------- */
+  const getTtsSettings = useCallback(() => {
+    if (isNative.current) {
+      return { rate: 1.0, pitch: 0.7 };
+    }
+    if (isAndroidWeb.current) {
+      return { rate: 0.9, pitch: 0.2 };
+    }
+    // PC Chrome 등
+    return { rate: 0.8, pitch: 0.2 };
+  }, []);
+
   const speakText = useCallback(
     async (text: string, index: number, onEnd: () => void) => {
       if (!isMounted.current || stopRequested.current) return;
@@ -135,11 +149,12 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
 
       try {
         if (isNative.current) {
+          const settings = getTtsSettings();
           await TextToSpeech.speak({
             text,
             lang: 'ko-KR',
-            rate: 1.0,
-            pitch: 0.7,
+            rate: settings.rate,
+            pitch: settings.pitch,
             volume: 1.0,
             category: 'ambient',
           });
@@ -153,19 +168,19 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
           const utter = new SpeechSynthesisUtterance(text);
           currentUtterance.current = utter;
           utter.lang = 'ko-KR';
-          utter.rate = 1;
-          utter.pitch = 0.2;
-          
+          const settings = getTtsSettings();
+          utter.rate = settings.rate;
+          utter.pitch = settings.pitch;
+
           utter.onend = () => {
             currentUtterance.current = null;
             if (!stopRequested.current && isMounted.current) {
-              // 👉 문장 끝난 뒤 500ms 쉬고 다음으로 넘어감
               setTimeout(() => {
                 onEnd();
-              }, 500); // ← 이 값을 조절하면 문장 간 간격이 바뀜
+              }, 500);
             }
           };
-                    utter.onerror = () => stopSpeech(false);
+          utter.onerror = () => stopSpeech(false);
 
           synth.current.speak(utter);
         }
@@ -174,7 +189,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
         stopSpeech(false);
       }
     },
-    [setParentCurrentIndex, smoothCenter, stopSpeech]
+    [setParentCurrentIndex, smoothCenter, stopSpeech, getTtsSettings]
   );
 
   /* -------------------------------------------------- */
