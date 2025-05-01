@@ -376,8 +376,8 @@ export default function ScripturePage() {
       {ttsSentences.length > 0 && (
         <TTSPlayer
           sentences={ttsSentences}
-          currentIndex={currentIndex}
-          setCurrentIndex={setCurrentIndex}
+          currentIndex={currentIndex}        // 이름 변경: parentCurrentIndex -> currentIndex
+          setCurrentIndex={setCurrentIndex}    // 이름 변경: setParentCurrentIndex -> setCurrentIndex
           smoothCenter={smoothCenter}
           onPlaybackStateChange={setIsTTSSpeaking}
           // onPlaybackStateChange={(playing) => console.log('TTS Playing:', playing)} // 필요시 콜백 활성화
