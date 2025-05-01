@@ -28,7 +28,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
   const internalCurrentIndex = useRef<number>(parentCurrentIndex);
   const isNative = useRef<boolean>(Capacitor.getPlatform() !== 'web');
 
-  // --- 초기화 ---
+  /* ---------- 초기화 ---------- */
   useEffect(() => {
     if (!isNative.current && typeof window !== 'undefined' && 'speechSynthesis' in window) {
       synth.current = window.speechSynthesis;
@@ -37,18 +37,25 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
     }
   }, []);
 
+  /* ---------- 외부에 상태 반영 ---------- */
   useEffect(() => {
     onPlaybackStateChange?.(isSpeakingState);
   }, [isSpeakingState, onPlaybackStateChange]);
 
+  /* ---------- 재생·정지 ---------- */
   const stopSpeech = useCallback((updateParentIndex = true) => {
     stopRequested.current = true;
 
+    // ⛔️ 네이티브 TTS 즉시 중단
+    if (isNative.current) {
+      TextToSpeech.stop().catch(() => {});
+    }
+
+    // ⛔️ 웹 TTS 즉시 중단
     if (!isNative.current && currentUtterance.current) {
       currentUtterance.current.onend = null;
       currentUtterance.current.onerror = null;
     }
-
     if (!isNative.current && synth.current && (synth.current.speaking || synth.current.pending)) {
       synth.current.cancel();
     }
@@ -59,42 +66,43 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
     if (updateParentIndex) {
       setParentCurrentIndex(internalCurrentIndex.current);
     }
-
     KeepAwake.allowSleep().catch();
   }, [setParentCurrentIndex, onPlaybackStateChange]);
 
-  const speakText = async (text: string, index: number, onEnd: () => void) => {
+  const speakText = (
+    text: string,
+    index: number,
+    onEnd: () => void
+  ) => {
     if (isNative.current) {
-      try {
-        console.log(`[TTSPlayer] Native speak: index ${index}`);
-        // 👉 수동 상태 반영
-        stopRequested.current = false;
-        setIsSpeakingState(true);
-        onPlaybackStateChange?.(true);
-        internalCurrentIndex.current = index;
-        setParentCurrentIndex(index);
-        smoothCenter(index);
+      /* ----- Native (Capacitor) ----- */
+      stopRequested.current = false;
+      setIsSpeakingState(true);
+      onPlaybackStateChange?.(true);
+      internalCurrentIndex.current = index;
+      setParentCurrentIndex(index);
+      smoothCenter(index);
 
-        await TextToSpeech.speak({
-          text,
-          lang: 'ko-KR',
-          rate: 1.0,
-          pitch: 1.0,
-          volume: 1.0,
-          category: 'ambient',
+      TextToSpeech.speak({
+        text,
+        lang: 'ko-KR',
+        rate: 1.0,
+        pitch: 1.0,
+        volume: 1.0,
+        category: 'ambient',
+      })
+        .then(() => {
+          if (stopRequested.current) return;
+          setIsSpeakingState(false);
+          onPlaybackStateChange?.(false);
+          onEnd();
+        })
+        .catch(e => {
+          console.error('[TTSPlayer] Native TTS Error:', e);
+          stopSpeech();
         });
-
-        setIsSpeakingState(false);
-        onPlaybackStateChange?.(false);
-        onEnd();
-
-      } catch (e) {
-        console.error('[TTSPlayer] Native TTS Error:', e);
-        setIsSpeakingState(false);
-        onPlaybackStateChange?.(false);
-        stopSpeech();
-      }
     } else {
+      /* ----- Web SpeechSynthesis ----- */
       const utterance = new SpeechSynthesisUtterance(text);
       currentUtterance.current = utterance;
       utterance.lang = 'ko-KR';
@@ -106,7 +114,6 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
           stopSpeech();
           return;
         }
-        console.log(`[TTSPlayer] Web speak: index ${index}`);
         setIsSpeakingState(true);
         onPlaybackStateChange?.(true);
         internalCurrentIndex.current = index;
@@ -128,9 +135,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
 
       if (synth.current?.speaking || synth.current?.pending) {
         synth.current.cancel();
-        setTimeout(() => {
-          synth.current?.speak(utterance);
-        }, 100);
+        setTimeout(() => synth.current?.speak(utterance), 100);
       } else {
         synth.current?.speak(utterance);
       }
@@ -143,13 +148,11 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
       stopSpeech(false);
       return;
     }
-
     const nextText = sentences[nextIndex];
     if (!nextText?.trim()) {
       playNextSpeech(nextIndex);
       return;
     }
-
     speakText(nextText, nextIndex, () => {
       if (!stopRequested.current) {
         setTimeout(() => playNextSpeech(nextIndex), 120);
@@ -175,12 +178,16 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
     }
   }, [isSpeakingState, parentCurrentIndex, sentences, stopSpeech, playNextSpeech]);
 
+  /* ---------- sentences 변경·언마운트 시 정지 ---------- */
   useEffect(() => {
-    if (isSpeakingState && parentCurrentIndex !== internalCurrentIndex.current) {
+    if (isSpeakingState) {
       stopSpeech(false);
     }
-  }, [parentCurrentIndex, isSpeakingState, stopSpeech]);
+  }, [sentences, isSpeakingState, stopSpeech]);
 
+  useEffect(() => () => stopSpeech(false), [stopSpeech]);
+
+  /* ---------- 렌더 ---------- */
   return (
     <button
       onClick={handlePlayPause}
