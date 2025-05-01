@@ -318,7 +318,7 @@ export default function ScripturePage() {
       {/* 상단 UI */}
       <div className="sticky top-0 z-50 bg-white h-16 py-2">
         <div className="flex items-center justify-between gap-2">
-          <div onClick={() => setShowModal(true)} className="cursor-pointer flex items-center max-w-[180px]">
+          <div onClick={() => setShowModal(true)} className="cursor-pointer flex items-center max-w-[140px]">
             <span className="text-base font-semibold text-red-dark truncate">
               {formatDisplayTitle(selected)}
             </span>
