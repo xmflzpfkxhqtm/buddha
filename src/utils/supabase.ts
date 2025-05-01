@@ -2,8 +2,12 @@ import { createClient } from '@supabase/supabase-js';
 
 // 환경 변수에서 값을 가져오거나 기본값 사용
 //xmflzpfkxhqtm's Project
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ekqucunjkiimfisgiyfp.supabase.co';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVrcXVjdW5qa2lpbWZpc2dpeWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTU0OTk3MzYsImV4cCI6MjAzMTA3NTczNn0.rjyD5sT8QCk6eXRnJFuWIc8EUb0MFTiP9tU1Rrxhd-4';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error('Supabase 환경 변수가 설정되지 않았습니다.');
+}
 
 // 문서 메타데이터 인터페이스
 export interface DocumentMetadata {

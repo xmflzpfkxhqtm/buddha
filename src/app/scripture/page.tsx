@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import ScriptureModal from '../../../components/ScriptureModal';
 import dynamic from 'next/dynamic';
 const TTSPlayer = dynamic(() => import('../../../components/TTSPlayer'), { ssr: false });
+import { Search } from 'lucide-react';
 
 interface GlobalSearchResult {
   title: string;
@@ -317,11 +318,11 @@ export default function ScripturePage() {
       {/* 상단 UI */}
       <div className="sticky top-0 z-50 bg-white h-16 py-2">
         <div className="flex items-center justify-between gap-2">
-          <div onClick={() => setShowModal(true)} className="cursor-pointer flex items-center max-w-[140px]">
+          <div onClick={() => setShowModal(true)} className="cursor-pointer flex items-center max-w-[180px]">
             <span className="text-base font-semibold text-red-dark truncate">
               {formatDisplayTitle(selected)}
             </span>
-            <span className="ml-1 text-base text-red-light">⏷</span>
+            <span className="ml-1 text-base text-red-light"> <Search size={24} /></span>
           </div>
           <span className="text-sm text-red-dark">{`${currentIndex + 1} / ${displaySentences.length}`}</span>
           <div className="flex items-center gap-2">

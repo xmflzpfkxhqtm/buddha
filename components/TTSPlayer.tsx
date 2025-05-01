@@ -153,13 +153,19 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
           const utter = new SpeechSynthesisUtterance(text);
           currentUtterance.current = utter;
           utter.lang = 'ko-KR';
-          utter.rate = 0.9;
-
+          utter.rate = 0.7;
+          utter.pitch = 0.5;
+          
           utter.onend = () => {
             currentUtterance.current = null;
-            if (!stopRequested.current && isMounted.current) onEnd();
+            if (!stopRequested.current && isMounted.current) {
+              // 👉 문장 끝난 뒤 500ms 쉬고 다음으로 넘어감
+              setTimeout(() => {
+                onEnd();
+              }, 500); // ← 이 값을 조절하면 문장 간 간격이 바뀜
+            }
           };
-          utter.onerror = () => stopSpeech(false);
+                    utter.onerror = () => stopSpeech(false);
 
           synth.current.speak(utter);
         }
