@@ -61,10 +61,25 @@ interface TTSPlayerProps {
 
 /* ------------------------------------ Utils ------------------------------- */
 const waitUntilVoicesReady = (): Promise<void> => {
-  // ... (이전과 동일)
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return Promise.resolve();
   if (speechSynthesis.getVoices().length) return Promise.resolve();
-  return new Promise((res) => { /* ... */ });
+
+  return new Promise((resolve) => {
+    const int = setInterval(() => {
+      if (speechSynthesis.getVoices().length) {
+        clearInterval(int);
+        resolve();
+      }
+    }, 50);
+    speechSynthesis.addEventListener(
+      'voiceschanged',
+      () => {
+        clearInterval(int);
+        resolve();
+      },
+      { once: true }
+    );
+  });
 };
 
 /* ---------------------------------- Component ----------------------------- */
@@ -193,40 +208,56 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
       if (isNative) {
         const settings = getTtsSettings();
         await TextToSpeech.speak({
-          text, lang: 'ko-KR', rate: settings.rate ?? 1.0, pitch: settings.pitch ?? 1.0, volume: 1.0, category: 'ambient',
+          text,
+          lang: 'ko-KR',
+          rate: settings.rate ?? 1.0,
+          pitch: settings.pitch ?? 1.0,
+          volume: 1.0,
+          category: 'ambient',
         });
-
-        // <<< 완료 시 generation 체크 추가 >>>
-        if (mounted.current && !stopRequested.current && generation === playGeneration.current) {
-          console.log(`[TTS] Native speech finished. Index: ${index}, Gen: ${generation} - Proceeding`);
-          onDone(); // 다음 작업 수행
+        if (!stopRequested.current && mounted.current) {
+          console.log(`[TTS] Native speech finished. Index: ${index}`);
+          onDone();
         } else {
-          console.log(`[TTS] Native speech finished but aborted. Index: ${index}, StopReq: ${stopRequested.current}, Gen: ${generation}, CurrentGen: ${playGeneration.current}`);
+          console.log(`[TTS] Native speech finished but stop was requested. Index: ${index}`);
         }
-      } else { // Web Speech API
-        if (!synth.current) { /* ... 에러 처리 ... */ return; }
-        const utter = new SpeechSynthesisUtterance(text); /* ... 설정 ... */
+      } else {
+        if (!synth.current) {
+          console.error('[TTS] Web Speech Synthesis not available.');
+          stopSpeech(true);
+          return;
+        }
+
+        const utter = new SpeechSynthesisUtterance(text);
         currentUtterance.current = utter;
+        const settings = getTtsSettings();
+        utter.lang = 'ko-KR';
+        utter.rate = settings.rate ?? 1.0;
+        utter.pitch = settings.pitch ?? 1.0;
 
         utter.onend = () => {
           currentUtterance.current = null;
-          // <<< 완료 시 generation 체크 추가 >>>
-          if (mounted.current && !stopRequested.current && generation === playGeneration.current) {
-            console.log(`[TTS] Web speech finished. Index: ${index}, Gen: ${generation} - Proceeding`);
+          if (!stopRequested.current && mounted.current) {
+            console.log(`[TTS] Web speech finished. Index: ${index}`);
             setTimeout(onDone, 50);
           } else {
-            console.log(`[TTS] Web speech finished but aborted. Index: ${index}, StopReq: ${stopRequested.current}, Gen: ${generation}, CurrentGen: ${playGeneration.current}`);
+            console.log(`[TTS] Web speech finished but stop was requested. Index: ${index}`);
           }
         };
-        utter.onerror = (event) => { /* ... 에러 처리 ... */ };
+
+        utter.onerror = () => {
+          console.error('[TTS] Web Speech Synthesis error');
+          currentUtterance.current = null;
+          stopSpeech(true);
+        };
+
         synth.current.speak(utter);
       }
     } catch (e) {
-      console.error(`[TTS] Error speaking index ${index}, Gen: ${generation}:`, e);
-      // 에러 발생 시 현재 세대에서 멈춤 (새로운 세대 시작은 아님)
+      console.error(`[TTS] Error speaking index ${index}:`, e);
       stopSpeech(true);
     }
-  }, [isNative, setCurrentIndex, smoothCenter, stopSpeech]);
+  }, [isNative, setCurrentIndex, smoothCenter, stopSpeech, getTtsSettings]);
 
   /* ------------------------- Play-next routine ------------------------- */
   // <<< generation 파라미터 추가 >>>
@@ -332,7 +363,24 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
   useEffect(() => {
     mounted.current = true;
     console.log(`[TTS] Component mounted. Platform: ${platform}, Native: ${isNative}`);
-    // ... Web Speech API 초기화 ...
+
+    if (!isNative && 'speechSynthesis' in window) {
+      const currentSynth = window.speechSynthesis;
+      synth.current = currentSynth;
+      if (isIOSWeb) {
+        waitUntilVoicesReady().then(() => {
+          if (currentSynth) {
+            try {
+              const warm = new SpeechSynthesisUtterance(' ');
+              warm.volume = 0;
+              currentSynth.speak(warm);
+            } catch (e) {
+              console.warn('[TTS] iOS Web warmup speech failed (likely needs user gesture):', e);
+            }
+          }
+        });
+      }
+    }
 
     // 네이티브 MusicControls 리스너 등록
     let handle: PluginListenerHandle | null = null;
