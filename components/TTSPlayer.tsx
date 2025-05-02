@@ -276,7 +276,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
 
     /* native-notification listener */
     if (isNative) {
-      MusicControls.addListener('controlsNotification', (info) => {
+      void MusicControls.addListener('controlsNotification', (info) => {
         switch (info.action) {
           case 'music-controls-play':
           case 'music-controls-pause':
@@ -299,7 +299,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
     return () => {
       mounted.current = false;
       stopSpeech(false);
-      listenerHandle.current?.remove().catch(() => {});
+      void listenerHandle.current?.remove().catch(() => {});
       musicReady.current && MusicControls.destroy().catch(() => {});
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -323,7 +323,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
   /* ------------------------------------------------------------------------ */
 
   return (
-    <div className="fixed bottom-[84px] left-1/2 -translate-x-1/2 flex items-center gap-4 z-50 bg-white/80 backdrop-blur-sm p-2 rounded-full shadow-lg">
+    <div className="fixed bottom-[84px] left-1/2 -translate-x-1/2 flex items-center gap-4 z-50 border border-red-light bg-white/80 backdrop-blur-sm p-2 rounded-full shadow-lg">
       <button
         onClick={() => skip(-1)}
         aria-label="이전 문장"
@@ -337,7 +337,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
         onClick={handlePlayPause}
         aria-label={isSpeaking ? '일시정지' : '재생'}
         disabled={!sentences.length}
-        className="bg-red-dark text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg disabled:opacity-50"
+        className="bg-red-light text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg disabled:opacity-50"
       >
         {isSpeaking ? <Pause size={36} /> : <Play size={36} fill="currentColor" />}
       </button>
