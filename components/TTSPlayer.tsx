@@ -6,15 +6,6 @@ import { KeepAwake } from '@capacitor-community/keep-awake';
 import { TextToSpeech } from '@capacitor-community/text-to-speech';
 import { Capacitor, registerPlugin, PluginListenerHandle } from '@capacitor/core';
 
-interface SpeakOptions {
-  text: string;
-  lang?: string;
-  rate?: number;
-  pitch?: number;
-  volume?: number;
-  category?: string;
-}
-
 /* -------------------------------------------------------------------------- */
 /* MusicControls 타입 -------------------------------------------------------- */
 interface MusicControlsPlugin {
