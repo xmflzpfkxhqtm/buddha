@@ -134,7 +134,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
       ? { rate: 1.0, pitch: 1.0 }
       : isAndroidWeb
       ? { rate: 1.0, pitch: 1.0 }
-      : { rate: 0.9, pitch: 1.1 };
+      : { rate: 0.9, pitch: 1.0 };
 
   const cancelWebUtterance = () => {
     if (currentUtterance.current) {
