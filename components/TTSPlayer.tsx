@@ -251,8 +251,8 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
       if (next < 0 || next >= sentences.length) return;
 
       stopRequested.current = false;
-      if (isNative) TextToSpeech.stop().catch(() => {});
-      else cancelWebUtterance();
+      if (isNative) void TextToSpeech.stop().catch(() => {});
+            else cancelWebUtterance();
 
       playFrom(next);
     },
@@ -300,8 +300,8 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
       mounted.current = false;
       stopSpeech(false);
       void listenerHandle.current?.remove().catch(() => {});
-      musicReady.current && MusicControls.destroy().catch(() => {});
-    };
+      if (musicReady.current) 
+        void MusicControls.destroy().catch(() => {});    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
