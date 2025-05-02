@@ -112,12 +112,11 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
   const stopSpeech = useCallback(
     async (updateParentIndex = true) => {
       stopRequested.current = true;
-         try {
-             if (isNative.current) await TextToSpeech.stop();
-             else synth.current?.cancel();
-           } catch (_) { /* noop */ 
-        
-   
+      try {
+        if (isNative.current) await TextToSpeech.stop();
+        else synth.current?.cancel();
+      } catch {
+        // 에러 무시
       } finally {
         if (isMounted.current) {
           setIsSpeakingState(false);

@@ -325,13 +325,17 @@ export default function ScripturePage() {
   // 전체 검색 핸들러 (원본 유지)
   const handleGlobalSearch = async () => {
     if (!search.trim()) return;
-    setIsSearching(true); setGlobalResults([]);
-    try { /* 검색 로직 */
+    setIsSearching(true);
+    setGlobalResults([]);
+    try {
       const res = await fetch(`/api/global-search?query=${encodeURIComponent(search)}`);
       const data = await res.json();
       setGlobalResults(data.results || []);
-    } catch (err) { /* 에러 처리 */ }
-    finally { setIsSearching(false); }
+    } catch {
+      // 에러 무시
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   // === 플레이어 렌더링 로직 추가 ===
