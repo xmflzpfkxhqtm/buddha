@@ -5,43 +5,62 @@ import { App } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
-import { PluginListenerHandle } from '@capacitor/core';
+import type { PluginListenerHandle } from '@capacitor/core';
 
 export default function DeepLinkHandler() {
   const router = useRouter();
 
   useEffect(() => {
-    // addListener가 반환하는 sub를 기억해 두면 나중에 remove 가능
-    let unsubscribe: PluginListenerHandle | undefined;
-    
-    const setupListener = async () => {
-      const sub = await App.addListener('appUrlOpen', async ({ url }) => {
-        console.log('앱 딥링크 복귀 URL:', url);
+    let sub: PluginListenerHandle | undefined;
+
+    (async () => {
+      sub = await App.addListener('appUrlOpen', async ({ url }) => {
+        console.log('[DeepLink] RAW URL →', url);
 
         if (!url?.startsWith('yeondeung://auth/callback')) return;
 
-        /* ✅ 1) "code → 세션" 교환 */
-        const { error } = await supabase.auth.exchangeCodeForSession(url);
-        if (error) {
-          console.error('세션 교환 실패', error);
+        /* ────────── ① PKCE : ?code= ────────── */
+        if (url.includes('?code=')) {
+          console.log('[DeepLink] PKCE path');
+          const { error } = await supabase.auth.exchangeCodeForSession(url);
+          if (error) {
+            console.error('[DeepLink] exchangeCodeForSession 실패', error);
+            return;
+          }
+          await Browser.close();
+          router.replace('/me');
           return;
         }
 
-        /* ✅ 2) 인앱 브라우저 닫기 (SFSafariViewController) */
-        await Browser.close();
+        /* ────────── ② implicit : #access_token= ────────── */
+        if (url.includes('#access_token=')) {
+          console.log('[DeepLink] Implicit path');
+          const [, fragment] = url.split('#');
+          const p = new URLSearchParams(fragment);
 
-        /* ✅ 3) 원하는 화면으로 이동 */
-        router.replace('/me');      // 또는 /home 등
+          const access_token  = p.get('access_token');
+          const refresh_token = p.get('refresh_token');
+
+          if (!access_token || !refresh_token) {
+            console.error('[DeepLink] 해시 파싱 실패');
+            return;
+          }
+
+          await supabase.auth.setSession({
+            access_token,
+            refresh_token,
+          });
+
+          await Browser.close();
+          router.replace('/me');
+          return;
+        }
+
+        console.warn('[DeepLink] 알 수 없는 URL 형식, 무시');
       });
-      unsubscribe = sub;
-    };
+    })();
 
-    setupListener();
-
-    // clean-up
-    return () => {
-      if (unsubscribe) unsubscribe.remove();
-    };
+    return () => { sub?.remove(); };
   }, [router]);
 
   return null;

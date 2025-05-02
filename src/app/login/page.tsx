@@ -39,6 +39,8 @@ export default function LoginPage() {
       options: {
         redirectTo,
         skipBrowserRedirect: true, // <= 인앱브라우저 직접 열 때 필수
+        // @ts-expect-error PKCE flow type is required for mobile
+        flowType: 'pkce',          // ✅ 반드시 추가
         queryParams: {
           prompt: 'select_account', // ✅ 매번 계정 선택창 강제
         },
