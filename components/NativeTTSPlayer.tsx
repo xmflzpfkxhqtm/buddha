@@ -45,7 +45,7 @@ export default function NativeTTSPlayer({
     // 네이티브 플랫폼별 설정
     return platform === 'android'
       ? { rate: 1.0, pitch: 0.5 }
-      : { rate: 0.7, pitch: 0.4 }; // iOS 설정 (예시)
+      : { rate: 0.9, pitch: 0.4 }; // iOS 설정 (예시)
   }, [platform]);
 
   // --- MusicControls 관련 함수들 (필요 시) ---
@@ -103,6 +103,7 @@ export default function NativeTTSPlayer({
   }, [setCurrentIndex, smoothCenter, stopSpeech, getTtsSettings]); // mounted, stopRequested, playGeneration, internalIndex ref 불필요
 
   /* --------------------------- playFrom (재귀) --------------------------- */
+  /* --------------------------- playFrom (재귀) --------------------------- */
   const playFrom = useCallback((startIdx: number, gen: number) => {
     if (!mounted.current || stopRequested.current || gen !== playGeneration.current) return;
     if (startIdx >= sentences.length) { stopSpeech(true); return; }
@@ -110,14 +111,29 @@ export default function NativeTTSPlayer({
     const txt = sentences[startIdx];
     if (!txt?.trim()) { playFrom(startIdx + 1, gen); return; }
 
-    speakText(txt, startIdx, gen, () => {
+    // speakText 호출 시, onDone 콜백 내부에 setTimeout 추가
+    speakText(txt, startIdx, gen, () => { // 이 함수가 onDone 콜백
         if(mounted.current && !stopRequested.current && gen === playGeneration.current) {
-            playFrom(startIdx + 1, gen);
+            // === 여기에 딜레이 추가 ===
+            const delayBetweenSentences = 500; // 예시: 300ms (0.3초) 쉼
+            console.log(`[TTS Native] Sentence ${startIdx} finished, starting ${delayBetweenSentences}ms delay.`);
+            setTimeout(() => {
+                // 딜레이 후에도 상태 재확인 (그 사이에 stop/skip 눌렸을 수 있음)
+                if(mounted.current && !stopRequested.current && gen === playGeneration.current) {
+                    console.log(`[TTS Native] Delay finished, calling playFrom(${startIdx + 1})`);
+                    playFrom(startIdx + 1, gen); // 딜레이 후 다음 문장 재생
+                } else {
+                     console.log(`[TTS Native] Aborted during delay before playing index ${startIdx + 1}.`);
+                }
+            }, delayBetweenSentences);
+            // =======================
+        } else {
+            // console.log(`[TTS Native] onDone aborted for index ${startIdx}.`);
         }
     });
   }, [sentences, speakText, stopSpeech]); // mounted, stopRequested, playGeneration ref 불필요
-
-  /* --------------------------- control handlers -------------------------- */
+  // 
+  //   /* --------------------------- control handlers -------------------------- */
   const handlePlayPause = useCallback(async () => {
     if (isSpeaking) {
       stopSpeech(true);
