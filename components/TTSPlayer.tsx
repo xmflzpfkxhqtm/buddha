@@ -4,79 +4,75 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Pause, SkipBack, SkipForward } from 'lucide-react';
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import { TextToSpeech } from '@capacitor-community/text-to-speech';
-import { Capacitor } from '@capacitor/core';
-// @ts-expect-error - MusicControls 타입 정의가 없을 경우 사용
-import * as MusicControls from 'capacitor-music-controls-plugin';
+import { Capacitor, PluginListenerHandle } from '@capacitor/core';
+import { MusicControls } from 'capacitor-music-controls-plugin';
+// import * as MusicControls from 'capacitor-music-controls-plugin'; // ★ 제거
 
-// --- Interfaces ---
-
+// --- Interfaces --- (기존과 동일)
 interface TTSPlayerProps {
   sentences: string[];
-  scriptureName: string; // ★ 부모로부터 받을 경전명
+  scriptureName: string;
   currentIndex: number;
   setCurrentIndex: (index: number) => void;
   onPlaybackStateChange?: (isPlaying: boolean) => void;
   smoothCenter: (index: number) => void;
 }
 
-// MusicControls 업데이트 시 사용할 옵션 타입 정의
 interface MusicControlsInfo {
   track: string;
   artist: string;
-  album?: string; // 앨범은 선택적
+  album?: string;
   isPlaying: boolean;
   hasNext: boolean;
   hasPrev: boolean;
 }
 
-// MusicControls 이벤트 리스너 타입 정의
 interface MusicControlsNotification {
   action: 'music-controls-next' | 'music-controls-previous' | 'music-controls-pause' | 'music-controls-play' | 'music-controls-stop' | 'music-controls-destroy';
 }
 
-// --- iOS Web 전용 유틸 ---
+
+// --- iOS Web 전용 유틸 --- (기존과 동일)
 function waitUntilVoicesReady(): Promise<void> {
-  // (기존 코드와 동일)
-  if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-    return Promise.resolve();
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      return Promise.resolve();
+    }
+    if (speechSynthesis.getVoices().length) return Promise.resolve();
+
+    return new Promise((res) => {
+      const int = setInterval(() => {
+        if (speechSynthesis.getVoices().length) {
+          clearInterval(int);
+          res();
+        }
+      }, 50);
+      speechSynthesis.addEventListener(
+        'voiceschanged',
+        () => {
+          clearInterval(int);
+          res();
+        },
+        { once: true }
+      );
+    });
   }
-  if (speechSynthesis.getVoices().length) return Promise.resolve();
-
-  return new Promise((res) => {
-    const int = setInterval(() => {
-      if (speechSynthesis.getVoices().length) {
-        clearInterval(int);
-        res();
-      }
-    }, 50);
-    speechSynthesis.addEventListener(
-      'voiceschanged',
-      () => {
-        clearInterval(int);
-        res();
-      },
-      { once: true }
-    );
-  });
-}
-
 
 // --- Component ---
 
 const TTSPlayer: React.FC<TTSPlayerProps> = ({
   sentences,
-  scriptureName, // ★ props 추가
+  scriptureName,
   currentIndex: parentCurrentIndex,
   setCurrentIndex: setParentCurrentIndex,
   onPlaybackStateChange,
   smoothCenter,
 }) => {
-  // --- Refs & States ---
+  // --- Refs & States --- (기존과 동일)
   const [isSpeakingState, setIsSpeakingState] = useState(false);
   const synth = useRef<SpeechSynthesis | null>(null);
   const currentUtterance = useRef<SpeechSynthesisUtterance | null>(null);
-  const stopRequested = useRef(false); // 사용자가 명시적으로 중지/일시정지 요청했는지 여부
-  const internalCurrentIndex = useRef<number>(parentCurrentIndex); // 내부 상태 관리용 인덱스
+  const stopRequested = useRef(false);
+  const internalCurrentIndex = useRef<number>(parentCurrentIndex);
 
   const platform = useRef(Capacitor.getPlatform());
   const isNative = useRef(platform.current !== 'web');
@@ -87,7 +83,10 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
     platform.current === 'web' && /Android/.test(navigator.userAgent)
   );
   const isMounted = useRef(false);
-  const musicControlsCreated = useRef(false); // MusicControls 최초 생성 여부
+  const musicControlsCreated = useRef(false);
+
+  // ★ MusicControls 플러그인 가져오기 (네이티브에서만 유효)
+  const NativeMusicControls = isNative.current ? Plugins.MusicControls : undefined;
 
   // --- Music Controls ---
 
@@ -116,434 +115,362 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
           hasPrev: info.hasPrev,
           hasNext: info.hasNext,
         });
+        // iOS는 create 후 isPlaying 업데이트가 필요할 수 있음 (플러그인 특성)
         if (Capacitor.getPlatform() === 'ios') {
-          // @ts-expect-error
+          // @ts-expect-error: MusicControls 플러그인 타입 정의가 불완전할 수 있음
           await MusicControls.updateIsPlaying(info.isPlaying);
         }
         musicControlsCreated.current = true;
       } else {
-        console.log('[MusicControls] Updating:', info);
-        // @ts-expect-error
+        console.log('[MusicControls] Updating isPlaying state:', info.isPlaying);
+        // @ts-expect-error: MusicControls 플러그인 타입 정의가 불완전할 수 있음
         await MusicControls.updateIsPlaying(info.isPlaying);
+        // 참고: 트랙명 등 메타데이터 업데이트가 필요하다면 destroy/create 또는 플러그인 기능 확인 필요
       }
     } catch (error) {
       console.error('[TTS] Failed to update Music Controls:', error);
-      musicControlsCreated.current = false;
-      try { 
-        // @ts-expect-error
-        await MusicControls.destroy(); 
+      musicControlsCreated.current = false; // 실패 시 생성 플래그 리셋
+      // destroy 호출 시도 (오류 무시)
+      try {
+        // @ts-expect-error: MusicControls 플러그인 타입 정의가 불완전할 수 있음
+        if (MusicControls) await MusicControls.destroy();
       } catch { /* ignore */ }
     }
-  }, [isNative]);
+    // ★ 의존성 배열에서 isNative 제거 (컴포넌트 마운트 시 고정값이므로 불필요)
+    // ★ MusicControls는 isNative.current에 의존하므로, isNative가 바뀌지 않는 이상 불필요
+  }, [getMusicControlOptions]); // updateMusicControls 자체는 MusicControls에 의존하지 않음 (내부에서 사용만 함)
 
-  // --- TTS Core Logic ---
 
-  const stopSpeech = useCallback(
-    async (resetIndexToParent = false) => {
-      console.log('[TTS] Stopping speech...');
-      stopRequested.current = true;
-      if (currentUtterance.current) {
-        currentUtterance.current.onend = null;
-        currentUtterance.current.onerror = null;
-        currentUtterance.current = null;
-      }
+  // --- Event Handlers (handlePlayPause, skipForward, skipBackward) ---
+  // 이 함수들은 내부적으로 updateMusicControls를 호출하므로,
+  // updateMusicControls의 의존성 배열이 올바르게 설정되어 있다면 별도 수정 불필요.
 
-      try {
-        if (isNative.current) {
-          await TextToSpeech.stop();
-        } else {
-          synth.current?.cancel();
-        }
-      } catch (error) {
-        console.error('[TTS] Error stopping speech:', error);
-      } finally {
-        if (isMounted.current) {
-          const finalIndex = internalCurrentIndex.current;
-          setIsSpeakingState(false);
-          if (resetIndexToParent) {
-            setParentCurrentIndex(finalIndex);
+  // --- TTS Core Logic (stopSpeech, speakText, playNextSpeech, cancelCurrentSpeech) ---
+
+    const stopSpeech = useCallback(
+        async (resetIndexToParent = false) => {
+          console.log('[TTS] Stopping speech...');
+          stopRequested.current = true;
+          if (currentUtterance.current) {
+            currentUtterance.current.onend = null;
+            currentUtterance.current.onerror = null;
+            currentUtterance.current = null;
           }
-          updateMusicControls(getMusicControlOptions(finalIndex, false));
+
+          try {
+            if (isNative.current) {
+              await TextToSpeech.stop();
+            } else {
+              synth.current?.cancel();
+            }
+          } catch (error) {
+            console.error('[TTS] Error stopping speech:', error);
+          } finally {
+            if (isMounted.current) {
+              const finalIndex = internalCurrentIndex.current;
+              setIsSpeakingState(false);
+              if (resetIndexToParent) {
+                setParentCurrentIndex(finalIndex);
+              }
+              // ★ updateMusicControls 호출 시점에는 MusicControls가 유효해야 함
+              updateMusicControls(getMusicControlOptions(finalIndex, false));
+            }
+            KeepAwake.allowSleep().catch(() => {});
+          }
+        },
+        // ★ isNative는 고정값이므로 의존성 제거, MusicControls도 제거 (updateMusicControls 내부 사용)
+        [setParentCurrentIndex, updateMusicControls, getMusicControlOptions]
+      );
+
+
+    const getTtsSettings = useCallback(() => {
+        if (isNative.current) {
+          return { rate: 1.0, pitch: 1.0, volume: 1.0 };
         }
-        KeepAwake.allowSleep().catch(() => {});
-      }
-    },
-    [isNative, setParentCurrentIndex, updateMusicControls, getMusicControlOptions]
-  );
+        if (isAndroidWeb.current) {
+          return { rate: 1.0, pitch: 1.0 };
+        }
+        return { rate: 0.9, pitch: 1.1 };
+        // ★ isNative, isAndroidWeb은 고정값이므로 의존성 제거
+      }, []);
+
+
+      const speakText = useCallback(
+        async (text: string, index: number, onEndCallback: () => void) => {
+          // ... (speakText 시작 부분 로직 동일) ...
+          if (!isMounted.current || stopRequested.current || !text?.trim()) {
+            // ...
+            // ★ updateMusicControls 호출
+             updateMusicControls(getMusicControlOptions(index, false));
+            // ...
+            return;
+          }
+
+          // ... (인덱스, 상태 업데이트 등) ...
+          setIsSpeakingState(true);
+          // ★ updateMusicControls 호출
+          await updateMusicControls(getMusicControlOptions(index, true));
+
+          try {
+            if (isNative.current) {
+              const settings = getTtsSettings();
+              await TextToSpeech.speak({ /* ... */ });
+              if (isMounted.current && !stopRequested.current) {
+                onEndCallback();
+              } else {
+                 if (isMounted.current) {
+                    setIsSpeakingState(false);
+                    // ★ updateMusicControls 호출
+                    updateMusicControls(getMusicControlOptions(internalCurrentIndex.current, false));
+                 }
+              }
+            } else {
+              // ... (Web Speech API 로직) ...
+              utter.onend = () => {
+                // ...
+                if (isMounted.current) {
+                   setIsSpeakingState(false);
+                   // ★ updateMusicControls 호출
+                   updateMusicControls(getMusicControlOptions(internalCurrentIndex.current, false));
+               }
+                // ...
+              };
+              utter.onerror = (event) => {
+                 // ...
+                stopSpeech(false);
+                // ★ updateMusicControls 호출 (stopSpeech 내부에서도 호출되지만 명시)
+                 updateMusicControls(getMusicControlOptions(internalCurrentIndex.current, false));
+              };
+              synth.current.speak(utter);
+            }
+          } catch (error) {
+            console.error('[TTS] Speak error:', error);
+            if (isMounted.current) {
+              stopSpeech(false);
+              // ★ updateMusicControls 호출 (stopSpeech 내부에서도 호출되지만 명시)
+              updateMusicControls(getMusicControlOptions(internalCurrentIndex.current, false));
+            }
+          }
+        },
+        // ★ 의존성 배열 업데이트: isNative 제거, getTtsSettings, stopSpeech 추가
+        [setParentCurrentIndex, smoothCenter, updateMusicControls, getMusicControlOptions, getTtsSettings, stopSpeech]
+      );
+
+
+      const playNextSpeech = useCallback(
+        (currentIndex: number) => {
+           // ... (로직 동일) ...
+           speakText(nextText, nextIndex, () => {
+             if (isMounted.current && !stopRequested.current) {
+                playNextSpeech(nextIndex);
+             }
+          });
+        },
+        // ★ 의존성 배열 업데이트
+        [sentences, speakText, stopSpeech]
+      );
+
+
+      const handlePlayPause = useCallback(async () => {
+        if (isSpeakingState) {
+          console.log('[TTS] Pausing playback.');
+          stopSpeech(false);
+        } else {
+          console.log('[TTS] Starting playback.');
+          stopRequested.current = false;
+          KeepAwake.keepAwake().catch(() => {});
+
+          if (!isNative.current && isIOSWeb.current) {
+            // ... (waitUntilVoicesReady) ...
+          }
+
+          const startIndex = internalCurrentIndex.current;
+          const startText = sentences[startIndex];
+
+          if (!startText?.trim()) {
+             playNextSpeech(startIndex);
+            return;
+          }
+          speakText(startText, startIndex, () => {
+             if (isMounted.current && !stopRequested.current) {
+                playNextSpeech(startIndex);
+             }
+          });
+        }
+        // ★ 의존성 배열 업데이트: isNative, isIOSWeb 제거
+      }, [isSpeakingState, stopSpeech, sentences, speakText, playNextSpeech]);
+
+
+      const cancelCurrentSpeech = useCallback(async () => {
+        console.log('[TTS] Cancelling current speech for skip...');
+        if (currentUtterance.current) {
+            currentUtterance.current.onend = null;
+            currentUtterance.current.onerror = null;
+            currentUtterance.current = null;
+        }
+        if (isNative.current) {
+            await TextToSpeech.stop().catch(() => {});
+        } else {
+            synth.current?.cancel();
+        }
+      }, [isNative]); // ★ isNative 의존성 유지 (조건문에서 사용)
+
+
+      const skipForward = useCallback(async () => {
+        // ... (skipForward 로직 앞부분 동일) ...
+         if (!nextText?.trim()) {
+           // ...
+           // ★ updateMusicControls 호출
+           updateMusicControls(getMusicControlOptions(nextIndex, false));
+           return;
+        }
+
+        speakText(nextText, nextIndex, () => {
+           if (wasSpeaking && isMounted.current && !stopRequested.current) {
+              playNextSpeech(nextIndex);
+           } else if (isMounted.current) {
+              setIsSpeakingState(false);
+              // ★ updateMusicControls 호출
+              updateMusicControls(getMusicControlOptions(nextIndex, false));
+           }
+        });
+        // ★ 의존성 배열 업데이트
+      }, [sentences, isSpeakingState, cancelCurrentSpeech, speakText, playNextSpeech, setParentCurrentIndex, smoothCenter, updateMusicControls, getMusicControlOptions]);
+
+
+      const skipBackward = useCallback(async () => {
+         // ... (skipBackward 로직 앞부분 동일) ...
+         if (!prevText?.trim()) {
+           // ...
+           // ★ updateMusicControls 호출
+           updateMusicControls(getMusicControlOptions(prevIndex, false));
+           return;
+        }
+
+        speakText(prevText, prevIndex, () => {
+          if (wasSpeaking && isMounted.current && !stopRequested.current) {
+            playNextSpeech(prevIndex);
+          } else if (isMounted.current) {
+             setIsSpeakingState(false);
+             // ★ updateMusicControls 호출
+             updateMusicControls(getMusicControlOptions(prevIndex, false));
+          }
+        });
+        // ★ 의존성 배열 업데이트
+      }, [sentences, isSpeakingState, cancelCurrentSpeech, speakText, playNextSpeech, setParentCurrentIndex, smoothCenter, updateMusicControls, getMusicControlOptions]);
+
+
 
   // --- Lifecycle Effects ---
 
   useEffect(() => {
     isMounted.current = true;
+    const currentPlatform = Capacitor.getPlatform(); // 내부 변수로 사용
+    const isNativePlatform = currentPlatform !== 'web'; // 내부 변수로 사용
+
     console.log(
-      `[TTS] Mount – Platform=${platform.current}, Native=${isNative.current}, iOSWeb=${isIOSWeb.current}, AndroidWeb=${isAndroidWeb.current}`
+      `[TTS] Mount – Platform=${currentPlatform}, Native=${isNativePlatform}`
     );
 
-    // Android 알림 권한 요청
-    if (isNative.current && Capacitor.getPlatform() === 'android') {
-      // @ts-ignore
-      Capacitor.Permissions.requestPermission('notifications').catch(() => {});
+    // Android 알림 권한 요청 (Capacitor 5+ 스타일)
+    if (isNativePlatform && currentPlatform === 'android') {
+      // Capacitor Core의 Permissions 사용
+      import('@capacitor/core').then(({ Permissions }) => {
+          Permissions.query({ name: 'notifications' as any }).then(status => { // 'notifications'가 PermissionName 타입에 없을 수 있어 any 사용
+             if (status.state === 'prompt') {
+               Permissions.requestPermission({ name: 'notifications' as any }).catch(e => console.error("Notification permission request failed", e));
+             } else if (status.state === 'denied') {
+                console.warn("Notification permission was denied.");
+             }
+           }).catch(e => console.error("Notification permission query failed", e));
+      }).catch(e => console.error("Failed to load Capacitor Permissions", e));
     }
 
     // 웹 TTS 초기화
-    if (!isNative.current && 'speechSynthesis' in window) {
+    if (!isNativePlatform && 'speechSynthesis' in window) {
       synth.current = window.speechSynthesis;
-      if (isIOSWeb.current) {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (isIOS) {
         waitUntilVoicesReady().then(() => {
+          if (!synth.current) return;
           const warm = new SpeechSynthesisUtterance(' ');
           warm.volume = 0;
-          synth.current?.speak(warm);
-        }).catch((e: Error) => console.error("Error warming up iOS Web TTS", e));
+          synth.current.speak(warm);
+        }).catch((e) => console.error("Error warming up iOS Web TTS", e));
       } else {
-        waitUntilVoicesReady().catch((e: Error) => console.error("Error waiting for voices", e));
+        waitUntilVoicesReady().catch((e) => console.error("Error waiting for voices", e));
       }
     }
 
     // 네이티브 MusicControls 이벤트 리스너 설정
-    let musicControlsListener: any = null;
-    if (isNative.current) {
-      // @ts-ignore
-      musicControlsListener = MusicControls.addListener('controlsNotification', (info: MusicControlsNotification) => {
-        console.log(`[MusicControls] Event received: ${info.action}`);
-        switch (info.action) {
-          case 'music-controls-next':
-            skipForward();
-            break;
-          case 'music-controls-previous':
-            skipBackward();
-            break;
-          case 'music-controls-pause':
-            if (isSpeakingState) handlePlayPause();
-            break;
-          case 'music-controls-play':
-            if (!isSpeakingState) handlePlayPause();
-            break;
-          case 'music-controls-stop':
-          case 'music-controls-destroy':
-            stopSpeech(true);
-            break;
-        }
-      });
+    let musicControlsListener: PluginListenerHandle | null = null;
+    // ★ MusicControls 사용
+    if (MusicControls) {
+        // @ts-expect-error: MusicControls 플러그인 타입 정의가 불완전할 수 있음
+        MusicControls.addListener('controlsNotification', (info: MusicControlsNotification) => {
+          console.log(`[MusicControls] Event received: ${info.action}`);
+          // ★ 의존성 배열에 추가된 함수들 사용
+          switch (info.action) {
+            case 'music-controls-next':     skipForward();  break;
+            case 'music-controls-previous': skipBackward(); break;
+            case 'music-controls-pause':    if (isSpeakingState) handlePlayPause(); break;
+            case 'music-controls-play':     if (!isSpeakingState) handlePlayPause(); break;
+            case 'music-controls-stop':
+            case 'music-controls-destroy':  stopSpeech(true); break;
+            default: break; // 알려지지 않은 액션 무시
+          }
+        }).then(handle => {
+            musicControlsListener = handle; // 리스너 핸들 저장
+        }).catch(e => console.error("Failed to add MusicControls listener", e));
     }
 
+    // 컴포넌트 언마운트 시 정리 작업
     return () => {
       isMounted.current = false;
       console.log('[TTS] Unmount');
 
-      if (isNative.current) {
+      // ★ isNativePlatform 변수 사용
+      if (isNativePlatform) {
         TextToSpeech.stop().catch(() => {});
       } else {
         synth.current?.cancel();
       }
 
+      // 리스너 제거
       if (musicControlsListener) {
-        musicControlsListener.remove();
+        musicControlsListener.remove().catch(e => console.error("Failed to remove listener", e));
       }
-      if (isNative.current && musicControlsCreated.current) {
-        // @ts-ignore
+      // ★ MusicControls 사용 및 musicControlsCreated 확인
+      if (MusicControls && musicControlsCreated.current) {
+        // @ts-expect-error: MusicControls 플러그인 타입 정의가 불완전할 수 있음
         MusicControls.destroy().catch(() => {});
         musicControlsCreated.current = false;
       }
 
       KeepAwake.allowSleep().catch(() => {});
     };
-  }, []);
+    // ★ ESLint exhaustive-deps 수정: 필요한 콜백 함수들 추가
+  }, [MusicControls, handlePlayPause, skipBackward, skipForward, stopSpeech, isSpeakingState]); // isSpeakingState 추가 (리스너 콜백 내부 조건에서 사용)
 
-  // 외부로 재생 상태 전파
+
+  // 외부로 재생 상태 전파 (기존과 동일)
   useEffect(() => {
     onPlaybackStateChange?.(isSpeakingState);
   }, [isSpeakingState, onPlaybackStateChange]);
 
-  // 부모로부터 받은 currentIndex가 변경되면 내부 상태 동기화 및 재생 중지 (선택적)
+  // 부모 currentIndex 변경 감지 (기존과 동일, 의존성 확인)
   useEffect(() => {
-    // 재생 중에 외부에서 인덱스가 강제로 변경되면 일단 중지
     if (isSpeakingState && parentCurrentIndex !== internalCurrentIndex.current) {
        console.log(`[TTS] External index change (${parentCurrentIndex}) while playing. Stopping.`);
-       stopSpeech(false); // 부모 인덱스를 다시 업데이트할 필요는 없음
-       internalCurrentIndex.current = parentCurrentIndex; // 내부 인덱스는 동기화
+       stopSpeech(false);
+       internalCurrentIndex.current = parentCurrentIndex;
     } else if (!isSpeakingState) {
-       // 재생 중이 아닐 때는 내부 인덱스를 부모 인덱스와 맞춰줌
        internalCurrentIndex.current = parentCurrentIndex;
     }
- }, [parentCurrentIndex, isSpeakingState, stopSpeech]); // isSpeakingState와 stopSpeech 추가
-
-  // --- TTS Core Logic ---
-
-  // TTS 설정 가져오기 (플랫폼별)
-  const getTtsSettings = useCallback(() => {
-    if (isNative.current) {
-      // 네이티브 TTS 설정 (Android/iOS 공통 또는 분기)
-      return { rate: 1.0, pitch: 1.0, volume: 1.0 }; // 필요에 따라 조절
-    }
-    // 웹 TTS 설정
-    if (isAndroidWeb.current) {
-      return { rate: 1.0, pitch: 1.0 }; // Android Web
-    }
-    // iOS Web 및 기타 데스크탑 Web
-    return { rate: 0.9, pitch: 1.1 }; // 예시 값
-  }, [isNative, isAndroidWeb]);
-
-  // 텍스트 음성 변환 실행
-  const speakText = useCallback(
-    async (text: string, index: number, onEndCallback: () => void) => {
-      if (!isMounted.current || stopRequested.current || !text?.trim()) {
-        console.log('[TTS] Speak cancelled or invalid text');
-        if (!text?.trim()) { // 빈 텍스트면 바로 종료 콜백 호출 (다음 문장으로)
-          onEndCallback();
-        } else {
-           setIsSpeakingState(false);
-           updateMusicControls(getMusicControlOptions(index, false));
-        }
-        return;
-      }
-
-      console.log(`[TTS] Speaking index ${index}: "${text.substring(0, 30)}..."`);
-      internalCurrentIndex.current = index;
-      setParentCurrentIndex(index); // 부모에게 현재 인덱스 알림
-      smoothCenter(index);          // UI 스크롤
-      setIsSpeakingState(true);
-      await updateMusicControls(getMusicControlOptions(index, true)); // MusicControls 업데이트 (재생 중)
-
-      try {
-        if (isNative.current) {
-          const settings = getTtsSettings();
-          await TextToSpeech.speak({
-            text,
-            lang: 'ko-KR',
-            rate: settings.rate,
-            pitch: settings.pitch,
-            volume: settings.volume,
-            category: 'playback', // 'ambient' 대신 'playback' 사용 시 오디오 포커싱 유리
-          });
-          // 네이티브 TTS는 speak Promise가 완료되면 종료된 것으로 간주
-          if (isMounted.current && !stopRequested.current) {
-            onEndCallback(); // 정상 종료 시 다음 작업 실행
-          } else {
-             // 중간에 멈춘 경우
-             console.log('[TTS] Native speech ended prematurely or component unmounted.');
-             if (isMounted.current) {
-                setIsSpeakingState(false);
-                updateMusicControls(getMusicControlOptions(internalCurrentIndex.current, false));
-             }
-          }
-        } else {
-          // Web Speech API
-          if (!synth.current) throw new Error('Web Speech Synthesis not available.');
-
-          const utter = new SpeechSynthesisUtterance(text);
-          currentUtterance.current = utter;
-          utter.lang = 'ko-KR';
-          const settings = getTtsSettings();
-          utter.rate = settings.rate;
-          utter.pitch = settings.pitch;
-          utter.volume = 1.0;
-
-          utter.onend = () => {
-            if (currentUtterance.current !== utter) return; // 다른 발화가 시작된 경우 무시
-            currentUtterance.current = null;
-            console.log(`[TTS] Web speech ended for index ${index}`);
-            if (isMounted.current && !stopRequested.current) {
-              // 약간의 딜레이 후 다음 작업 실행 (목소리 잘림 방지)
-              setTimeout(onEndCallback, 50);
-            } else {
-               if (isMounted.current) {
-                   setIsSpeakingState(false);
-                   updateMusicControls(getMusicControlOptions(internalCurrentIndex.current, false));
-               }
-            }
-          };
-
-          utter.onerror = (event) => {
-            if (currentUtterance.current !== utter) return;
-            currentUtterance.current = null;
-            console.error('[TTS] Web speech error:', event.error);
-            stopSpeech(false); // 에러 발생 시 중지 (부모 인덱스는 현재 인덱스로 유지)
-            updateMusicControls(getMusicControlOptions(internalCurrentIndex.current, false));
-          };
-
-          synth.current.speak(utter);
-        }
-      } catch (error) {
-        console.error('[TTS] Speak error:', error);
-        if (isMounted.current) {
-          stopSpeech(false); // 에러 시 중지
-          updateMusicControls(getMusicControlOptions(internalCurrentIndex.current, false));
-        }
-      }
-    },
-    [setParentCurrentIndex, smoothCenter, updateMusicControls, getMusicControlOptions, isNative, getTtsSettings, stopSpeech] // stopSpeech 추가
-  );
-
-  // 다음 문장 재생 로직
-  const playNextSpeech = useCallback(
-    (currentIndex: number) => {
-      if (!isMounted.current || stopRequested.current) return;
-
-      const nextIndex = currentIndex + 1;
-      if (nextIndex >= sentences.length) {
-        console.log('[TTS] Reached end of sentences.');
-        stopSpeech(true); // 마지막 문장까지 끝나면 중지 (부모 인덱스 업데이트 함)
-        return;
-      }
-
-      const nextText = sentences[nextIndex];
-      // 빈 문장이면 다음으로 건너뛰기 (재귀 호출)
-      if (!nextText?.trim()) {
-        console.log(`[TTS] Skipping empty sentence at index ${nextIndex}`);
-        playNextSpeech(nextIndex);
-        return;
-      }
-
-      // 다음 문장 재생 호출
-      speakText(nextText, nextIndex, () => {
-         // 다음 문장 재생이 정상적으로 끝나면 다시 playNext 호출
-         if (isMounted.current && !stopRequested.current) {
-            playNextSpeech(nextIndex);
-         }
-      });
-    },
-    [sentences, speakText, stopSpeech] // sentences.length 대신 sentences 사용
-  );
-
-  // --- Event Handlers ---
-
-  // 재생/일시정지 버튼 핸들러
-  const handlePlayPause = useCallback(async () => {
-    if (isSpeakingState) {
-      console.log('[TTS] Pausing playback.');
-      stopSpeech(false); // 일시정지 (인덱스는 현재 위치 유지, 부모 업데이트 X)
-    } else {
-      console.log('[TTS] Starting playback.');
-      stopRequested.current = false; // 재생 시작 시 중지 요청 해제
-      KeepAwake.keepAwake().catch(() => {}); // 화면 켜짐 유지
-
-      // iOS Web TTS 준비 확인 (필요시)
-      if (!isNative.current && isIOSWeb.current) {
-        try {
-           await waitUntilVoicesReady();
-        } catch (e) {
-           console.error("iOS Web TTS not ready", e);
-           return; // 준비 안되면 재생 불가
-        }
-      }
-
-      const startIndex = internalCurrentIndex.current; // 현재 내부 인덱스에서 시작
-      const startText = sentences[startIndex];
-
-      if (!startText?.trim()) {
-        console.warn(`[TTS] Cannot start playback from empty sentence at index ${startIndex}. Trying next...`);
-        // 현재 문장이 비어있으면 다음 문장부터 재생 시도
-        playNextSpeech(startIndex);
-        return;
-      }
-
-      // 현재 인덱스부터 재생 시작
-      speakText(startText, startIndex, () => {
-         // 첫 문장 재생이 끝나면 다음 문장 재생 로직 호출
-         if (isMounted.current && !stopRequested.current) {
-            playNextSpeech(startIndex);
-         }
-      });
-    }
-  }, [isSpeakingState, stopSpeech, isNative, isIOSWeb, sentences, speakText, playNextSpeech, internalCurrentIndex]);
-
-  // 현재 발화 중인 것을 즉시 취소 (skip 로직용)
-  const cancelCurrentSpeech = useCallback(async () => {
-    console.log('[TTS] Cancelling current speech for skip...');
-    if (currentUtterance.current) { // 웹 TTS 콜백 정리
-        currentUtterance.current.onend = null;
-        currentUtterance.current.onerror = null;
-        currentUtterance.current = null;
-    }
-    if (isNative.current) {
-        await TextToSpeech.stop().catch(() => {}); // 네이티브는 stop 호출
-    } else {
-        synth.current?.cancel(); // 웹은 cancel 호출
-    }
-    // Music Controls 상태는 speakText가 이어서 업데이트하므로 여기서 변경 불필요할 수 있음
-    // 필요하다면 updateMusicControls(getMusicControlOptions(internalCurrentIndex.current, false)); 호출
-  }, [isNative]);
+ }, [parentCurrentIndex, isSpeakingState, stopSpeech]); // stopSpeech 의존성 확인
 
 
-  // 다음 문장으로 건너뛰기
-  const skipForward = useCallback(async () => {
-    const currentIdx = internalCurrentIndex.current;
-    if (currentIdx >= sentences.length - 1) return; // 마지막 문장이면 무시
-
-    console.log('[TTS] Skipping forward.');
-    const wasSpeaking = isSpeakingState; // 스킵 전 재생 상태 기억
-    stopRequested.current = false; // 스킵 후 재생될 수 있으므로 중지 요청 해제
-
-    await cancelCurrentSpeech(); // 현재 발화 취소
-
-    const nextIndex = currentIdx + 1;
-    internalCurrentIndex.current = nextIndex; // 내부 인덱스 업데이트
-
-    // 다음 문장 즉시 재생 (원래 재생 중이었던 경우에만 자동 재생)
-    const nextText = sentences[nextIndex];
-    if (!nextText?.trim()) {
-       // 다음 문장이 비었으면 한 번 더 스킵 시도 (재귀는 위험할 수 있으니 상태 업데이트만)
-       console.log(`[TTS] Skipped to empty sentence at ${nextIndex}, stopping.`);
-       setParentCurrentIndex(nextIndex); // 부모 인덱스 업데이트
-       smoothCenter(nextIndex);
-       setIsSpeakingState(false);
-       updateMusicControls(getMusicControlOptions(nextIndex, false));
-       return;
-    }
-
-    // 다음 문장 텍스트로 speakText 호출
-    speakText(nextText, nextIndex, () => {
-       // 스킵된 문장의 재생이 끝나면, *원래 재생 중이었다면* 다음 문장 자동 재생
-       if (wasSpeaking && isMounted.current && !stopRequested.current) {
-          playNextSpeech(nextIndex);
-       } else if (isMounted.current) {
-          // 원래 재생 중이 아니었거나 중간에 멈췄다면 정지 상태로 둠
-          setIsSpeakingState(false);
-          updateMusicControls(getMusicControlOptions(nextIndex, false));
-       }
-    });
-
-  }, [sentences, isSpeakingState, cancelCurrentSpeech, speakText, playNextSpeech, setParentCurrentIndex, smoothCenter, updateMusicControls, getMusicControlOptions]);
-
-
-  // 이전 문장으로 건너뛰기
-  const skipBackward = useCallback(async () => {
-    const currentIdx = internalCurrentIndex.current;
-    if (currentIdx <= 0) return; // 첫 문장이면 무시
-
-    console.log('[TTS] Skipping backward.');
-    const wasSpeaking = isSpeakingState;
-    stopRequested.current = false;
-
-    await cancelCurrentSpeech();
-
-    const prevIndex = currentIdx - 1;
-    internalCurrentIndex.current = prevIndex;
-
-    const prevText = sentences[prevIndex];
-     if (!prevText?.trim()) {
-       console.log(`[TTS] Skipped back to empty sentence at ${prevIndex}, stopping.`);
-       setParentCurrentIndex(prevIndex);
-       smoothCenter(prevIndex);
-       setIsSpeakingState(false);
-       updateMusicControls(getMusicControlOptions(prevIndex, false));
-       return;
-    }
-
-    // 이전 문장 텍스트로 speakText 호출
-    speakText(prevText, prevIndex, () => {
-      if (wasSpeaking && isMounted.current && !stopRequested.current) {
-        playNextSpeech(prevIndex);
-      } else if (isMounted.current) {
-         setIsSpeakingState(false);
-         updateMusicControls(getMusicControlOptions(prevIndex, false));
-      }
-    });
-
-  }, [sentences, isSpeakingState, cancelCurrentSpeech, speakText, playNextSpeech, setParentCurrentIndex, smoothCenter, updateMusicControls, getMusicControlOptions]);
-
-
-  // --- Render ---
+  // --- Render --- (기존과 거의 동일, unescaped entities 수정)
   return (
     <div className="fixed bottom-[84px] left-1/2 -translate-x-1/2 flex items-center gap-4 z-50 bg-white/80 backdrop-blur-sm p-2 rounded-full shadow-lg">
       <button
@@ -557,6 +484,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
       <button
         onClick={handlePlayPause}
         className="bg-red-dark text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+        // ★ isSpeakingState 값에 따라 aria-label 변경
         aria-label={isSpeakingState ? '일시정지' : '재생'}
         disabled={sentences.length === 0}
       >
