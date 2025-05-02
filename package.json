@@ -16,6 +16,8 @@
     "@capacitor/app": "^7.0.1",
     "@capacitor/browser": "^7.0.1",
     "@capacitor/core": "^7.2.0",
+    "@capacitor/ios": "^7.2.0",
+    "@capacitor/status-bar": "^7.0.1",
     "@google/generative-ai": "^0.24.0",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/supabase-js": "^2.49.4",

@@ -88,9 +88,12 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
 
     return () => {
       isMounted.current = false;
-      stopSpeech(false);
-      if (isNative.current) TextToSpeech.stop().catch(() => {});
-      else synth.current?.cancel();
+      const isNativeAtCleanup = isNative.current;
+      if (isNativeAtCleanup) {
+        TextToSpeech.stop().catch(() => {});
+      } else {
+        synth.current?.cancel();
+      }
       KeepAwake.allowSleep().catch(() => {});
     };
   }, []);

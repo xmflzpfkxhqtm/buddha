@@ -4,7 +4,8 @@ import './globals.css';
 import PageTransition from '../../components/PageTransition';
 import MarbleOverlay from '../../components/Overlay';
 import BottomNav from '../../components/BottomNav';
-import DeepLinkHandler from '../../components/DeepLinkHandler'; // ✅ 추가
+import DeepLinkHandler from '../../components/DeepLinkHandler';
+import NativeInit from '../../components/NativeInit';
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
@@ -33,7 +34,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning={true}
       >
-        <DeepLinkHandler /> {/* ✅ 앱 딥링크 감지 */}
+        <NativeInit />
+        <DeepLinkHandler />
         <div className="relative min-h-screen w-full max-w-[430px] mx-auto pb-[64px]">
           <PageTransition>{children}</PageTransition>
         </div>
