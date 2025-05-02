@@ -7,7 +7,7 @@ import { TextToSpeech } from '@capacitor-community/text-to-speech';
 import { Capacitor, registerPlugin, PluginListenerHandle } from '@capacitor/core';
 
 /* -------------------------------------------------------------------------- */
-/* MusicControls 플러그인 타입 ------------------------------------------------ */
+/* MusicControls 타입 -------------------------------------------------------- */
 interface MusicControlsPlugin {
   create(options: {
     track: string;
@@ -38,7 +38,7 @@ interface MusicControlsNotification {
 }
 
 /* -------------------------------------------------------------------------- */
-/*                                   Props                                    */
+/* Props -------------------------------------------------------------------- */
 interface TTSPlayerProps {
   sentences: string[];
   scriptureName: string;
@@ -49,7 +49,7 @@ interface TTSPlayerProps {
 }
 
 /* -------------------------------------------------------------------------- */
-/*                                   Utils                                    */
+/* iOS-Web: voice 로드 대기 util -------------------------------------------- */
 const waitUntilVoicesReady = (): Promise<void> => {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
     return Promise.resolve();
@@ -75,7 +75,7 @@ const waitUntilVoicesReady = (): Promise<void> => {
 };
 
 /* -------------------------------------------------------------------------- */
-/*                                 Component                                  */
+/* Component ---------------------------------------------------------------- */
 const TTSPlayer: React.FC<TTSPlayerProps> = ({
   sentences,
   scriptureName,
@@ -84,7 +84,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
   onPlaybackStateChange,
   smoothCenter,
 }) => {
-  /* ------------------------------ Refs / State ----------------------------- */
+  /* ------------------------------ state / refs ---------------------------- */
   const [isSpeaking, setIsSpeaking] = useState(false);
 
   const synth = useRef<SpeechSynthesis | null>(null);
@@ -103,7 +103,8 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
 
   const mounted = useRef(false);
 
-  /* -------------------------- Music-controls helper ------------------------ */
+  /* -------------------------- MusicControls helpers ----------------------- */
+  /** MusicControls 세션을 처음 한 번만, isPlaying=false 로 생성 */
   const createMusicControls = useCallback(async () => {
     if (!isNative || musicReady.current) return;
 
@@ -111,7 +112,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
       track: scriptureName || '경전 낭독',
       artist: '연등',
       album: '연등',
-      isPlaying: true,
+      isPlaying: false, // ← 핵심 변경: 처음엔 false
       dismissable: false,
       hasPrev: internalIndex.current > 0,
       hasNext: internalIndex.current < sentences.length - 1,
@@ -119,6 +120,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
     musicReady.current = true;
   }, [isNative, scriptureName, sentences.length]);
 
+  /** 재생/일시정지 상태 토글 */
   const setMusicControlsPlaying = useCallback(
     async (playing: boolean) => {
       if (isNative && musicReady.current) {
@@ -128,18 +130,15 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
     [isNative]
   );
 
-  /* ----------------------------- Speech helpers ---------------------------- */
+  /* ----------------------------- Speech helpers --------------------------- */
   const getTtsSettings = () => {
     if (isNative) {
-      if (Capacitor.getPlatform() === 'android') {
-        return { rate: 1.0, pitch: 0.5 }; // Android Native
-      }
-      return { rate: 1.0, pitch: 0.7 }; // iOS Native
+      return Capacitor.getPlatform() === 'android'
+        ? { rate: 1.0, pitch: 0.5 }
+        : { rate: 1.0, pitch: 0.7 }; // iOS
     }
-    if (isAndroidWeb) {
-      return { rate: 1.0, pitch: 0.5 }; // Android Web
-    }
-    return { rate: 0.9, pitch: 0.7 }; // iOS Web & Desktop
+    if (isAndroidWeb) return { rate: 1.0, pitch: 0.5 };
+    return { rate: 0.9, pitch: 0.7 }; // iOS-Web & Desktop
   };
 
   const cancelWebUtterance = () => {
@@ -151,6 +150,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
     synth.current?.cancel();
   };
 
+  /* ------------------------------ stopSpeech ------------------------------ */
   const stopSpeech = useCallback(
     async (syncParent = false) => {
       stopRequested.current = true;
@@ -171,32 +171,39 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
     [isNative, setCurrentIndex, setMusicControlsPlaying]
   );
 
-  /* ------------------------------ speakText -------------------------------- */
+  /* ------------------------------ speakText ------------------------------- */
   const speakText = useCallback(
     async (text: string, onDone: () => void) => {
       if (!text?.trim() || stopRequested.current) return;
 
       setIsSpeaking(true);
-      await createMusicControls();
-      await setMusicControlsPlaying(true);
 
       try {
         if (isNative) {
-          const settings = getTtsSettings();
+          /* 1) 세션 없으면 isPlaying:false 로 생성 */
+          await createMusicControls();
+          /* 2) 이제 재생 상태 true 로 토글 (update만 하므로 오디오 포커스 충돌 X) */
+          await setMusicControlsPlaying(true);
+
+          /* 3) TTS 실행 */
+          const { rate, pitch } = getTtsSettings();
           await TextToSpeech.speak({
             text,
             lang: 'ko-KR',
-            rate: settings.rate,
-            pitch: settings.pitch,
+            rate,
+            pitch,
             volume: 1.0,
             category: 'ambient',
           });
+
           if (!stopRequested.current) onDone();
         } else {
+          /* ---- Web TTS ---- */
           const utter = new SpeechSynthesisUtterance(text);
           currentUtterance.current = utter;
           Object.assign(utter, getTtsSettings());
           utter.lang = 'ko-KR';
+
           utter.onend = () => {
             currentUtterance.current = null;
             if (!stopRequested.current) onDone();
@@ -205,6 +212,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
             currentUtterance.current = null;
             stopSpeech(false);
           };
+
           synth.current!.speak(utter);
         }
       } catch (e) {
@@ -212,17 +220,16 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
         stopSpeech(false);
       }
     },
-    [createMusicControls, isNative, setMusicControlsPlaying, stopSpeech]
+    [createMusicControls, setMusicControlsPlaying, getTtsSettings, isNative, stopSpeech]
   );
 
-  /* --------------------------- Play-next routine --------------------------- */
+  /* --------------------------- playFrom (재귀) ----------------------------- */
   const playFrom = useCallback(
     (idx: number) => {
       if (idx >= sentences.length) {
         stopSpeech(false);
         return;
       }
-
       internalIndex.current = idx;
       setCurrentIndex(idx);
       smoothCenter(idx);
@@ -232,7 +239,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
     [sentences, setCurrentIndex, smoothCenter, speakText, stopSpeech]
   );
 
-  /* --------------------------- Control handlers ---------------------------- */
+  /* --------------------------- 핸들러들 ------------------------------------ */
   const handlePlayPause = useCallback(() => {
     if (isSpeaking) {
       stopSpeech(false);
@@ -240,18 +247,16 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
       stopRequested.current = false;
       KeepAwake.keepAwake().catch(() => {});
 
-      // iOS-Safari: user-gesture 확보용
       if (!isNative && isIOSWeb && typeof AudioContext !== 'undefined') {
-        void new AudioContext();
+        void new AudioContext(); // iOS-Safari first-gesture
       }
-
       playFrom(internalIndex.current);
     }
-  }, [isSpeaking, isNative, isIOSWeb, playFrom, stopSpeech]);
+  }, [isSpeaking, playFrom, stopSpeech, isNative, isIOSWeb]);
 
   const skip = useCallback(
-    (direction: 1 | -1) => {
-      const next = internalIndex.current + direction;
+    (dir: 1 | -1) => {
+      const next = internalIndex.current + dir;
       if (next < 0 || next >= sentences.length) return;
 
       stopRequested.current = false;
@@ -265,7 +270,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
     [sentences.length, playFrom]
   );
 
-  /* ------------------------------- Lifecycle ------------------------------- */
+  /* ------------------------------- Lifecycle ------------------------------ */
   useEffect(() => {
     mounted.current = true;
 
@@ -280,10 +285,10 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
       });
     }
 
-    /* native-notification listener */
+    /* Headset / Notification 리스너 */
     (async () => {
       if (isNative) {
-        const handle = await MusicControls.addListener(
+        listenerHandle.current = await MusicControls.addListener(
           'controlsNotification',
           (info) => {
             switch (info.action) {
@@ -304,7 +309,6 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
             }
           }
         );
-        listenerHandle.current = handle;
       }
     })();
 
@@ -322,26 +326,25 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* 외부 index 변경 → 재생 중이면 멈추고 맞춰 주기 */
+  /* 외부 index ↔ 내부 index 동기화 */
   useEffect(() => {
     if (externalIndex !== internalIndex.current) {
       if (isSpeaking) stopSpeech(false);
       internalIndex.current = externalIndex;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [externalIndex]);
+  }, [externalIndex, isSpeaking, stopSpeech]);
 
   useEffect(() => {
     onPlaybackStateChange?.(isSpeaking);
   }, [isSpeaking, onPlaybackStateChange]);
 
-  /* ------------------------------------------------------------------------ */
+  /* ------------------------------- UI ------------------------------------- */
   return (
-    <div className="fixed bottom-[84px] left-1/2 -translate-x-1/2 flex items-center gap-4 z-50 borderp-2 rounded-full">
+    <div className="fixed bottom-[84px] left-1/2 -translate-x-1/2 flex items-center gap-4 z-50">
       <button
         onClick={() => skip(-1)}
-        aria-label="이전 문장"
         disabled={internalIndex.current <= 0}
+        aria-label="이전 문장"
         className="bg-red-light text-white rounded-full w-12 h-12 flex items-center justify-center shadow-md disabled:opacity-50"
       >
         <SkipBack size={24} />
@@ -349,8 +352,8 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
 
       <button
         onClick={handlePlayPause}
-        aria-label={isSpeaking ? '일시정지' : '재생'}
         disabled={!sentences.length}
+        aria-label={isSpeaking ? '일시정지' : '재생'}
         className="bg-red-light text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg disabled:opacity-50"
       >
         {isSpeaking ? <Pause size={36} /> : <Play size={36} fill="currentColor" />}
@@ -358,8 +361,8 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
 
       <button
         onClick={() => skip(1)}
-        aria-label="다음 문장"
         disabled={internalIndex.current >= sentences.length - 1}
+        aria-label="다음 문장"
         className="bg-red-light text-white rounded-full w-12 h-12 flex items-center justify-center shadow-md disabled:opacity-50"
       >
         <SkipForward size={24} />
