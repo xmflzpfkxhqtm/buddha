@@ -5,8 +5,8 @@ import { Play, Pause, SkipBack, SkipForward } from 'lucide-react';
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import { TextToSpeech } from '@capacitor-community/text-to-speech';
 import { Capacitor } from '@capacitor/core';
-// @ts-ignore - MusicControls 타입 정의가 없을 경우 사용
-import MusicControls from 'capacitor-music-controls-plugin';
+// @ts-expect-error - MusicControls 타입 정의가 없을 경우 사용
+import * as MusicControls from 'capacitor-music-controls-plugin';
 
 // --- Interfaces ---
 
@@ -107,7 +107,6 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
     try {
       if (!musicControlsCreated.current) {
         console.log('[MusicControls] Creating:', info);
-        // @ts-ignore
         await MusicControls.create({
           track: info.track,
           artist: info.artist,
@@ -117,22 +116,21 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
           hasPrev: info.hasPrev,
           hasNext: info.hasNext,
         });
-        // @ts-ignore
         if (Capacitor.getPlatform() === 'ios') {
-          // @ts-ignore
+          // @ts-expect-error
           await MusicControls.updateIsPlaying(info.isPlaying);
         }
         musicControlsCreated.current = true;
       } else {
         console.log('[MusicControls] Updating:', info);
-        // @ts-ignore
+        // @ts-expect-error
         await MusicControls.updateIsPlaying(info.isPlaying);
       }
     } catch (error) {
       console.error('[TTS] Failed to update Music Controls:', error);
       musicControlsCreated.current = false;
       try { 
-        // @ts-ignore
+        // @ts-expect-error
         await MusicControls.destroy(); 
       } catch { /* ignore */ }
     }
