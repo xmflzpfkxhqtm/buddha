@@ -9,7 +9,6 @@ import { Capacitor, registerPlugin, PluginListenerHandle } from '@capacitor/core
 /* -------------------------------------------------------------------------- */
 /*                                MusicControls                               */
 /* -------------------------------------------------------------------------- */
-
 interface MusicControlsPlugin {
   create(options: {
     track: string;
@@ -42,7 +41,6 @@ interface MusicControlsNotification {
 /* -------------------------------------------------------------------------- */
 /*                                   Props                                    */
 /* -------------------------------------------------------------------------- */
-
 interface TTSPlayerProps {
   sentences: string[];
   scriptureName: string;
@@ -55,7 +53,6 @@ interface TTSPlayerProps {
 /* -------------------------------------------------------------------------- */
 /*                                   Utils                                    */
 /* -------------------------------------------------------------------------- */
-
 const waitUntilVoicesReady = (): Promise<void> => {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
     return Promise.resolve();
@@ -83,7 +80,6 @@ const waitUntilVoicesReady = (): Promise<void> => {
 /* -------------------------------------------------------------------------- */
 /*                                 Component                                  */
 /* -------------------------------------------------------------------------- */
-
 const TTSPlayer: React.FC<TTSPlayerProps> = ({
   sentences,
   scriptureName,
@@ -116,7 +112,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
     if (!isNative || musicReady.current) return;
 
     await MusicControls.create({
-      track: scriptureName || '경전 낭독', // **제목만 한 번 지정**
+      track: scriptureName || '경전 낭독',
       artist: '연등',
       album: '연등',
       isPlaying: true,
@@ -145,9 +141,10 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
       : { rate: 0.9, pitch: 1.1 };
 
   const cancelWebUtterance = () => {
-    currentUtterance.current?.onend && (currentUtterance.current.onend = null);
-    currentUtterance.current?.onerror &&
-      (currentUtterance.current.onerror = null);
+    if (currentUtterance.current) {
+      currentUtterance.current.onend = null;
+      currentUtterance.current.onerror = null;
+    }
     currentUtterance.current = null;
     synth.current?.cancel();
   };
@@ -238,7 +235,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
       KeepAwake.keepAwake().catch(() => {});
 
       if (!isNative && isIOSWeb) {
-        // iOS-Safari 첫 호출 시 user-gesture 확보
+        // iOS Safari 첫 호출 시 user-gesture 확보
         window?.AudioContext && new AudioContext();
       }
       playFrom(internalIndex.current);
@@ -251,9 +248,11 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
       if (next < 0 || next >= sentences.length) return;
 
       stopRequested.current = false;
-      if (isNative) void TextToSpeech.stop().catch(() => {});
-            else cancelWebUtterance();
-
+      if (isNative) {
+        void TextToSpeech.stop().catch(() => {});
+      } else {
+        cancelWebUtterance();
+      }
       playFrom(next);
     },
     [sentences.length, playFrom]
@@ -265,7 +264,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
 
     if (!isNative && 'speechSynthesis' in window) {
       synth.current = window.speechSynthesis;
-      waitUntilVoicesReady().then(() => {
+      void waitUntilVoicesReady().then(() => {
         if (isIOSWeb) {
           const warm = new SpeechSynthesisUtterance(' ');
           warm.volume = 0;
@@ -274,34 +273,45 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
       });
     }
 
-    /* native-notification listener */
-    if (isNative) {
-      void MusicControls.addListener('controlsNotification', (info) => {
-        switch (info.action) {
-          case 'music-controls-play':
-          case 'music-controls-pause':
-            handlePlayPause();
-            break;
-          case 'music-controls-next':
-            skip(1);
-            break;
-          case 'music-controls-previous':
-            skip(-1);
-            break;
-          case 'music-controls-stop':
-          case 'music-controls-destroy':
-            stopSpeech(true);
-            break;
-        }
-      }).then((h) => (listenerHandle.current = h));
-    }
+    /* native-notification listener (async wrapper → 표현식 아님) */
+    (async () => {
+      if (isNative) {
+        const handle = await MusicControls.addListener(
+          'controlsNotification',
+          (info) => {
+            switch (info.action) {
+              case 'music-controls-play':
+              case 'music-controls-pause':
+                handlePlayPause();
+                break;
+              case 'music-controls-next':
+                skip(1);
+                break;
+              case 'music-controls-previous':
+                skip(-1);
+                break;
+              case 'music-controls-stop':
+              case 'music-controls-destroy':
+                stopSpeech(true);
+                break;
+            }
+          }
+        );
+        listenerHandle.current = handle;
+      }
+    })();
 
     return () => {
       mounted.current = false;
       stopSpeech(false);
-      void listenerHandle.current?.remove().catch(() => {});
-      if (musicReady.current) 
-        void MusicControls.destroy().catch(() => {});    };
+
+      if (listenerHandle.current) {
+        void listenerHandle.current.remove().catch(() => {});
+      }
+      if (musicReady.current) {
+        void MusicControls.destroy().catch(() => {});
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -319,9 +329,8 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
   }, [isSpeaking, onPlaybackStateChange]);
 
   /* ------------------------------------------------------------------------ */
-  /*                                   UI                                    */
+  /*                                   UI                                     */
   /* ------------------------------------------------------------------------ */
-
   return (
     <div className="fixed bottom-[84px] left-1/2 -translate-x-1/2 flex items-center gap-4 z-50 border border-red-light bg-white/80 backdrop-blur-sm p-2 rounded-full shadow-lg">
       <button
