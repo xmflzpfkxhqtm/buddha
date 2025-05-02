@@ -38,6 +38,7 @@ export default function LoginPage() {
       provider: 'google',
       options: {
         redirectTo,
+        skipBrowserRedirect: true, // <= 인앱브라우저 직접 열 때 필수
         queryParams: {
           prompt: 'select_account', // ✅ 매번 계정 선택창 강제
         },
