@@ -112,7 +112,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
          try {
              if (isNative.current) await TextToSpeech.stop();
              else synth.current?.cancel();
-           } catch (_) { /* noop */ 
+       } catch { /* noop */ 
         
    
       } finally {
