@@ -131,7 +131,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
   /* ----------------------------- Speech helpers ---------------------------- */
   const getTtsSettings = () =>
     isNative
-      ? { rate: 1.0, pitch: 1.0, volume: 1.0 }
+      ? { rate: 1.0, pitch: 1.0 }
       : isAndroidWeb
       ? { rate: 1.0, pitch: 1.0 }
       : { rate: 0.9, pitch: 1.1 };
