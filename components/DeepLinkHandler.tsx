@@ -2,16 +2,17 @@
 
 import { useEffect } from 'react';
 import { App } from '@capacitor/app';
-import { Browser } from '@capacitor/browser';          // 🔹 추가
+import { Browser } from '@capacitor/browser';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';        // 🔹 추가
+import { supabase } from '@/lib/supabaseClient';
+import { PluginListenerHandle } from '@capacitor/core';
 
 export default function DeepLinkHandler() {
   const router = useRouter();
 
   useEffect(() => {
     // addListener가 반환하는 sub를 기억해 두면 나중에 remove 가능
-    let unsubscribe: any;
+    let unsubscribe: PluginListenerHandle | undefined;
     
     const setupListener = async () => {
       const sub = await App.addListener('appUrlOpen', async ({ url }) => {
