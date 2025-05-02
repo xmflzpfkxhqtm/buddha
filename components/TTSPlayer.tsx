@@ -176,7 +176,10 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
 
       try {
         if (isNative) {
-          await TextToSpeech.speak({ text, lang: 'ko-KR', ...getTtsSettings() });
+          await TextToSpeech.speak({ text, lang: 'ko-KR', ...getTtsSettings(),
+             volume: 1.0,          // ★ 반드시 넣어준다 (0.0~1.0)
+             category: 'ambient',  // (iOS 전용, Android는 무시해도 안전)
+           });
           if (!stopRequested.current) onDone();
         } else {
           const utter = new SpeechSynthesisUtterance(text);
@@ -323,7 +326,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
 
   /* ------------------------------------------------------------------------ */
   return (
-    <div className="fixed bottom-[84px] left-1/2 -translate-x-1/2 flex items-center gap-4 z-50 border border-red-light bg-white/80 backdrop-blur-sm p-2 rounded-full shadow-lg">
+    <div className="fixed bottom-[84px] left-1/2 -translate-x-1/2 flex items-center gap-4 z-50 borderp-2 rounded-full">
       <button
         onClick={() => skip(-1)}
         aria-label="이전 문장"
