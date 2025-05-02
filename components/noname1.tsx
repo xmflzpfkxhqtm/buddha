@@ -5,6 +5,7 @@ import { Play, Pause, SkipBack, SkipForward } from 'lucide-react';
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import { TextToSpeech } from '@capacitor-community/text-to-speech';
 import { Capacitor } from '@capacitor/core';
+import { useRouter } from 'next/router';
 
 interface TTSPlayerProps {
   sentences: string[];
@@ -67,6 +68,8 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
     platform.current === 'web' && /Android/.test(navigator.userAgent)
   );
   const isMounted = useRef(false);
+
+  const router = useRouter();
 
   /* -------------------------------------------------- */
   /* mount / unmount                                    */
@@ -307,6 +310,16 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
     });
   }, [sentences, speakText, playNextSpeech, setParentCurrentIndex, isSpeakingState, smoothCenter]);
   
+  const handleClick = () => {
+    if (isNative.current) {
+      // 네이티브 앱에서 실행
+      window.location.href = 'buddha://ask';
+    } else {
+      // 웹에서 실행
+      router.push('/ask');
+    }
+  };
+
   /* -------------------------------------------------- */
   /* render                                             */
   /* -------------------------------------------------- */

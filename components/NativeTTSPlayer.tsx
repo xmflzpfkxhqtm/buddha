@@ -10,29 +10,27 @@ import PlayerControlsUI from './PlayerControlsUI'; // 경로 수정 필요
 
 /* -------------------------------------------------------------------------- */
 /* Props (WebTTSPlayer와 동일하게 유지) ------------------------------------ */
-interface TTSPlayerProps {
+interface NativeTTSPlayerProps {
   sentences: string[];
-  scriptureName: string; // MusicControls 등 네이티브 기능에 사용 가능
   currentIndex: number;
-  setCurrentIndex: (idx: number) => void;
-  onPlaybackStateChange?: (playing: boolean) => void;
-  smoothCenter: (idx: number) => void;
+  setCurrentIndex: (index: number) => void;
+  smoothCenter: (index: number, instant?: boolean) => void;
+  onPlaybackStateChange: (isSpeaking: boolean) => void;
 }
 
 /* -------------------------------------------------------------------------- */
 /* Component ---------------------------------------------------------------- */
-const NativeTTSPlayer: React.FC<TTSPlayerProps> = ({
+export default function NativeTTSPlayer({
   sentences,
-  scriptureName, // 네이티브에서 사용 가능
-  currentIndex: externalIndex,
+  currentIndex,
   setCurrentIndex,
-  onPlaybackStateChange,
   smoothCenter,
-}) => {
+  onPlaybackStateChange,
+}: NativeTTSPlayerProps) {
   /* ------------------------------ state / refs --------------------------- */
   const [isSpeaking, setIsSpeaking] = useState(false);
   const stopRequested = useRef(false);
-  const internalIndex = useRef(externalIndex);
+  const internalIndex = useRef(currentIndex);
   const playGeneration = useRef(0);
   const mounted = useRef(false);
   const platform = Capacitor.getPlatform(); // android 또는 ios
@@ -190,15 +188,15 @@ const NativeTTSPlayer: React.FC<TTSPlayerProps> = ({
 
   /* 외부 인덱스 변경 */
   useEffect(() => {
-    if (mounted.current && externalIndex !== internalIndex.current) {
-       console.log(`[TTS Native] External index changed to ${externalIndex}.`);
+    if (mounted.current && currentIndex !== internalIndex.current) {
+       console.log(`[TTS Native] External index changed to ${currentIndex}.`);
       if (isSpeaking) {
         playGeneration.current += 1;
         stopSpeech(false);
       }
-      internalIndex.current = externalIndex;
+      internalIndex.current = currentIndex;
     }
-  }, [externalIndex, isSpeaking, stopSpeech]);
+  }, [currentIndex, isSpeaking, stopSpeech]);
 
   /* 재생 상태 변경 시 외부 콜백 호출 */
   useEffect(() => {
@@ -219,6 +217,4 @@ const NativeTTSPlayer: React.FC<TTSPlayerProps> = ({
       isPlayPauseDisabled={sentences.length === 0}
     />
   );
-};
-
-export default NativeTTSPlayer;
+}
