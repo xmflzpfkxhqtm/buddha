@@ -129,12 +129,18 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
   );
 
   /* ----------------------------- Speech helpers ---------------------------- */
-  const getTtsSettings = () =>
-    isNative
-      ? { rate: 1.0, pitch: 1.0 }
-      : isAndroidWeb
-      ? { rate: 1.0, pitch: 1.0 }
-      : { rate: 0.9, pitch: 1.0 };
+  const getTtsSettings = () => {
+    if (isNative) {
+      if (Capacitor.getPlatform() === 'android') {
+        return { rate: 1.0, pitch: 0.5 }; // Android Native
+      }
+      return { rate: 1.0, pitch: 0.7 }; // iOS Native
+    }
+    if (isAndroidWeb) {
+      return { rate: 1.0, pitch: 0.5 }; // Android Web
+    }
+    return { rate: 0.9, pitch: 0.7 }; // iOS Web & Desktop
+  };
 
   const cancelWebUtterance = () => {
     if (currentUtterance.current) {
