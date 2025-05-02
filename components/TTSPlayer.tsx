@@ -68,9 +68,9 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
     if (isNative) {
       return platform === 'android'
         ? { rate: 1.0, pitch: 0.5 }
-        : { rate: 1.0, pitch: 0.7 };
+        : { rate: 0.8, pitch: 0.5 };
     }
-    return { rate: 0.9, pitch: 0.7 };
+    return { rate: 0.9, pitch: 0.5 };
   };
 
   const cancelWebUtterance = () => {
