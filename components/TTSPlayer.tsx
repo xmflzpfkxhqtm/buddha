@@ -176,10 +176,15 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
 
       try {
         if (isNative) {
-          await TextToSpeech.speak({ text, lang: 'ko-KR', ...getTtsSettings(),
-             volume: 1.0,          // ★ 반드시 넣어준다 (0.0~1.0)
-             category: 'ambient',  // (iOS 전용, Android는 무시해도 안전)
-           });
+          const settings = getTtsSettings();
+          await TextToSpeech.speak({
+            text,
+            lang: 'ko-KR',
+            rate: settings.rate,
+            pitch: settings.pitch,
+            volume: 1.0,
+            category: 'ambient',
+          });
           if (!stopRequested.current) onDone();
         } else {
           const utter = new SpeechSynthesisUtterance(text);
