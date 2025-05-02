@@ -347,7 +347,7 @@ export default function ScripturePage() {
             </p>
             <ul className="list-none space-y-1 pl-1 text-base">
               <li className="flex items-start"><span className="mr-2">-</span> 좌측 상단에서 경전 선택 / 문장 검색</li>
-              <li className="flex items-start"><span className="mr-2">-</span> 우측 상단 '가' 버튼으로 글자 크기 조절</li>
+              <li className="flex items-start"><span className="mr-2">-</span> 우측 상단 가 버튼으로 글자 크기 조절</li>
               <li className="flex items-start"><span className="mr-2">-</span> 문장을 책갈피에 저장 가능</li>
               <li className="flex items-start"><span className="mr-2">-</span> 재생 버튼으로 문장을 낭독</li>
             </ul>
