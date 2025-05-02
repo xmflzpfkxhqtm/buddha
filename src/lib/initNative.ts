@@ -16,6 +16,10 @@ export async function initNative() {
     if (Capacitor.getPlatform() === 'ios') {
       await StatusBar.setBackgroundColor({ color: '#F5F1E6' });
     }
+
+    // 뷰포트 크기 로깅
+    console.log('Viewport width:', window.innerWidth);
+    console.log('Device pixel ratio:', window.devicePixelRatio);
   } catch (e) {
     console.warn('StatusBar 설정 실패', e);
   }

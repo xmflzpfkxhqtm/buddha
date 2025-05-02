@@ -36,7 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       >
         <NativeInit />
         <DeepLinkHandler />
-        <div className="relative min-h-screen w-full max-w-[430px] mx-auto pb-[64px]">
+        <div className="relative min-h-screen w-full max-w-[460px] mx-auto pb-[64px]">
           <PageTransition>{children}</PageTransition>
         </div>
         <BottomNav />

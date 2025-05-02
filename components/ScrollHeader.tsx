@@ -25,7 +25,7 @@ export default function ScrollHeader() {
   }, [])
 
   return (
-    <header className="w-full max-w-[430px] h-[128px] mx-auto mb-4 relative">
+    <header className="w-full max-w-[460px] h-[128px] mx-auto mb-4 relative">
       {/* 우측 상단 사운드 버튼 */}
       <button
         onClick={toggleSound}

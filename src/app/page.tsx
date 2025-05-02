@@ -88,7 +88,7 @@ export default function Home() {
     
   if (isLoading) {
     return (
-      <div className="relative min-h-screen w-full max-w-[430px] mx-auto bg-gradient-to-b from-red to-redbrown flex flex-col items-center justify-center px-6 overflow-hidden">
+      <div className="relative min-h-screen w-full max-w-[460px] mx-auto bg-gradient-to-b from-red to-redbrown flex flex-col items-center justify-center px-6 overflow-hidden">
         {/* 배경 이미지 (투명도 + 혼합 모드) */}
         <Image
           src="/bg_loading.png"
@@ -123,7 +123,7 @@ export default function Home() {
     <>
       <MarbleOverlay />
       <div className="absolute bg-gradient-to-b from-red to-redbrown">
-        <main className="min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto px-6 pt">
+        <main className="min-h-screen w-full max-w-[460px] flex flex-col justify-start items-center mx-auto px-6 pt">
           <ScrollHeader />
 
           {/* 상단 홍보 배너 */}
