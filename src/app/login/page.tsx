@@ -39,8 +39,7 @@ export default function DeepLinkHandler() {
 
           const access_token  = p.get('access_token');
           const refresh_token = p.get('refresh_token');
-          const expires_in    = Number(p.get('expires_in') ?? '3600');
-
+          
           if (!access_token || !refresh_token) {
             console.error('[DeepLink] 해시 파싱 실패');
             return;
