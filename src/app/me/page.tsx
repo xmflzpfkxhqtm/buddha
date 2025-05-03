@@ -96,6 +96,22 @@ export default function MePage() {
             {answerCount}개 <ChevronRight size={16} />
           </div>
         </li>
+
+
+        <li
+          onClick={() => router.push('/me/copies')}
+          className="cursor-pointer px-4 py-4 flex items-center justify-between hover:bg-beige"
+        >
+          <div>
+            <p className="font-semibold text-red-dark">🖊️ 나의 사경노트</p>
+            <p className="text-sm text-gray-600">당신의 질문과 부처님의 답변입니다.</p>
+          </div>
+          <div className="flex items-center gap-2 text-gray-400 text-sm">
+            {answerCount}개 <ChevronRight size={16} />
+          </div>
+        </li>
+
+
       
         <li
   onClick={() => router.push('/me/settings')}

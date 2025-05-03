@@ -53,7 +53,7 @@ export default function CopyHome() {
             {/* ✅ 클릭 가능 영역  ─ lang 쿼리 파라미터 전달 */}
             <Link
               href={`/copy/${t.id}?lang=${lang}`} // 예) /copy/heart?lang=kor
-              className="block bg-red-light text-beige p-4 rounded-xl hover:bg-gray-50"
+              className="block border border-red-light bg-red-light text-beige p-4 rounded-xl hover:bg-white hover:border hover:border-red-light hover:text-red-dark"
             >
               {t.title}
             </Link>

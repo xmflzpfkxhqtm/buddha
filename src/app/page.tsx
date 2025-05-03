@@ -70,6 +70,20 @@ export default function Home() {
       }
         
       const end = Date.now();
+
+       const fontReady = (async () => {
+          /* ocument.fonts.ready 로 기본 대기 */
+         await document.fonts.ready;
+                 /* 아직 쓰이지 않은 커스텀 글꼴 강제 로드(옵션) */
+         const extra = ['MaruBuri', 'Yuji Mai'].map(
+           family => document.fonts.load(`1rem "${family}"`)
+         );
+          await Promise.all(extra);
+         })();
+        
+        
+
+
       const elapsed = end - start;
       const remaining = Math.max(3000 - elapsed, 0); // ✅ 첫 방문 때만 쓰일 최소 로딩 시간
   
@@ -88,7 +102,7 @@ export default function Home() {
     
   if (isLoading) {
     return (
-      <div className="relative min-h-screen w-full max-w-[460px] mx-auto bg-gradient-to-b from-red to-redbrown flex flex-col items-center justify-center px-6 overflow-hidden">
+      <div className="relative min-h-screen w-full max-w-[4600px] mx-auto bg-gradient-to-b from-red to-redbrown flex flex-col items-center justify-center px-6 overflow-hidden">
         {/* 배경 이미지 (투명도 + 혼합 모드) */}
         <Image
           src="/bg_loading.png"
@@ -122,14 +136,14 @@ export default function Home() {
   return (
     <>
       <MarbleOverlay />
-      <div className="absolute bg-gradient-to-b from-red to-redbrown">
+      <div className="absolute bg-gradient-to-b w-full from-red to-redbrown">
         <main className="min-h-screen w-full max-w-[460px] flex flex-col justify-start items-center mx-auto px-6 pt">
           <ScrollHeader />
 
           {/* 상단 홍보 배너 */}
           <div
   onClick={() => router.push('/ask')}
-  className="w-full h-16 bg-redbrown border border-red-light rounded-xl flex flex-row items-center pl-1 mt-4 justify-start cursor-pointer"
+  className="w-full h-16  bg-redbrown border border-red-light rounded-xl flex flex-row items-center pl-1 mt-4 justify-start cursor-pointer"
 >
             <Image
               src="/lotusbeige.png"

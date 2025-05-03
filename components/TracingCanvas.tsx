@@ -22,7 +22,7 @@ interface Props {
   
   /* 셀 크기 · 확대배율 */
   const CELL  = 50;     // 한 칸 50×50 표시
-  const SCALE = 4;      // 드로잉 캔버스는 4배(200×200)
+  const SCALE = 6;      // 드로잉 캔버스는 4배(200×200)
   
   export default function TracingCanvas({
     char,
