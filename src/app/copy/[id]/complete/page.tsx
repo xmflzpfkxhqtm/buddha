@@ -131,7 +131,7 @@ export default function CompletePage() {
   if (isLoading)   return <p className="text-center py-12">시트 불러오는 중…</p>;
 
   return (
-    <main className="p-6 max-w-[460px] mx-auto">
+    <main className="p-4 max-w-[460px] mx-auto">
       <h1 className="font-bold mb-4 text-xl">완성본</h1>
 
       {/* 시트 */}

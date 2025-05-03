@@ -15,7 +15,7 @@ export default function CopyHome() {
     'p-3 rounded-lg border cursor-pointer transition duration-150';
 
   return (
-    <main className="min-h-screen w-full max-w-[460px] h-full p-6 space-y-4">
+    <main className="min-h-screen w-full max-w-[460px] h-full p-4 space-y-4">
       {/* 언어 선택 버튼 */}
   
       <div className="w-full z-1 pt-8">

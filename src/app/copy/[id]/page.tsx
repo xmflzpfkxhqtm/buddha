@@ -191,7 +191,7 @@ useEffect(() => {
   if (!textObj)    return <p>잘못된 경전 ID입니다.</p>;
 
   return (
-    <main className="flex flex-col max-w-[460px] items-center p- select-none touch-none">
+    <main className="flex flex-col max-w-[460px] items-center p-4 select-none touch-none">
       {/* 뒤로가기 */}
       <button
         onClick={() => router.push('/copy')}
