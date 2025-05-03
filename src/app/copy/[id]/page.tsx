@@ -23,29 +23,27 @@ export default function CopySession() {
     const [prevSvgs, setPrevSvgs]       = useState<(string | null)[]>(Array(WINDOW).fill(null));
     const [currentSvg, setCurrentSvg]   = useState<string | null>(null);
 
-    // Conditional rendering for error cases
-    if (typeof id !== 'string') return null;
-    const textObj = copyTexts.find(t => t.id === id);
-    if (!textObj) return <p>잘못된 경전 ID입니다.</p>;
-
-    /* ───── 언어: URL 파라미터 → 기본 'han' */
+    // Use variables for error cases
+    const isIdString = typeof id === 'string';
+    const sessionId = isIdString ? (id as string) : '';
+    const textObj = isIdString ? copyTexts.find(t => t.id === sessionId) : null;
     const lang: 'han' | 'kor' = (search.get('lang') as 'kor' | 'han') ?? 'han';
-  
-    /* 본문 글자 배열 */
-    const chars = [...textObj[lang]];
+    const chars = textObj ? [...textObj[lang]] : [];
 
     /* ───────── 최초 이어쓰기 위치 찾기 */
     useEffect(() => {
+      if (!isIdString || !textObj) return;
       (async () => {
         let i = 0;
-        while (i < chars.length && (await getStroke(id, i))) i++;
+        while (i < chars.length && (await getStroke(sessionId, i))) i++;
         await loadWindow(i);
       })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [id]);
+    }, [sessionId, isIdString, textObj]);
 
     /* ───────── 현재 idx를 네 번째 칸에 맞춘 7칸 윈도 계산 */
     const loadWindow = async (i: number) => {
+      if (!textObj) return;
       if (i < 0 || i >= chars.length) return;
 
       const g: string[]               = [];
@@ -53,17 +51,18 @@ export default function CopySession() {
       for (let col = 0; col < WINDOW; col++) {
         const gi = i - CURCOL + col;
         g.push(gi >= 0 && gi < chars.length ? chars[gi] : '');
-        p.push(gi >= 0 && gi < i ? (await getStroke(id, gi)) ?? null : null);
+        p.push(gi >= 0 && gi < i ? (await getStroke(sessionId, gi)) ?? null : null);
       }
       setGuide(g);
       setPrevSvgs(p);
-      setCurrentSvg((await getStroke(id, i)) ?? null);
+      setCurrentSvg((await getStroke(sessionId, i)) ?? null);
       setIdx(i);
     };
 
     /* ───────── 글자 하나 완료 → 다음 글자 자동 이동 */
     const handleDone = async (svg: string) => {
-      await saveStroke(id, idx, svg);
+      if (!textObj) return;
+      await saveStroke(sessionId, idx, svg);
       setPrevSvgs(prev => {
         const copy = [...prev];
         copy[CURCOL] = svg;
@@ -73,7 +72,8 @@ export default function CopySession() {
     };
 
     const handleClear = async () => {
-      await deleteStroke(id, idx);
+      if (!textObj) return;
+      await deleteStroke(sessionId, idx);
       setCurrentSvg(null);
       setPrevSvgs(prev => {
         const copy = [...prev];
@@ -84,20 +84,26 @@ export default function CopySession() {
 
     /* ───────── "중간 저장" — 이미 저장된 글자 + 현재 글자 저장 */
     const handleMidSave = async () => {
-      if (currentSvg) await saveStroke(id, idx, currentSvg);
+      if (!textObj) return;
+      if (currentSvg) await saveStroke(sessionId, idx, currentSvg);
       alert('중간 저장 완료!');
     };
 
     const handleReset = async () => {
+      if (!textObj) return;
       if (confirm('모든 글자를 삭제하고 처음부터 다시 시작할까요?')) {
-        await clearSession(id);
+        await clearSession(sessionId);
         await loadWindow(0);
       }
     };
 
-    const gotoComplete = () => router.push(`/copy/${id}/complete`);
+    const gotoComplete = () => router.push(`/copy/${sessionId}/complete`);
 
     const isFinished = idx + 1 >= chars.length && currentSvg;
+
+    // Conditional rendering for error cases
+    if (!isIdString) return null;
+    if (!textObj) return <p>잘못된 경전 ID입니다.</p>;
 
     return (
       <main className="flex flex-col max-w-[460px] items-center p-4">
