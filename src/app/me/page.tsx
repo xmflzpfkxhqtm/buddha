@@ -9,6 +9,8 @@ export default function MePage() {
   const router = useRouter();
   const [bookmarkCount, setBookmarkCount] = useState(0);
   const [answerCount, setAnswerCount] = useState(0);
+  const [copyCount,     setCopyCount]     = useState(0);   // ← 추가
+
   const [userName, setUserName] = useState<string | null>(null);
 
   useEffect(() => {
@@ -39,10 +41,16 @@ export default function MePage() {
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id)
         .eq('is_saved', true);
+        const { count: savedCopyCount } = await supabase
+        .from('copy_notes')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('completed', true);       // 완료본만
+
       
       setAnswerCount(savedAnswerCount || 0);
-      
       setBookmarkCount(bookmarks?.length || 0);
+      setCopyCount(savedCopyCount || 0);
     };
 
     checkAuthAndFetchData();
@@ -107,7 +115,7 @@ export default function MePage() {
             <p className="text-sm text-gray-600">당신의 질문과 부처님의 답변입니다.</p>
           </div>
           <div className="flex items-center gap-2 text-gray-400 text-sm">
-            {answerCount}개 <ChevronRight size={16} />
+            {copyCount}개 <ChevronRight size={16} />
           </div>
         </li>
 
