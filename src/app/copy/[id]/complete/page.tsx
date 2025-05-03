@@ -23,10 +23,6 @@ export default function CompletePage() {
   const lang: 'han' | 'kor' = textObj ? (textObj.lang as 'han' | 'kor') : 'han';
   const chars = textObj ? [...textObj[lang]] : [];
 
-  // 시트 크기 상수
-  const KOR_COLS = 7, KOR_ROWS = 10;
-  const HAN_ROWS = 7, HAN_COLS = 6;
-
   // 모든 SVG 불러오기
   useEffect(() => {
     if (!isIdString || !textObj) return;
