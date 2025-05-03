@@ -217,7 +217,7 @@ interface Props {
             <canvas ref={baseRef} className="absolute inset-0" />
             <canvas
               ref={liveRef}
-              className="absolute inset-0 select-none touch-none"
+              className="absolute inset-0 select-none"
               onPointerDown={handleDown}
               onPointerMove={handleMove}
               onPointerUp={finishStroke}
