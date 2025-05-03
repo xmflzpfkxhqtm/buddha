@@ -5,7 +5,7 @@ import path from 'path';
 
 export async function GET() {
   try {
-    const dirPath = path.join(process.cwd(), 'data');
+    const dirPath = path.join(process.cwd(), 'data', 'scripture');
     const files = await readdir(dirPath);
     const titles = files
       .filter((file) => file.endsWith('.txt'))

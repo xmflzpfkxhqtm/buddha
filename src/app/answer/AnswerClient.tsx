@@ -223,7 +223,7 @@ export default function AnswerClient() {
   const seen = new Set<string>();
 
   return (
-    <main className="relative min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-white px-6 py-10">
+    <main className="relative min-h-screen w-full max-w-[460px] flex flex-col justify-start items-center mx-auto bg-white px-6 py-10">
       <div ref={answerRef} className="rounded-2xl px-2">
         <div className="w-full z-1 mt-4">
           <h2 className="text-2xl text-red font-semibold text-start">

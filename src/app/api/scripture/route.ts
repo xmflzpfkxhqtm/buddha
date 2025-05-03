@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const safeTitle = path.basename(title); // 디렉터리 탈출 방지
-    const filePath = path.join(process.cwd(), 'data', `${safeTitle}.txt`);
+    const filePath = path.join(process.cwd(), 'data', 'scripture', `${safeTitle}.txt`);
     const content = await readFile(filePath, 'utf-8');
 
     return NextResponse.json({ content });

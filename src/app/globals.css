@@ -4,6 +4,9 @@
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 @import url('https://hangeul.pstatic.net/hangeul_static/css/maru-buri.css');
 */
+@import "@fontsource/yuji-mai/400.css";   /* 기본 400 weight만 */
+
+html { font-family: "YujiMai", serif; }
 
 /* 💬 FONT FACE (woff2 직접 로딩 방식) */
 @font-face {
@@ -159,3 +162,10 @@ img, svg {
   shape-rendering: geometricPrecision;
   image-rendering: crisp-edges;
 }
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+canvas { touch-action: none; }
+

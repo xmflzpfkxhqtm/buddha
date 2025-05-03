@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Mountain, Book, MessageCircle, User as UserIcon } from 'lucide-react';
+import { Mountain, Book, MessageCircle, User as UserIcon, Brush } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 
@@ -46,6 +46,8 @@ export default function BottomNav() {
     { label: '홈', icon: Mountain, path: '/' },
     { label: '불경', icon: Book, path: '/scripture' },
     { label: '질문', icon: MessageCircle, path: '/ask' },
+    { label: '사경', icon: Brush, path: '/copy' },
+
     {
       label: user ? '내정보' : '로그인',
       icon: UserIcon,
