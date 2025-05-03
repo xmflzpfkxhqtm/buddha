@@ -17,12 +17,23 @@ export default function Home() {
   const [sentence, setSentence] = useState('');
   const [userName, setUserName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true); // 👈 최소 로딩용 상태
+  const [fontReady, setFontReady] = useState(false); // 폰트 로딩 상태
+
   function formatDisplayTitle(rawTitle: string): string {
     return rawTitle
       .replace(/_GPT\d+(\.\d+)?번역/, '') // GPT 번역 제거
       .replace(/_/g, ' ');                // _를 공백으로
   }
   
+  useEffect(() => {
+    // 폰트 로딩 감지
+    if (document.fonts) {
+      document.fonts.ready.then(() => setFontReady(true));
+    } else {
+      setFontReady(true);
+    }
+  }, []);
+
   useEffect(() => {
     const visited = sessionStorage.getItem('visited');
     const isFirstVisit = !visited;
@@ -70,20 +81,6 @@ export default function Home() {
       }
         
       const end = Date.now();
-
-       const fontReady = (async () => {
-          /* ocument.fonts.ready 로 기본 대기 */
-         await document.fonts.ready;
-                 /* 아직 쓰이지 않은 커스텀 글꼴 강제 로드(옵션) */
-         const extra = ['MaruBuri', 'Yuji Mai'].map(
-           family => document.fonts.load(`1rem "${family}"`)
-         );
-          await Promise.all(extra);
-         })();
-        
-        
-
-
       const elapsed = end - start;
       const remaining = Math.max(3000 - elapsed, 0); // ✅ 첫 방문 때만 쓰일 최소 로딩 시간
   
@@ -100,9 +97,9 @@ export default function Home() {
   }, []);
   
     
-  if (isLoading) {
+  if (isLoading || !fontReady) {
     return (
-      <div className="relative min-h-screen w-full max-w-[4600px] mx-auto bg-gradient-to-b from-red to-redbrown flex flex-col items-center justify-center px-6 overflow-hidden">
+      <div className="relative min-h-screen w-full max-w-[460px] mx-auto bg-gradient-to-b from-red to-redbrown flex flex-col items-center justify-center px-6 overflow-hidden">
         {/* 배경 이미지 (투명도 + 혼합 모드) */}
         <Image
           src="/bg_loading.png"
