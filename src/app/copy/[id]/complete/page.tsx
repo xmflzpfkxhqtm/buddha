@@ -9,24 +9,28 @@ import html2canvas from 'html2canvas';
 
 export default function CompletePage() {
   const { id } = useParams();
-  if (typeof id !== 'string') return null;
-
-  const textObj = copyTexts.find(t => t.id === id);
-  if (!textObj) return <p>잘못된 경전 ID입니다.</p>;
-
-  const lang: 'han' | 'kor' = 'han'; // 또는 'kor'
-  const chars = [...textObj[lang]]; 
   const sheetRef = useRef<HTMLDivElement>(null);
   const [pngUrl, setPngUrl] = useState<string>();
 
-  // 캡처 & PNG 만들기
+  const isIdString = typeof id === 'string';
+  const textObj = isIdString ? copyTexts.find(t => t.id === id) : null;
+
+  const lang: 'han' | 'kor' = 'han'; // 또는 'kor'
+  const chars = textObj ? [...textObj[lang]] : [];
+
   useEffect(() => {
+    if (!textObj) return;
     (async () => {
       await new Promise(r => setTimeout(r, 50));        // 레이아웃 안정화
-      const canvas = await html2canvas(sheetRef.current!);
-      setPngUrl(canvas.toDataURL('image/png'));
+      if (sheetRef.current) {
+        const canvas = await html2canvas(sheetRef.current);
+        setPngUrl(canvas.toDataURL('image/png'));
+      }
     })();
-  }, []);
+  }, [textObj]);
+
+  if (!isIdString) return null;
+  if (!textObj) return <p>잘못된 경전 ID입니다.</p>;
 
   return (
     <main className="p-6">
