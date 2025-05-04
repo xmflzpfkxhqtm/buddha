@@ -15,7 +15,7 @@ export default function CopyHome() {
     'p-3 rounded-lg border cursor-pointer transition duration-150';
 
   return (
-    <main className="min-h-screen w-full max-w-[460px] h-full p-4 space-y-4">
+    <main className="min-h-screen w-full max-w-[460px] h-full py-10 px-6 space-y-4">
       {/* --- ▼▼▼ 1. 상단 텍스트 수정 ▼▼▼ --- */}
       <div className="w-full z-1 pb-6 pt-8">
           <h2 className="text-4xl text-red font-semibold text-start">

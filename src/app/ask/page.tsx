@@ -108,7 +108,7 @@ export default function AskPage() {
 
   return (
     <>
-          <main className="relative min-h-screen w-full max-w-[430px] flex flex-col justify-start items-center mx-auto bg-white px-6 py-10">
+          <main className="relative min-h-screen w-full max-w-[460px] flex flex-col justify-start items-center bg-white px-6 py-10">
        
        
        
