@@ -6,6 +6,9 @@ import { copyTexts } from '@/data/copyTexts';
 import { getStroke } from '@/lib/copyStore';
 import { toPng } from 'html-to-image';
 import { supabase } from '@/lib/supabaseClient';   // service key 필요 X
+import { Share }     from '@capacitor/share';
+import { Capacitor } from '@capacitor/core';
+
 
 export default function CompletePage() {
   const { id } = useParams();
@@ -52,32 +55,46 @@ export default function CompletePage() {
   }, [textObj, svgs]);
 
   /* ---------- 핸들러들 ---------- */
-  const handleShare = async () => {
+/* ---------- 핸들러들 ---------- */
+const handleShare = async () => {
     if (!pngUrl) return;
-
-    // Web Share API 지원 브라우저 (모바일 등)
+  
+    /* 1️⃣ 네이티브 앱( iOS / Android ) → Capacitor Share 플러그인 */
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await Share.share({
+          title: `${textObj?.title} 사경`,
+          text : '사경한 경전을 함께 나눠요 🙏',
+          /*  🔑 url 에 data-URL 을 넘겨도 Android/iOS 기본 공유 시트에서
+              "이미지" 항목으로 인식됩니다.  */
+          url  : pngUrl,
+        });
+        return;               // 공유 완료 → 끝
+      } catch (err) {
+        /* 사용자가 취소하거나 오류 → 웹 Share 로 폴백 */
+        console.warn('Native share failed, falling back …', err);
+      }
+    }
+  
+    /* 2️⃣ PWA / 모바일 브라우저 → Web Share API */
     if (navigator.share) {
       try {
+        const blob = await (await fetch(pngUrl)).blob();
         await navigator.share({
           title: `${textObj?.title} 사경`,
           text : '사경한 경전을 함께 나눠요 🙏',
-          files: [
-            await (async () => {
-              const res   = await fetch(pngUrl);
-              const blob  = await res.blob();
-              return new File([blob], `${textObj?.title}.png`, { type: 'image/png' });
-            })(),
-          ],
+          files: [new File([blob], `${textObj?.title}.png`, { type:'image/png' })],
         });
         return;
       } catch {
         /* 사용자가 취소 */
       }
     }
-    // 지원 안되면 fallback 모달
+  
+    /* 3️⃣ 데스크톱 등 → 커스텀 모달 */
     setShowShare(true);
   };
-
+  
   const downloadPng = () => {
     if (!pngUrl) return;
     const a = document.createElement('a');
