@@ -8,6 +8,7 @@ import { toPng } from 'html-to-image';
 import { supabase } from '@/lib/supabaseClient';   // service key 필요 X
 import { Share }     from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
 
 
 export default function CompletePage() {
@@ -55,21 +56,25 @@ export default function CompletePage() {
   }, [textObj, svgs]);
 
   /* ---------- 핸들러들 ---------- */
-/* ---------- 핸들러들 ---------- */
-const handleShare = async () => {
+  const handleShare = async () => {
     if (!pngUrl) return;
   
     /* 1️⃣ 네이티브 앱( iOS / Android ) → Capacitor Share 플러그인 */
     if (Capacitor.isNativePlatform()) {
       try {
+        const b64 = pngUrl.split(',')[1];
+        const name = `buddha_${Date.now()}.png`;
+        const { uri } = await Filesystem.writeFile({
+          path: name,
+          data: b64,
+          directory: Directory.Cache,
+        });
         await Share.share({
           title: `${textObj?.title} 사경`,
-          text : '사경한 경전을 함께 나눠요 🙏',
-          /*  🔑 url 에 data-URL 을 넘겨도 Android/iOS 기본 공유 시트에서
-              "이미지" 항목으로 인식됩니다.  */
-          url  : pngUrl,
+          text: '사경한 경전을 함께 나눠요 🙏',
+          files: [uri],
         });
-        return;               // 공유 완료 → 끝
+        return;
       } catch (err) {
         /* 사용자가 취소하거나 오류 → 웹 Share 로 폴백 */
         console.warn('Native share failed, falling back …', err);
@@ -82,8 +87,8 @@ const handleShare = async () => {
         const blob = await (await fetch(pngUrl)).blob();
         await navigator.share({
           title: `${textObj?.title} 사경`,
-          text : '사경한 경전을 함께 나눠요 🙏',
-          files: [new File([blob], `${textObj?.title}.png`, { type:'image/png' })],
+          text: '사경한 경전을 함께 나눠요 🙏',
+          files: [new File([blob], `${textObj?.title}.png`, { type: 'image/png' })],
         });
         return;
       } catch {
@@ -95,12 +100,21 @@ const handleShare = async () => {
     setShowShare(true);
   };
   
-  const downloadPng = () => {
+  const saveToGallery = async () => {
     if (!pngUrl) return;
-    const a = document.createElement('a');
-    a.href = pngUrl;
-    a.download = `${textObj?.title}-사경.png`;
-    a.click();
+    try {
+      const b64 = pngUrl.split(',')[1];
+      const fileName = `buddha_${Date.now()}.png`;
+      const { uri } = await Filesystem.writeFile({
+        directory: Directory.ExternalStorage,
+        path: `Pictures/${fileName}`,
+        data: b64,
+      });
+      alert('✅ 갤러리에 저장되었습니다!');
+    } catch (err) {
+      console.error(err);
+      alert('저장 실패: ' + (err as Error).message);
+    }
   };
 
   async function saveToNotebook() {
@@ -189,20 +203,30 @@ const handleShare = async () => {
       </div>
 
       {/* 하단 버튼 */}
-      <div className="flex gap-4 mt-8">
+      <div className="flex flex-col space-y-4 mt-8">
+        <div className="flex space-x-4">
+          <button
+            onClick={handleShare}
+            disabled={!pngUrl}
+            className="w-full py-3 bg-white text-red-dark border border-red font-bold rounded-4xl hover:bg-red hover:text-white transition disabled:opacity-40"
+          >
+            이미지로 공유하기
+          </button>
+          <button
+            onClick={saveToGallery}
+            disabled={!pngUrl}
+            className="w-full py-3 bg-white text-red-dark border border-red font-bold rounded-4xl hover:bg-red hover:text-white transition disabled:opacity-40"
+          >
+            갤러리에 저장하기
+          </button>
+        </div>
+
         <button
-          onClick={handleShare}
+          onClick={saveToNotebook}
           disabled={!pngUrl}
-          className="flex-1 py-2 rounded-xl font-bold text-white bg-red-light disabled:opacity-40"
+          className="w-full py-3 bg-red-light text-white font-bold rounded-4xl hover:bg-red transition disabled:opacity-40"
         >
-          공유하기
-        </button>
-        <button
-          onClick={() => setShowSave(true)}          /* ★ */
-          disabled={!pngUrl}
-          className="flex-1 py-2 rounded-xl font-bold text-red-dark border border-red-light bg-white disabled:opacity-40"
-        >
-          저장하기
+          나의 사경노트에 저장
         </button>
       </div>
 
@@ -247,19 +271,10 @@ const handleShare = async () => {
           <h2 className="font-bold mb-4">저장하기</h2>
           <button
             onClick={() => {
-              downloadPng();
-              setShowSave(false);
-            }}
-            className="w-full py-2 rounded bg-green-600 text-white mb-3"
-          >
-            앨범에 저장
-          </button>
-          <button
-            onClick={() => {
               saveToNotebook();
               setShowSave(false);
             }}
-            className="w-full py-2 rounded bg-yellow-300 text-black"
+            className="w-full py-2 rounded bg-green-600 text-white mb-3"
           >
             나의 사경노트에 저장
           </button>

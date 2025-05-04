@@ -174,7 +174,7 @@ export default function AnswerClient() {
     const dataUrl = await toPng(answerRef.current, {
       quality: 1,
       pixelRatio: 2,
-      backgroundColor: '#fff',
+      backgroundColor: '#f8f5ee',
       style: { padding: '32px', borderRadius: '1rem', boxSizing: 'border-box' },
     });
 
