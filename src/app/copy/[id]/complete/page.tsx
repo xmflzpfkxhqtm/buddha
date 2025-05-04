@@ -291,7 +291,7 @@ export default function CompletePage() {
 
 // 한글 시트: 7x10 가로
 function KoreanSheet({ chars, svgs }: { chars: string[]; svgs: (string | null)[] }) {
-  const rows = Array.from({ length: 10 }, (_, rowIdx) =>
+  const rows = Array.from({ length: 6 }, (_, rowIdx) =>
     chars.slice(rowIdx * 7, (rowIdx + 1) * 7)
   );
   return (
@@ -318,15 +318,15 @@ function KoreanSheet({ chars, svgs }: { chars: string[]; svgs: (string | null)[]
 // 한자 시트: 6x7 세로, 오른쪽부터 왼쪽
 function HanjaSheet({ chars, svgs }: { chars: string[]; svgs: (string | null)[] }) {
   // 6열, 각 열에 7글자씩, 오른쪽부터 왼쪽으로
-  const cols = Array.from({ length: 6 }, (_, colIdx) =>
-    chars.slice(colIdx * 7, (colIdx + 1) * 7)
+  const cols = Array.from({ length: 8 }, (_, colIdx) =>
+    chars.slice(colIdx * 5, (colIdx + 1) * 5)
   );
   return (
     <div className="flex flex-row-reverse gap-1 justify-start w-full">
       {cols.map((col, colIdx) => (
         <div key={colIdx} className="flex flex-col gap-0">
           {col.map((c, rowIdx) => {
-            const idx = colIdx * 7 + rowIdx;
+            const idx = colIdx * 5 + rowIdx;
             return (
               <div key={rowIdx} className="w-[50px] h-[50px] border border-red-light relative flex items-center justify-center rounded">
                 <span className="absolute inset-0 flex items-center justify-center opacity-10 select-none text-2xl font-['Yuji_Mai'] text-red-dark">{c}</span>
