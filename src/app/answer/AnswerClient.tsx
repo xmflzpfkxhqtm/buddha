@@ -8,6 +8,9 @@ import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 import { useAskStore } from '@/stores/askStore';
 import { useBookmarkStore } from '@/stores/useBookmarkStore';
+import { toPng } from 'html-to-image';
+import { Share } from '@capacitor/share';
+import { Capacitor } from '@capacitor/core';
 
 function levenshtein(a: string, b: string): number {
   const dp = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
@@ -167,26 +170,54 @@ export default function AnswerClient() {
     return `『${display}』`;
   });
   
-  const handleShare = async () => {
-    const baseUrl = window.location.origin;
-    const url = questionId ? `${baseUrl}/answer?questionId=${questionId}` : window.location.href;
-  
+  const handleShareImage = async () => {
+    if (!answerRef.current) return;
+    // 1. 이미지 생성
+    const dataUrl = await toPng(answerRef.current, {
+      quality: 1.0,
+      pixelRatio: 2,
+      backgroundColor: '#fff',
+      style: {
+        padding: '32px',
+        boxSizing: 'border-box',
+        borderRadius: '1rem',
+      },
+    });
+
+    // 2. 네이티브 앱
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await Share.share({
+          title: '마음속 부처님과 나눈 이야기',
+          text: '내 질문에 돌아온 부처님의 가르침입니다. 오늘 마음에 닿은 말씀을 함께 나눕니다.',
+          url: dataUrl,
+        });
+        return;
+      } catch (err) {
+        console.warn('Native share failed, falling back …', err);
+      }
+    }
+
+    // 3. Web Share API
     if (navigator.share) {
       try {
+        const blob = await (await fetch(dataUrl)).blob();
         await navigator.share({
           title: '마음속 부처님과 나눈 이야기',
           text: '내 질문에 돌아온 부처님의 가르침입니다. 오늘 마음에 닿은 말씀을 함께 나눕니다.',
-          url,
+          files: [new File([blob], 'buddha-answer.png', { type: 'image/png' })],
         });
+        return;
       } catch {}
-    } else {
-      try {
-        await navigator.clipboard.writeText(url); // ✅ 이 url이 명확해야 함
-        setShowCopiedModal(true);
-        setTimeout(() => setShowCopiedModal(false), 2000);
-      } catch {
-        alert('클립보드 복사에 실패했습니다.');
-      }
+    }
+
+    // 4. 데스크탑 등: 클립보드 복사
+    try {
+      await navigator.clipboard.writeText(dataUrl);
+      setShowCopiedModal(true);
+      setTimeout(() => setShowCopiedModal(false), 2000);
+    } catch {
+      alert('이미지 URL 복사에 실패했습니다.');
     }
   };
   
@@ -288,10 +319,10 @@ export default function AnswerClient() {
         <div className="w-full flex flex-col space-y-4 mt-12 px-2 mb-12">
           <div className="flex flex-row space-x-4">
             <button
-              onClick={handleShare}
+              onClick={handleShareImage}
               className="w-full py-3 bg-white text-red-dark border border-red font-bold rounded-4xl hover:bg-red transition hover:text-white"
             >
-              공유하기
+              이미지로 공유하기
             </button>
             <button
               onClick={handleSaveToSupabase}
