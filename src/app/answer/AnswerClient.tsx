@@ -125,10 +125,18 @@ const saveToPicturesDir = async (dataUrl: string) => {
 
 // -- iOS : Media 플러그인 ----------------------------------------------------
 const saveWithMedia = async (dataUrl: string) => {
-  /* Media v8 이상: savePhoto 호출 시 권한 자동 요청됨 */
+  // 1) base64 → 임시 파일 작성(메모리 절약용)
+  const fileName = `buddha_${Date.now()}.png`;
+  const { uri } = await Filesystem.writeFile({
+    directory: Directory.Cache,
+    path     : fileName,
+    data     : dataUrl.split(',')[1],   // base64 부분만
+  });
+
+  // 2) 카메라 롤(Recents)로 저장 → albumIdentifier 생략!
   await Media.savePhoto({
-    path: dataUrl,            // data:image/png;base64,....
-    albumIdentifier: 'Buddha' // 앨범 없으면 생성
+    path    : uri,          // file://… URI
+    fileName,               // 옵션·생략 가능
   });
 };
 
