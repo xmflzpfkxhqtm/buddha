@@ -12,7 +12,8 @@ interface CopyNote {
   created_at: string;
 }
 
-const ITEMS_PER_PAGE = 6;
+// 페이지당 아이템 수를 5개로 변경 (1x5 그리드를 반영)
+const ITEMS_PER_PAGE = 5;
 
 export default function MyCopyNotesPage() {
   const [notes, setNotes] = useState<CopyNote[]>([]);
@@ -60,19 +61,25 @@ export default function MyCopyNotesPage() {
 
   /* ---------- 렌더 ---------- */
   return (
-    <main className="min-h-screen max-w-[430px] mx-auto bg-white px-4 py-10">
+    <main className="min-h-screen max-w-[460px] mx-auto bg-white px-4 py-10">
       <h1 className="text-xl font-bold text-red-dark mb-4">🖼 나의 사경노트</h1>
 
       {notes.length === 0 ? (
         <p className="text-sm text-gray-500">아직 저장된 사경노트가 없습니다.</p>
       ) : (
         <>
-          <ul className="grid grid-cols-2 gap-4 mb-6">
+          {/* --- ▼▼▼ 여기를 수정 ▼▼▼ --- */}
+          {/* grid-cols-2 를 grid-cols-1 로 변경하여 1열로 만듭니다. */}
+          <ul className="grid grid-cols-1 gap-4 mb-6">
+          {/* --- ▲▲▲ 여기까지 수정 ▲▲▲ --- */}
             {paginated.map((n) => (
               <li
                 key={n.id}
                 onClick={() => setSelected(n)}
-                className="relative h-[300px] rounded-xl shadow border bg-white overflow-hidden cursor-pointer flex flex-col"
+                // 한 줄에 하나씩 표시되므로 높이를 조절하거나 제거할 수 있습니다 (선택 사항)
+                // 예: className="relative h-[200px] rounded-xl shadow border bg-white overflow-hidden cursor-pointer flex flex-col"
+                // 또는 높이 제거: className="relative rounded-xl shadow border bg-white overflow-hidden cursor-pointer flex flex-col"
+                className="relative h-[300px] rounded-xl shadow border bg-white overflow-hidden cursor-pointer flex flex-col" // 기존 높이 유지
               >
                 {/* 상단 바: 제목 + 삭제 */}
                 <div className="flex justify-between items-center px-3 py-2 text-sm text-red-dark font-semibold">
@@ -98,7 +105,7 @@ export default function MyCopyNotesPage() {
                     />
                   ) : (
                     <div className="flex items-center justify-center w-full h-full bg-white text-gray-500">
-                      NO&nbsp;IMAGE
+                      NO IMAGE
                     </div>
                   )}
                 </div>

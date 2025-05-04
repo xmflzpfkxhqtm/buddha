@@ -188,8 +188,11 @@ export default function CompletePage() {
   if (isLoading)   return <p className="text-center py-12">시트 불러오는 중…</p>;
 
   return (
-    <main className="p-4 max-w-[460px] mx-auto">
-      <h1 className="font-bold mb-4 text-xl">완성본</h1>
+    <main className="p-4 max-w-[460px] my-4 mx-auto">
+      <h1 className="font-bold text-red mb-4 text-2xl">
+        {textObj?.title} ({lang === 'han' ? '한문' : '한글'})
+      </h1>
+      <p className="mb-4 text-start text-red-dark text-sm">오늘도 마음에 새긴 한 글자,<br /> 나를 위한 작은 수행입니다.</p>
 
       {/* 시트 */}
       <div
@@ -292,7 +295,7 @@ function KoreanSheet({ chars, svgs }: { chars: string[]; svgs: (string | null)[]
     chars.slice(rowIdx * 7, (rowIdx + 1) * 7)
   );
   return (
-    <div className="flex flex-col gap-0">
+    <div className="flex flex-col gap-0 justify-start w-full">
       {rows.map((row, rowIdx) => (
         <div key={rowIdx} className="flex flex-row gap-0">
           {row.map((c, colIdx) => {
@@ -319,7 +322,7 @@ function HanjaSheet({ chars, svgs }: { chars: string[]; svgs: (string | null)[] 
     chars.slice(colIdx * 7, (colIdx + 1) * 7)
   );
   return (
-    <div className="flex flex-row-reverse gap-1">
+    <div className="flex flex-row-reverse gap-1 justify-start w-full">
       {cols.map((col, colIdx) => (
         <div key={colIdx} className="flex flex-col gap-0">
           {col.map((c, rowIdx) => {

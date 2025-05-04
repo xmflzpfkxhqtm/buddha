@@ -16,16 +16,18 @@ export default function CopyHome() {
 
   return (
     <main className="min-h-screen w-full max-w-[460px] h-full p-4 space-y-4">
-      {/* 언어 선택 버튼 */}
-  
-      <div className="w-full z-1 pt-8">
+      {/* --- ▼▼▼ 1. 상단 텍스트 수정 ▼▼▼ --- */}
+      <div className="w-full z-1 pb-6 pt-8">
           <h2 className="text-4xl text-red font-semibold text-start">
-            대신귀여운사경<br />을 드리겠습니다
+            법문을 <br />마음에 새겨보세요
           </h2>
           <p className="text-base text-red font-medium text-start mt-2">
-            사경을 해보세요<br />사경을 하게됩니다.
+            고요히 말씀을 손으로 좇아보는 시간
           </p>
-        </div>
+      </div>
+      {/* --- ▲▲▲ 1. 상단 텍스트 수정 ▲▲▲ --- */}
+
+      {/* 언어 선택 버튼 */}
       <div className="w-full flex gap-3">
         {[
           { id: 'kor', label: '한글' },
@@ -37,14 +39,15 @@ export default function CopyHome() {
             className={
               btnBase +
               (lang === b.id
-                ? ' border-red bg-red-light text-white'
-                : ' border-red bg-white text-black')
+                ? ' border-red bg-red-light text-white' // 활성 상태
+                : ' border-red bg-white text-black') // 비활성 상태
             }
           >
             {b.label}
           </button>
         ))}
       </div>
+
       <h1 className="text-xl text-red-dark font-bold">사경할 경전 선택</h1>
 
       <ul className="space-y-3">
@@ -53,13 +56,26 @@ export default function CopyHome() {
             {/* ✅ 클릭 가능 영역  ─ lang 쿼리 파라미터 전달 */}
             <Link
               href={`/copy/${t.id}?lang=${lang}`} // 예) /copy/heart?lang=kor
-              className="block border border-red-light bg-red-light text-beige p-4 rounded-xl hover:bg-white hover:border hover:border-red-light hover:text-red-dark"
+              className="block border border-red-light bg-red-light text-beige p-4 rounded-xl hover:bg-white hover:border hover:border-red-light hover:text-red-dark transition-colors" // transition 추가
             >
               {t.title}
             </Link>
           </li>
         ))}
       </ul>
+
+      {/* --- ▼▼▼ 2. 사용법/주의사항 텍스트 공간 추가 ▼▼▼ --- */}
+      <div className="text-base text-red mt-8 pt-4 border-t border-gray-200">
+        <p className="leading-relaxed">
+          마음에 드는 경전을 골라 붓을 들어보세요.<br />
+          한 획 한 획에 집중하다 보면 어느새 마음이 차분해질 거예요.<br />
+          천천히, 정성껏 나만의 사경을 완성해보세요.<br />
+          엄지를 사용하면 관절에 무리가 갈 수 있어요.<br />
+          엄지보다는 검지나 중지로 쓰는 것을 권장합니다.
+        </p>
+        {/* 필요하다면 여기에 추가적인 안내 문구를 넣을 수 있습니다. */}
+      </div>
+      {/* --- ▲▲▲ 2. 사용법/주의사항 텍스트 공간 추가 ▲▲▲ --- */}
     </main>
   );
 }
