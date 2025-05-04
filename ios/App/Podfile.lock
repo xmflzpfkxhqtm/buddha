@@ -10,6 +10,8 @@ PODS:
   - CapacitorCommunityTextToSpeech (6.0.0):
     - Capacitor
   - CapacitorCordova (7.2.0)
+  - CapacitorFilesystem (7.0.1):
+    - Capacitor
   - CapacitorHaptics (7.0.1):
     - Capacitor
   - CapacitorMusicControlsPlugin (6.1.0):
@@ -26,6 +28,7 @@ DEPENDENCIES:
   - "CapacitorCommunityKeepAwake (from `../../node_modules/@capacitor-community/keep-awake`)"
   - "CapacitorCommunityTextToSpeech (from `../../node_modules/@capacitor-community/text-to-speech`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorFilesystem (from `../../node_modules/@capacitor/filesystem`)"
   - "CapacitorHaptics (from `../../node_modules/@capacitor/haptics`)"
   - CapacitorMusicControlsPlugin (from `../../node_modules/capacitor-music-controls-plugin`)
   - "CapacitorShare (from `../../node_modules/@capacitor/share`)"
@@ -44,6 +47,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor-community/text-to-speech"
   CapacitorCordova:
     :path: "../../node_modules/@capacitor/ios"
+  CapacitorFilesystem:
+    :path: "../../node_modules/@capacitor/filesystem"
   CapacitorHaptics:
     :path: "../../node_modules/@capacitor/haptics"
   CapacitorMusicControlsPlugin:
@@ -60,11 +65,12 @@ SPEC CHECKSUMS:
   CapacitorCommunityKeepAwake: ae762ce29b53147d28cfcaae5273cd1db0c38fc4
   CapacitorCommunityTextToSpeech: 4e82235c0e184d2edbd1b2d81ef22af531bda13e
   CapacitorCordova: 5967b9ba03915ef1d585469d6e31f31dc49be96f
+  CapacitorFilesystem: e6261c410436f54908c11f94336c5b58286b1db0
   CapacitorHaptics: 1f1e17041f435d8ead9ff2a34edd592c6aa6a8d6
   CapacitorMusicControlsPlugin: 32f1a75c5ced2cc3e7a42f6586758626342754d5
   CapacitorShare: e573823f511f260f598d0423c33b1e3d7bbe5fd1
   CapacitorStatusBar: 6e7af040d8fc4dd655999819625cae9c2d74c36f
 
-PODFILE CHECKSUM: 96ffd2caf5a4e92c99e6354b8713cbb53ac4dbd1
+PODFILE CHECKSUM: eb3c85a542b117f2b2f719e34e5c7af3bfa7c5c1
 
 COCOAPODS: 1.16.2

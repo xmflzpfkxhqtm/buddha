@@ -12,7 +12,9 @@ import { toPng } from 'html-to-image';
 
 import { Capacitor } from '@capacitor/core';
 import { Share } from '@capacitor/share';
-import { Filesystem, Directory } from '@capacitor/filesystem';
+import {
+  Filesystem,
+  Directory, } from '@capacitor/filesystem';
 
 /* -------------------------------------------------------------------------- */
 /* UTILS                                                                      */
@@ -84,21 +86,47 @@ function filterKnownScriptures(answer: string, known: string[]): ScriptureMatch[
   });
 }
 
-function fmtTitle(raw: string, volume?: number) {
+const fmtTitle = (raw: string, volume?: number) => {
   const base = raw.replace(/_GPT\d+(\.\d+)?번역/, '').replace(/_\d+권/, '').replace(/_/g, ' ');
   return volume ? `${base} ${volume}권` : base;
-}
+};
+
+/* -------------------------------------------------------------------------- */
+/* 파일 시스템 helper (① ~ ③)                                               */
+/* -------------------------------------------------------------------------- */
+const ensurePublicWrite = async () => {
+  const { publicStorage } = await Filesystem.checkPermissions();
+  if (publicStorage !== 'granted') {
+    const res = await Filesystem.requestPermissions();
+    if (res.publicStorage !== 'granted') {
+      throw new Error('저장 권한 거부됨');
+    }
+  }
+};
+
+const savePngToGallery = async (dataUrl: string) => {
+  await ensurePublicWrite(); // ① 권한
+
+  const b64 = dataUrl.split(',')[1];
+  const fileName = `buddha_${Date.now()}.png`;
+
+  const { uri } = await Filesystem.writeFile({
+    directory: Directory.ExternalStorage,          // ② Pictures/…
+    path: `Pictures/${fileName}`,
+    data: b64,
+  });
+
+  return uri;
+};
 
 /* -------------------------------------------------------------------------- */
 /* COMPONENT                                                                  */
 /* -------------------------------------------------------------------------- */
 export default function AnswerClient() {
-  /* router & params */
   const router = useRouter();
   const params = useSearchParams();
   const questionId = params.get('questionId');
 
-  /* state */
   const [question, setQuestion] = useState('');
   const [fullAnswer, setFullAnswer] = useState('');
   const [scriptureTitles, setScriptureTitles] = useState<string[]>([]);
@@ -107,16 +135,12 @@ export default function AnswerClient() {
   const [saved, setSaved] = useState(false);
   const [showCopied, setShowCopied] = useState(false);
 
-  /* stores */
   const { setParentId } = useAskStore();
   const { setBookmark } = useBookmarkStore();
 
-  /* refs */
   const answerRef = useRef<HTMLDivElement>(null);
 
-  /* ---------------------------------------------------------------------- */
-  /* DATA FETCH                                                             */
-  /* ---------------------------------------------------------------------- */
+  /* 데이터 로드 */
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
   }, []);
@@ -124,43 +148,29 @@ export default function AnswerClient() {
   useEffect(() => {
     if (!questionId) return;
 
-    (async () => {
-      const { data, error } = await supabase
-        .from('temp_answers')
-        .select('question, answer')
-        .eq('id', questionId)
-        .single();
-
-      if (error || !data) {
-        setFullAnswer('부처님과의 연결이 원활하지 않습니다. 다시 시도해 주세요.');
+    supabase
+      .from('temp_answers')
+      .select('question, answer')
+      .eq('id', questionId)
+      .single()
+      .then(({ data, error }) => {
+        if (error || !data) {
+          setFullAnswer('부처님과의 연결이 원활하지 않습니다. 다시 시도해 주세요.');
+        } else {
+          setQuestion(data.question);
+          setFullAnswer(data.answer);
+        }
         setDone(true);
-        return;
-      }
-      setQuestion(data.question);
-      setFullAnswer(data.answer);
-      setDone(true);
-    })();
+      });
 
     fetch('/api/scripture/list')
       .then((r) => r.json())
-      .then((j) => setScriptureTitles(j.titles || []))
-      .catch((e) => console.error('경전 리스트 실패', e));
+      .then((j) => setScriptureTitles(j.titles || []));
   }, [questionId]);
 
-  /* ---------------------------------------------------------------------- */
-  /* SHARE / SAVE HELPERS                                                   */
-  /* ---------------------------------------------------------------------- */
-  const saveBase64ToFile = async (dataUrl: string, dir: Directory) => {
-    const b64 = dataUrl.split(',')[1];
-    const name = `buddha_${Date.now()}.png`;
-    await Filesystem.writeFile({ path: name, data: b64, directory: dir });
-    const { uri } = await Filesystem.getUri({ path: name, directory: dir });
-    return uri;
-  };
-
+  /* 공유 */
   const shareImage = async () => {
     if (!answerRef.current) return;
-
     const dataUrl = await toPng(answerRef.current, {
       quality: 1,
       pixelRatio: 2,
@@ -168,77 +178,71 @@ export default function AnswerClient() {
       style: { padding: '32px', borderRadius: '1rem', boxSizing: 'border-box' },
     });
 
-    /* native */
     if (Capacitor.isNativePlatform()) {
-      try {
-        const uri = await saveBase64ToFile(dataUrl, Directory.Cache);
-        await Share.share({
-          title: '마음속 부처님과 나눈 이야기',
-          text: '오늘 마음에 닿은 말씀을 함께 나눕니다.',
-          files: [uri],
-          dialogTitle: '공유하기',
-        });
-        return;
-      } catch (err) {
-        console.warn('native share 실패, fallback', err);
-      }
+      // native → 캐시에 저장 후 Share
+      const b64 = dataUrl.split(',')[1];
+      const name = `buddha_${Date.now()}.png`;
+      const { uri } = await Filesystem.writeFile({
+        path: name,
+        data: b64,
+        directory: Directory.Cache,
+      });
+      await Share.share({
+        title: '마음속 부처님과 나눈 이야기',
+        text: '오늘 마음에 닿은 말씀을 함께 나눕니다.',
+        files: [uri],
+      });
+      return;
     }
 
-    /* web share */
+    /* Web share → blob */
     if (navigator.share) {
-      try {
-        const blob = await (await fetch(dataUrl)).blob();
-        await navigator.share({
-          title: '마음속 부처님과 나눈 이야기',
-          text: '오늘 마음에 닿은 말씀을 함께 나눕니다.',
-          files: [new File([blob], 'buddha.png', { type: 'image/png' })],
-        });
-        return;
-      } catch {}
+      const blob = await (await fetch(dataUrl)).blob();
+      await navigator.share({
+        title: '마음속 부처님과 나눈 이야기',
+        text: '오늘 마음에 닿은 말씀을 함께 나눕니다.',
+        files: [new File([blob], 'buddha.png', { type: 'image/png' })],
+      });
+      return;
     }
 
-    /* fallback: copy url */
-    try {
-      await navigator.clipboard.writeText(dataUrl);
-      setShowCopied(true);
-      setTimeout(() => setShowCopied(false), 2000);
-    } catch {
-      alert('URL 복사 실패');
-    }
+    /* Fallback 복사 */
+    await navigator.clipboard.writeText(dataUrl);
+    setShowCopied(true);
+    setTimeout(() => setShowCopied(false), 2000);
   };
 
+  /* 갤러리 저장 */
   const saveToGallery = async () => {
     if (!answerRef.current) return;
     try {
       const dataUrl = await toPng(answerRef.current, { quality: 1, pixelRatio: 2 });
-      await saveBase64ToFile(dataUrl, Directory.ExternalStorage); // Android Pictures/
-      alert('✅ 갤러리에 저장되었습니다.');
-    } catch (e) {
-      console.error(e);
-      alert('저장 실패');
+      await savePngToGallery(dataUrl);
+      alert('✅ 갤러리에 저장되었습니다!');
+    } catch (err) {
+      console.error(err);
+      alert('저장 실패: ' + (err as Error).message);
     }
   };
 
+  /* Supabase 보관 */
   const saveAnswerRecord = async () => {
     if (!user) return alert('로그인이 필요합니다!');
-    if (!questionId) return alert('질문 ID가 없습니다.');
+    if (!questionId) return;
 
     const { error } = await supabase
       .from('temp_answers')
       .update({ is_saved: true, saved_at: new Date().toISOString(), user_id: user.id })
       .eq('id', questionId);
 
-    if (error) {
-      alert('저장 실패! 다시 시도해주세요.');
-    } else {
+    if (error) alert('저장 실패! 다시 시도해주세요.');
+    else {
       setSaved(true);
       alert('✅ 보관되었습니다.');
     }
   };
 
-  /* ---------------------------------------------------------------------- */
-  /* RENDER                                                                 */
-  /* ---------------------------------------------------------------------- */
+  /* 렌더 */
   const formatted = fullAnswer.replace(/『(.+?)』/g, (_, p1) => {
     const raw = scriptureTitles.find((t) => t.startsWith(p1)) || p1;
     return `『${fmtTitle(raw)}』`;
@@ -254,6 +258,7 @@ export default function AnswerClient() {
         <h2 className="text-2xl text-red font-semibold mt-4">
           부처님이라면 분명<br />이렇게 말씀하셨을 것입니다
         </h2>
+
 
         {/* 답변 */}
         <section className="mt-6">
@@ -316,7 +321,7 @@ export default function AnswerClient() {
       {done && (
         <div className="w-full flex flex-col space-y-4 mt-12 mb-12 px-2">
           <div className="flex space-x-4">
-            <button
+          <button
               onClick={shareImage}
               className="w-full py-3 bg-white text-red-dark border border-red font-bold rounded-4xl hover:bg-red hover:text-white transition"
             >
@@ -329,6 +334,8 @@ export default function AnswerClient() {
               갤러리에 저장하기
             </button>
           </div>
+
+
 
           <button
             onClick={saveAnswerRecord}
