@@ -1,6 +1,6 @@
 'use client';
 
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
@@ -14,13 +14,12 @@ const CURCOL = 3;   // 중앙(4번째) 칸
 
 export default function CopySession() {
   /* ───────── 기본 변수 ───────── */
-  const { id }   = useParams();
-  const search   = useSearchParams();
-  const router   = useRouter();
+  const params = useParams();
+  const id = params.id as string;
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
 
-  const isIdString = typeof id === 'string';
-  const sessionId  = isIdString ? (id as string) : '';
-  const textObj    = isIdString ? copyTexts.find(t => t.id === sessionId) : null;
+  const textObj = copyTexts.find(t => t.id === id);
   const lang: 'han' | 'kor' = textObj?.lang ?? 'han';
   const chars = textObj ? [...textObj.text] : [];
 
@@ -37,7 +36,7 @@ export default function CopySession() {
 
   /* ───────── 최초 위치 결정 ───────── */
   useEffect(() => {
-    if (!isIdString || !textObj) return;
+    if (!id || !textObj) return;
 
     (async () => {
       let start = 0;
@@ -49,28 +48,28 @@ export default function CopySession() {
           .from('copy_notes')
           .select('progress_idx, completed')
           .eq('user_id', user.id)
-          .eq('session_id', sessionId)
+          .eq('session_id', id)
           .eq('lang', lang)
           .single();
 
         if (note) {
           if (note.completed) {
-            await clearSession(sessionId);
+            await clearSession(id);
             start = 0;
           } else {
             start = Math.min(note.progress_idx ?? 0, chars.length - 1);
           }
         } else {
-          await clearSession(sessionId);
+          await clearSession(id);
         }
       } else {
-        await clearSession(sessionId);
+        await clearSession(id);
       }
 
       await loadWindow(start);
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, isIdString, textObj, lang]);
+  }, [id, textObj, lang]);
 
   /* ───────── 7칸 윈도 로드 ───────── */
   const loadWindow = async (start: number) => {
@@ -86,19 +85,19 @@ export default function CopySession() {
     for (let col = 0; col < WINDOW; col++) {
       const gi = i - CURCOL + col;
       g.push(gi >= 0 && gi < chars.length ? chars[gi] : '');
-      p.push(gi >= 0 && gi < i ? (await getStroke(sessionId, gi)) ?? null : null);
+      p.push(gi >= 0 && gi < i ? (await getStroke(id, gi)) ?? null : null);
     }
 
     setGuide(g);
     setPrevSvgs(p);
-    setCurrentSvg((await getStroke(sessionId, i)) ?? null);
+    setCurrentSvg((await getStroke(id, i)) ?? null);
     setIdx(i);
   };
 
   /* ───────── 콜백들 ───────── */
   const handleDone = async (svg: string) => {
     if (!textObj) return;
-    await saveStroke(sessionId, idx, svg);
+    await saveStroke(id, idx, svg);
     setCurrentSvg(svg);
 
     setPrevSvgs(prev => { const cp=[...prev]; cp[CURCOL]=svg; return cp; });
@@ -109,14 +108,14 @@ export default function CopySession() {
 
   const handleClear = async () => {
     if (!textObj) return;
-    await deleteStroke(sessionId, idx);
+    await deleteStroke(id, idx);
     setCurrentSvg(null);
     setPrevSvgs(prev => { const cp=[...prev]; cp[CURCOL]=null; return cp; });
   };
 
   const handleMidSave = async () => {
     if (!textObj) return;
-    if (currentSvg) await saveStroke(sessionId, idx, currentSvg);
+    if (currentSvg) await saveStroke(id, idx, currentSvg);
 
     const { data:{ user } } = await supabase.auth.getUser();
     if (!user) { alert('로그인이 필요합니다.'); return; }
@@ -125,7 +124,7 @@ export default function CopySession() {
 
     const { error } = await supabase.from('copy_notes').upsert(
       {
-        user_id:user.id, session_id:sessionId, title:textObj.title,
+        user_id:user.id, session_id:id, title:textObj.title,
         progress_idx:nextIdx, completed:false, lang
       },
       { onConflict:'session_id,user_id,lang' }
@@ -137,19 +136,19 @@ export default function CopySession() {
   const handleReset = async () => {
     if (!textObj) return;
     if (confirm('모든 글자를 삭제하고 처음부터 다시 시작할까요?')) {
-      await clearSession(sessionId);
+      await clearSession(id);
       await loadWindow(0);
     }
   };
 
-  const gotoComplete = () => router.push(`/copy/${sessionId}/complete`);
+  const gotoComplete = () => router.push(`/copy/${id}/complete`);
 
   /* ───────── 파생값 ───────── */
   const isLast      = idx === chars.length - 1;
   const isFinished  = isLast && currentSvg !== null;
 
   /* ───────── 렌더 ───────── */
-  if (!isIdString) return null;
+  if (!id) return null;
   if (!textObj)    return <p>잘못된 경전 ID입니다.</p>;
 
   return (

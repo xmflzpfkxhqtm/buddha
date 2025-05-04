@@ -7,6 +7,9 @@ PODS:
     - Capacitor
   - CapacitorCommunityKeepAwake (7.0.0):
     - Capacitor
+  - CapacitorCommunityMedia (8.0.1):
+    - Capacitor
+    - SDWebImage
   - CapacitorCommunityTextToSpeech (6.0.0):
     - Capacitor
   - CapacitorCordova (7.2.0)
@@ -20,12 +23,16 @@ PODS:
     - Capacitor
   - CapacitorStatusBar (7.0.1):
     - Capacitor
+  - SDWebImage (5.21.0):
+    - SDWebImage/Core (= 5.21.0)
+  - SDWebImage/Core (5.21.0)
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorApp (from `../../node_modules/@capacitor/app`)"
   - "CapacitorBrowser (from `../../node_modules/@capacitor/browser`)"
   - "CapacitorCommunityKeepAwake (from `../../node_modules/@capacitor-community/keep-awake`)"
+  - "CapacitorCommunityMedia (from `../../node_modules/@capacitor-community/media`)"
   - "CapacitorCommunityTextToSpeech (from `../../node_modules/@capacitor-community/text-to-speech`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorFilesystem (from `../../node_modules/@capacitor/filesystem`)"
@@ -33,6 +40,10 @@ DEPENDENCIES:
   - CapacitorMusicControlsPlugin (from `../../node_modules/capacitor-music-controls-plugin`)
   - "CapacitorShare (from `../../node_modules/@capacitor/share`)"
   - "CapacitorStatusBar (from `../../node_modules/@capacitor/status-bar`)"
+
+SPEC REPOS:
+  trunk:
+    - SDWebImage
 
 EXTERNAL SOURCES:
   Capacitor:
@@ -43,6 +54,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/browser"
   CapacitorCommunityKeepAwake:
     :path: "../../node_modules/@capacitor-community/keep-awake"
+  CapacitorCommunityMedia:
+    :path: "../../node_modules/@capacitor-community/media"
   CapacitorCommunityTextToSpeech:
     :path: "../../node_modules/@capacitor-community/text-to-speech"
   CapacitorCordova:
@@ -63,6 +76,7 @@ SPEC CHECKSUMS:
   CapacitorApp: febecbb9582cb353aed037e18ec765141f880fe9
   CapacitorBrowser: 6299776d496e968505464884d565992faa20444a
   CapacitorCommunityKeepAwake: ae762ce29b53147d28cfcaae5273cd1db0c38fc4
+  CapacitorCommunityMedia: d1538b56a3303298e7cf45a18b11e624fbcbdc8e
   CapacitorCommunityTextToSpeech: 4e82235c0e184d2edbd1b2d81ef22af531bda13e
   CapacitorCordova: 5967b9ba03915ef1d585469d6e31f31dc49be96f
   CapacitorFilesystem: e6261c410436f54908c11f94336c5b58286b1db0
@@ -70,7 +84,8 @@ SPEC CHECKSUMS:
   CapacitorMusicControlsPlugin: 32f1a75c5ced2cc3e7a42f6586758626342754d5
   CapacitorShare: e573823f511f260f598d0423c33b1e3d7bbe5fd1
   CapacitorStatusBar: 6e7af040d8fc4dd655999819625cae9c2d74c36f
+  SDWebImage: f84b0feeb08d2d11e6a9b843cb06d75ebf5b8868
 
-PODFILE CHECKSUM: eb3c85a542b117f2b2f719e34e5c7af3bfa7c5c1
+PODFILE CHECKSUM: 29bfc83534950dd6d36512d7b11c6aae99cf6c43
 
 COCOAPODS: 1.16.2

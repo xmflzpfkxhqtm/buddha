@@ -9,6 +9,10 @@
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
+
+<key>NSPhotoLibraryAddUsageDescription</key>
+<string>사경 이미지를 사진 앨범에 저장하기 위해 사진 보관함 쓰기 권한이 필요합니다.</string>
+
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 interface CopyNote {
   id: string;
@@ -98,14 +99,16 @@ export default function MyCopyNotesPage() {
                 {/* 썸네일 */}
                 <div className="flex-1 flex items-center justify-center">
                   {n.thumb_url ? (
-                    <img
+                    <Image
                       src={n.thumb_url}
                       alt={n.title}
-                      className="object-cover w-full h-full rounded-b-xl"
+                      width={200}
+                      height={200}
+                      className="w-full h-auto rounded-lg"
                     />
                   ) : (
                     <div className="flex items-center justify-center w-full h-full bg-white text-gray-500">
-                      NO IMAGE
+                      NO IMAGE
                     </div>
                   )}
                 </div>
@@ -173,9 +176,11 @@ export default function MyCopyNotesPage() {
             <h2 className="text-lg font-semibold text-red mb-2">{selected.title}</h2>
 
             {selected.thumb_url ? (
-              <img
+              <Image
                 src={selected.thumb_url}
                 alt={selected.title}
+                width={200}
+                height={200}
                 className="w-full rounded mb-4"
               />
             ) : (

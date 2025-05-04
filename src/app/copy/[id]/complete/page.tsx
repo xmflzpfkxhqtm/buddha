@@ -5,7 +5,7 @@
  * ---------------------------------------------------------*/
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { toPng } from 'html-to-image';
 
@@ -55,12 +55,13 @@ const saveWithMedia = async (dataUrl: string) => {
 /*                                COMPONENT                              */
 /* ===================================================================== */
 export default function CompletePage() {
-  const { id } = useParams();
+  const router = useRouter();
+  const params = useParams();
+  const id = params.id as string;
   const sheetRef = useRef<HTMLDivElement>(null);
 
   const [pngUrl     , setPngUrl]   = useState<string>();
   const [showShare  , setShowShare] = useState(false);
-  const [showSave   , setShowSave]  = useState(false);
   const [svgs       , setSvgs]      = useState<(string | null)[]>([]);
   const [isLoading  , setIsLoading] = useState(true);
 
