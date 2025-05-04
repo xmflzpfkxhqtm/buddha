@@ -11,7 +11,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ results: [] });
   }
 
-  const dataDir = path.join(process.cwd(), 'data');
+  const dataDir = path.join(process.cwd(), 'data/scripture');
   const files = await fs.readdir(dataDir);
 
   const results: { title: string; index: number; text: string }[] = [];
