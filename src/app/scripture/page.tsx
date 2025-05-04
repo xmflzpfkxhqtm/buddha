@@ -53,7 +53,6 @@ function formatDisplayTitle(rawTitle: string): string {
 
 export default function ScripturePage() {
   // 상태 변수들 (TTS 관련 상태는 isTTSSpeaking만 유지)
-  const [isTTSSpeaking, setIsTTSSpeaking] = useState(false);
   const [displayParagraphs, setDisplayParagraphs] = useState<string[][]>([]);
   const router = useRouter();
   const [list, setList] = useState<string[]>([]);
@@ -352,7 +351,7 @@ export default function ScripturePage() {
       currentIndex: currentIndex,
       setCurrentIndex: setCurrentIndex,
       smoothCenter: smoothCenter,
-      onPlaybackStateChange: setIsTTSSpeaking,
+      onPlaybackStateChange: () => {}, // 빈 함수 추가
     };
 
     return platformInfo.isNative
@@ -435,7 +434,6 @@ export default function ScripturePage() {
           currentIndex={currentIndex}
           setCurrentIndex={setCurrentIndex}
           smoothCenter={smoothCenter}
-          onPlaybackStateChange={setIsTTSSpeaking}
         />
       )}
       */}

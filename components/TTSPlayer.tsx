@@ -113,6 +113,15 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
     smoothCenter(idx);
     setIsSpeaking(true);
 
+    const getTtsSettings = () => {
+      if (isNative) {
+        return platform === 'android'
+          ? { rate: 1.0, pitch: 0.5 }
+          : { rate: 0.8, pitch: 0.5 };
+      }
+      return { rate: 0.9, pitch: 0.5 };
+    };
+
     try {
       if (isNative) {
         const { rate, pitch } = getTtsSettings();
@@ -137,7 +146,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
       console.error('[TTS] speak error', e);
       stopSpeech(true);
     }
-  }, [isNative, setCurrentIndex, smoothCenter, stopSpeech, getTtsSettings]);
+  }, [isNative, setCurrentIndex, smoothCenter, stopSpeech]);
 
   /* --------------------------- playFrom (재귀) --------------------------- */
   const playFrom = useCallback((startIdx: number, gen: number) => {

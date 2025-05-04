@@ -5,8 +5,8 @@
  * ---------------------------------------------------------*/
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useParams } from 'next/navigation';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { toPng } from 'html-to-image';
 
 import { Capacitor }                        from '@capacitor/core';
@@ -67,7 +67,7 @@ export default function CompletePage() {
   const isIdString     = typeof id === 'string';
   const textObj        = isIdString ? copyTexts.find(t => t.id === id) : null;
   const lang: 'han' | 'kor' = textObj?.lang ?? 'han';
-  const chars          = textObj ? [...textObj.text] : [];
+  const chars = useMemo(() => textObj ? [...textObj.text] : [], [textObj]);
 
   /* ---------------------- SVG 로딩 ---------------------- */
   useEffect(() => {
