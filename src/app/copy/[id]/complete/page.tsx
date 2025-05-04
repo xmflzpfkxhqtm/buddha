@@ -55,7 +55,6 @@ const saveWithMedia = async (dataUrl: string) => {
 /*                                COMPONENT                              */
 /* ===================================================================== */
 export default function CompletePage() {
-  const router = useRouter();
   const params = useParams();
   const id = params.id as string;
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -79,7 +78,7 @@ export default function CompletePage() {
     )
       .then(setSvgs)
       .finally(() => setIsLoading(false));
-  }, [id, isIdString, textObj]);
+  }, [id, isIdString, textObj, chars]);
 
   /* ---------------------- PNG 캡처 ---------------------- */
   useEffect(() => {

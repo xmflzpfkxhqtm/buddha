@@ -90,7 +90,7 @@ export default function TracingCanvas({
     live.width = W;
     live.height = H;
     live.getContext('2d')!.clearRect(0, 0, W, H);
-  }, [char, dSmallList]);
+  }, [char, dSmallList, lang]);
 
   /* ---------------- drawing ---------------- */
   const points = useRef<Point[]>([]);

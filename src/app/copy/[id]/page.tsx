@@ -17,7 +17,6 @@ export default function CopySession() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(true);
 
   const textObj = copyTexts.find(t => t.id === id);
   const lang: 'han' | 'kor' = textObj?.lang ?? 'han';

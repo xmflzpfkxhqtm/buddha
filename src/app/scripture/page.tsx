@@ -277,30 +277,32 @@ export default function ScripturePage() {
 
   // 스크롤 위치에 따른 현재 인덱스 동기화 (원본 유지)
   useEffect(() => {
+    if (displaySentences.length === 0 || ttsSentences.length === 0) return;
     const onScroll = () => {
-      if (isTTSSpeaking) return;
-      const centerY = window.innerHeight / 2;
-      let closestIndex = -1;
-      let closestDistance = Infinity;
-      if (!sentenceRefs.current || sentenceRefs.current.length === 0) return;
-      sentenceRefs.current.forEach((el, i) => {
-        if (!el) return;
-        const rect = el.getBoundingClientRect();
-        if (rect.bottom < 0 || rect.top > window.innerHeight) return;
-        const elementCenter = rect.top + rect.height / 2;
-        const distance = Math.abs(elementCenter - centerY);
-        if (distance < closestDistance) {
-          closestIndex = i;
-          closestDistance = distance;
+      const viewportHeight = window.innerHeight;
+      const scrollTop = window.scrollY;
+      const centerY = scrollTop + viewportHeight / 2;
+
+      let closestIndex = 0;
+      let minDistance = Infinity;
+
+      sentenceRefs.current.forEach((ref, index) => {
+        if (!ref) return;
+        const rect = ref.getBoundingClientRect();
+        const elementCenterY = rect.top + rect.height / 2 + scrollTop;
+        const distance = Math.abs(elementCenterY - centerY);
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestIndex = index;
         }
       });
-      if (closestIndex !== -1 && closestIndex !== currentIndex) {
-        setCurrentIndex(closestIndex);
-      }
+
+      setCurrentIndex(closestIndex);
     };
-    window.addEventListener('scroll', onScroll, { passive: true });
+
+    window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
-  }, [currentIndex, isTTSSpeaking]); // 원본 의존성 배열 유지
+  }, [displaySentences.length, ttsSentences.length]);
 
   // 북마크 핸들러 (원본 유지)
   const handleBookmark = async () => {

@@ -64,7 +64,7 @@ export default function ScriptureModal({
     if (modalTab !== 'global' && isSearching) {
       setSearch('');
     }
-  }, [modalTab, setSearch]);
+  }, [modalTab, setSearch, isSearching]);
 
   return (
     <div onClick={onClose} className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[100] flex items-end justify-center">

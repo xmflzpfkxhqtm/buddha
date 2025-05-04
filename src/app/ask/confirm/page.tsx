@@ -50,7 +50,7 @@ export default function ConfirmPage() {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [fadeOut]);
+  }, [fadeOut, router]);
 
   const handleSubmit = async () => {
     if (!question) return;

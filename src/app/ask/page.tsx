@@ -63,7 +63,7 @@ export default function AskPage() {
     if (selectedModel !== 'gpt-4.1-mini') {
       setSelectedModel('gpt-4.1-mini');
     }
-  }, []);
+  }, [selectedModel, setSelectedModel]);
   
 
   useEffect(() => {
