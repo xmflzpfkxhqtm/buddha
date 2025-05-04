@@ -17,6 +17,8 @@ interface Props {
     canPrev?: boolean;
     canNext?: boolean;
     lang: 'kor' | 'han';          // ★ 추가
+    isLast?: boolean;      // ★ 추가
+
 
   }
   
@@ -36,6 +38,7 @@ interface Props {
     canPrev,
     canNext,
     lang,
+    isLast = false,
   }: Props) {
     /* ───── 상태: 현재 글자 누적 d(소형 좌표) */
     const [dSmallList, setDSmallList] = useState<string[]>([]);
@@ -255,8 +258,8 @@ interface Props {
               disabled={dSmallList.length === 0}
               className="px-4 py-2 font-bold border border-red bg-red-light text-white rounded-xl enabled:hover:bg-red enabled:hover:text-white disabled:opacity-40 transition"
             >
-              다음 글자
-            </button>
+   {isLast ? '완성하기' : '다음 글자'}
+</button>
           </div>
 
           {/* 다음 → */}

@@ -60,7 +60,7 @@ export default function MyCopyNotesPage() {
 
   /* ---------- 렌더 ---------- */
   return (
-    <main className="min-h-screen max-w-[430px] mx-auto bg-[#F5F1E6] px-4 py-10">
+    <main className="min-h-screen max-w-[430px] mx-auto bg-white px-4 py-10">
       <h1 className="text-xl font-bold text-red-dark mb-4">🖼 나의 사경노트</h1>
 
       {notes.length === 0 ? (
@@ -75,7 +75,7 @@ export default function MyCopyNotesPage() {
                 className="relative h-[300px] rounded-xl shadow border bg-white overflow-hidden cursor-pointer flex flex-col"
               >
                 {/* 상단 바: 제목 + 삭제 */}
-                <div className="flex justify-between items-center px-3 py-2 text-sm text-gray-700 font-semibold">
+                <div className="flex justify-between items-center px-3 py-2 text-sm text-red-dark font-semibold">
                   <span className="truncate">{n.title}</span>
                   <button
                     onClick={(e) => {
@@ -97,7 +97,7 @@ export default function MyCopyNotesPage() {
                       className="object-cover w-full h-full rounded-b-xl"
                     />
                   ) : (
-                    <div className="flex items-center justify-center w-full h-full bg-gray-200 text-gray-500">
+                    <div className="flex items-center justify-center w-full h-full bg-white text-gray-500">
                       NO&nbsp;IMAGE
                     </div>
                   )}

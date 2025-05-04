@@ -4,7 +4,7 @@ import { useParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { copyTexts } from '@/data/copyTexts';
 import { getStroke } from '@/lib/copyStore';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import { supabase } from '@/lib/supabaseClient';   // service key 필요 X
 
 export default function CompletePage() {
@@ -37,8 +37,17 @@ export default function CompletePage() {
     if (!textObj || !sheetRef.current) return;
     (async () => {
       await new Promise(r => setTimeout(r, 50));
-      const canvas = await html2canvas(sheetRef.current!);
-      setPngUrl(canvas.toDataURL('image/png'));
+      const dataUrl = await toPng(sheetRef.current!, {
+        quality: 1.0,
+        pixelRatio: 2,
+        backgroundColor: '#f8f5ee',
+        style: {
+          paddingBottom: '32px', // 2rem
+          boxSizing: 'border-box',
+          borderRadius: '1rem',
+        },
+      });
+      setPngUrl(dataUrl);
     })();
   }, [textObj, svgs]);
 
@@ -80,18 +89,21 @@ export default function CompletePage() {
   async function saveToNotebook() {
     if (!pngUrl || !textObj) return;
   
-    // 1) PNG → Blob
-    const res  = await fetch(pngUrl);
-    const blob = await res.blob();
+    /* ---------- PNG → Blob ---------- */
+    const res      = await fetch(pngUrl);
+    const blob     = await res.blob();
     const fileName = `${id}-${Date.now()}.png`;
   
-    // 2) Storage 업로드 (public.bucket: copy-thumbs)
-    const { error: uploadErr } = await supabase
+    /* ---------- Storage 업로드 ---------- */
+    const { error: upErr } = await supabase
       .storage
       .from('copy-thumbs')
-      .upload(fileName, blob, { contentType: 'image/png', upsert: true });
+      .upload(`public/${fileName}`, blob, {
+        contentType: 'image/png',
+        upsert: true,
+      });
   
-    if (uploadErr) {
+    if (upErr) {
       alert('PNG 업로드 실패 🥲');
       return;
     }
@@ -99,32 +111,46 @@ export default function CompletePage() {
     const { data: { publicUrl } } = supabase
       .storage
       .from('copy-thumbs')
-      .getPublicUrl(fileName);
+      .getPublicUrl(`public/${fileName}`);
   
-    // 3) copy_notes upsert
-    const { error: dbErr } = await supabase
+    /* ---------- 유저 확인 ---------- */
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+  
+    /* ---------- 1) 새 완성본 INSERT ---------- */
+    const { error: insertErr } = await supabase
       .from('copy_notes')
-      .upsert(
-        {
-          session_id : id,                 // copyTexts id
-          title      : textObj.title,
-          progress_idx: chars.length - 1,  // 0-base
-          completed  : true,
-          thumb_url  : publicUrl,
-          lang : lang
-        },
-        { onConflict: 'session_id,user_id' }   // 이미 있으면 update
-      );
+      .insert({
+        session_id   : id,
+        user_id      : user.id,
+        lang,
+        title        : textObj.title,
+        progress_idx : chars.length - 1,
+        completed    : true,
+        thumb_url    : publicUrl,
+      });
   
-    if (dbErr) {
-      console.error(dbErr);
+    if (insertErr) {
+      console.error(insertErr);
       alert('사경노트 저장 실패 😢');
       return;
     }
   
+    /* ---------- 2) 기존 진행중 레코드 삭제 ---------- */
+    await supabase
+      .from('copy_notes')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('session_id', id)
+      .eq('lang', lang)
+      .eq('completed', false);
+  
     alert('✅ "나의 사경노트"에 저장되었습니다!');
   }
-  
+    
   /* ---------- 렌더링 ---------- */
   if (!isIdString) return null;
   if (!textObj)    return <p>잘못된 경전 ID입니다.</p>;
@@ -135,7 +161,9 @@ export default function CompletePage() {
       <h1 className="font-bold mb-4 text-xl">완성본</h1>
 
       {/* 시트 */}
-      <div ref={sheetRef} className="flex justify-center items-center my-4">
+      <div
+        ref={sheetRef}
+        className="flex justify-center bg-white items-center my-4 py-4 overflow-visible rounded-xl">
         {lang === 'kor' ? (
           <KoreanSheet chars={chars} svgs={svgs} />
         ) : (
@@ -239,7 +267,7 @@ function KoreanSheet({ chars, svgs }: { chars: string[]; svgs: (string | null)[]
             const idx = rowIdx * 7 + colIdx;
             return (
               <div key={colIdx} className="w-[50px] h-[50px] border border-red-light relative flex items-center justify-center rounded">
-                <span className="absolute inset-0 flex items-center justify-center opacity-10 select-none text-2xl font-['MaruBuri'] text-red-dark">{c}</span>
+                <span className="absolute inset-0 flex items-center leading-none justify-center opacity-10 select-none text-2xl font-['MaruBuri'] text-red-dark">{c}</span>
                 {svgs[idx] && (
                   <svg className="absolute inset-0" viewBox="0 0 50 50" dangerouslySetInnerHTML={{ __html: svgs[idx]! }} />
                 )}

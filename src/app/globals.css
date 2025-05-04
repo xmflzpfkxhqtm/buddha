@@ -169,11 +169,3 @@ img, svg {
 
 canvas { touch-action: none; }
 
-.no-select  :not(input):not(textarea):not(select):not([contenteditable]) {
-  user-select: none !important;
-  -webkit-user-select: none !important;
-}
-.no-select {
-  touch-action: none;                         /* 모바일 스크롤·줌 방지 */
-  -webkit-tap-highlight-color: transparent;   /* iOS 파란 하이라이트 제거 */
-}
