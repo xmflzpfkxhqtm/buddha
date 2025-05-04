@@ -301,7 +301,7 @@ export default function ScripturePage() {
 
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
-  }, [displaySentences.length, ttsSentences.length]);
+  }, [displaySentences.length, ttsSentences.length, setCurrentIndex]);
 
   // 북마크 핸들러 (원본 유지)
   const handleBookmark = async () => {
@@ -362,7 +362,7 @@ export default function ScripturePage() {
 
   return (
     // JSX 구조 및 클래스명 원본 유지
-    <main className="p-4 pb-[120px] max-w-[430px] mx-auto relative">
+    <main className="p-4 pb-[120px] max-w-[460px] mx-auto relative">
       {/* 상단 UI (원본 유지) */}
       <div className="sticky top-0 z-50 bg-white h-16 py-2">
         <div className="flex items-center justify-between gap-2">

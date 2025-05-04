@@ -146,7 +146,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
       console.error('[TTS] speak error', e);
       stopSpeech(true);
     }
-  }, [isNative, setCurrentIndex, smoothCenter, stopSpeech]);
+  }, [isNative, setCurrentIndex, smoothCenter, stopSpeech, platform]);
 
   /* --------------------------- playFrom (재귀) --------------------------- */
   const playFrom = useCallback((startIdx: number, gen: number) => {
