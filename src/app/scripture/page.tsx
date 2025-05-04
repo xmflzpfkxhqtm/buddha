@@ -413,7 +413,7 @@ export default function ScripturePage() {
                   ref={(el) => { sentenceRefs.current[globalIndex] = el }}
                   className={`block px-1 rounded-lg transition-colors duration-150 ${globalIndex === currentIndex ? 'bg-amber-200' : ''} 
                   ${bookmarkedIndexes.includes(globalIndex) 
-                    ? 'underline decoration-red-500/50 decoration-4 underline-offset-4' : ''}`}
+                    ? 'underline decoration-red decoration-2 underline-offset-4' : ''}`}
                 >
                   {s}
                 </span>
