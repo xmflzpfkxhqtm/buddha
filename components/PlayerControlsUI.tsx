@@ -22,7 +22,7 @@ const PlayerControlsUI: React.FC<PlayerControlsUIProps> = ({
   isPlayPauseDisabled,
 }) => {
   return (
-    <div className="fixed bottom-[84px] left-1/2 -translate-x-1/2 flex items-center gap-4 z-50 bg-white/80 backdrop-blur-sm p-2 rounded-full shadow-lg">
+    <div className="fixed bottom-[96px] left-1/2 -translate-x-1/2 flex items-center gap-4 z-50 bg-white/80 backdrop-blur-sm p-2 rounded-full shadow-lg">
       <button
         onClick={onSkipBackward}
         disabled={isBackwardDisabled}
