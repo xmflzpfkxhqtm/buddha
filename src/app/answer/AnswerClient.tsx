@@ -251,8 +251,15 @@ export default function AnswerClient() {
                   volume
                     ? scriptureTitles.find(t => new RegExp(`^${title}[_ ]?${volume}권`).test(t))
                     : scriptureTitles.find(t => t === title) ||
-                      scriptureTitles.find(t => t.startsWith(title));
-
+                     // startsWith 된 것들 중 **권수 오름차순**으로 골라서 첫 번째
+                     scriptureTitles
+                       .filter(t => t.startsWith(title))
+                      .sort((a, b) => {
+                        const va = parseInt(a.match(/(\d+)권/)?.[1] ?? '0', 10);
+                              const vb = parseInt(b.match(/(\d+)권/)?.[1] ?? '0', 10);
+                              return va - vb;               // 1권, 2권 … 10권
+                            })[0];
+                    
                 if (!match) return null;
 
                 return (
