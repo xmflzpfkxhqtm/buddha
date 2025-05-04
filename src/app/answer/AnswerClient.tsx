@@ -1,7 +1,7 @@
 /******************************************************
  *  AnswerClient.tsx
- *  iOS:  @capacitor-community/media  (앨범 저장)
- *  Android: @capacitor/filesystem    (Pictures/ 저장)
+ *  iOS / Android: Capacitor Share 로 URL 공유
+ *  (화면 캡처·갤러리 저장 기능 제거)
  *****************************************************/
 'use client';
 
@@ -9,13 +9,10 @@ export const dynamic = 'force-dynamic';
 
 /* ----------------------------- 외부 라이브러리 ----------------------------- */
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
-import { toPng } from 'html-to-image';
+import { useEffect, useState } from 'react';
 
-import { Capacitor }               from '@capacitor/core';
-import { Share }                   from '@capacitor/share';
-import { Filesystem, Directory }   from '@capacitor/filesystem';
-import { Media }                   from '@capacitor-community/media';
+import { Capacitor } from '@capacitor/core';
+import { Share }     from '@capacitor/share';
 
 import { supabase }                from '@/lib/supabaseClient';
 import type { User }               from '@supabase/supabase-js';
@@ -102,44 +99,6 @@ const fmtTitle = (raw: string, volume?: number) =>
     .replace(/_\d+권/, '')
     .replace(/_/g, ' ') + (volume ? ` ${volume}권` : '');
 
-/* -------------------- 플랫폼별 갤러리 저장 Helper ------------------------- */
-// -- Android : Pictures/ 이하에 파일 기록 -----------------------------------
-const ensurePublicWrite = async () => {
-  const { publicStorage } = await Filesystem.checkPermissions();
-  if (publicStorage !== 'granted') {
-    const res = await Filesystem.requestPermissions();
-    if (res.publicStorage !== 'granted') throw new Error('저장 권한이 거부되었습니다');
-  }
-};
-
-const saveToPicturesDir = async (dataUrl: string) => {
-  await ensurePublicWrite();
-  const base64 = dataUrl.split(',')[1];
-  const filePath = `Pictures/buddha_${Date.now()}.png`;
-  await Filesystem.writeFile({
-    directory: Directory.ExternalStorage,
-    path     : filePath,
-    data     : base64,
-  });
-};
-
-// -- iOS : Media 플러그인 ----------------------------------------------------
-const saveWithMedia = async (dataUrl: string) => {
-  // 1) base64 → 임시 파일 작성(메모리 절약용)
-  const fileName = `buddha_${Date.now()}.png`;
-  const { uri } = await Filesystem.writeFile({
-    directory: Directory.Cache,
-    path     : fileName,
-    data     : dataUrl.split(',')[1],   // base64 부분만
-  });
-
-  // 2) 카메라 롤(Recents)로 저장 → albumIdentifier 생략!
-  await Media.savePhoto({
-    path    : uri,          // file://… URI
-    fileName,               // 옵션·생략 가능
-  });
-};
-
 /* -------------------------------------------------------------------------- */
 /*                                  COMPONENT                                 */
 /* -------------------------------------------------------------------------- */
@@ -162,8 +121,6 @@ export default function AnswerClient() {
   const [user            , setUser]           = useState<User | null>(null);
   const [saved           , setSaved]          = useState(false);
   const [showCopied      , setShowCopied]     = useState(false);
-
-  const answerRef = useRef<HTMLDivElement>(null);
 
   /* ----------------------- Supabase & 데이터 로딩 ----------------------- */
   useEffect(() => {
@@ -195,68 +152,35 @@ export default function AnswerClient() {
       .then(j => setScriptureTitles(j.titles || []));
   }, [questionId]);
 
-  /* -------------------- 이미지 공유 / 저장 ----------------------------- */
-  /** 카드 → 이미지 → Share */
-  const shareImage = async () => {
-    if (!answerRef.current) return;
+  /* -------------------------- URL 공유 ------------------------------ */
+  const shareUrl = async () => {
+    const url = typeof window !== 'undefined' ? window.location.href : '';
+    if (!url) return;
 
-    const dataUrl = await toPng(answerRef.current, {
-      pixelRatio      : 2,
-      backgroundColor : '#f8f5ee',
-      style           : { padding: '32px', borderRadius: '1rem', boxSizing: 'border-box' },
-    });
-
+    // 네이티브 (Capacitor)
     if (Capacitor.isNativePlatform()) {
-      /* 네이티브: 임시 파일 만들고 Share */
-      const name  = `buddha_${Date.now()}.png`;
-      const b64   = dataUrl.split(',')[1];
-      const { uri } = await Filesystem.writeFile({
-        directory: Directory.Cache,
-        path     : name,
-        data     : b64,
-      });
       await Share.share({
         title: '마음속 부처님과 나눈 이야기',
         text : '오늘 마음에 닿은 말씀을 함께 나눕니다.',
-        files: [uri],
+        url,
       });
       return;
     }
 
-    /* Web Share */
+    // Web Share API
     if (navigator.share) {
-      const blob = await (await fetch(dataUrl)).blob();
       await navigator.share({
         title: '마음속 부처님과 나눈 이야기',
         text : '오늘 마음에 닿은 말씀을 함께 나눕니다.',
-        files: [new File([blob], 'buddha.png', { type: 'image/png' })],
+        url,
       });
       return;
     }
 
-    /* Fallback: URL 복사 */
-    await navigator.clipboard.writeText(dataUrl);
+    // Fallback: 클립보드 복사
+    await navigator.clipboard.writeText(url);
     setShowCopied(true);
     setTimeout(() => setShowCopied(false), 2000);
-  };
-
-  /** 카드 → 이미지 → 갤러리 저장 */
-  const saveImageToGallery = async () => {
-    if (!answerRef.current) return;
-    try {
-      const dataUrl = await toPng(answerRef.current, { quality: 1, pixelRatio: 2 });
-
-      if (Capacitor.getPlatform() === 'ios') {
-        await saveWithMedia(dataUrl);
-      } else {
-        await saveToPicturesDir(dataUrl);
-      }
-
-      alert('✅ 갤러리에 저장되었습니다!');
-    } catch (e) {
-      console.error(e);
-      alert(`저장 실패: ${(e as Error).message}`);
-    }
   };
 
   /* -------------------- 답변 기록을 Supabase 에 보관 -------------------- */
@@ -288,7 +212,7 @@ export default function AnswerClient() {
   return (
     <main className="relative min-h-screen w-full max-w-[460px] flex flex-col items-center mx-auto bg-white px-6 py-10">
       {/* ======================== 카드 영역 ======================== */}
-      <div ref={answerRef} className="rounded-2xl px-2">
+      <div className="rounded-2xl px-2">
         <h2 className="text-2xl text-red font-semibold mt-4">
           부처님이라면 분명<br />이렇게 말씀하셨을 것입니다
         </h2>
@@ -352,33 +276,28 @@ export default function AnswerClient() {
       {/* ======================== 액션 버튼 ======================== */}
       {done && (
         <div className="w-full flex flex-col space-y-4 mt-12 mb-12 px-2">
+          {/* 1행: 공유하기 / 보관하기 */}
           <div className="flex space-x-4">
             <button
-              onClick={shareImage}
+              onClick={shareUrl}
               className="w-full py-3 bg-white text-red-dark border border-red font-bold rounded-4xl hover:bg-red hover:text-white transition"
             >
-              이미지로 공유하기
+              공유하기
             </button>
             <button
-              onClick={saveImageToGallery}
-              className="w-full py-3 bg-white text-red-dark border border-red font-bold rounded-4xl hover:bg-red hover:text-white transition"
+              onClick={saveAnswerRecord}
+              disabled={saved}
+              className={`w-full py-3 font-bold rounded-4xl transition ${
+                saved
+                  ? 'bg-red text-white cursor-not-allowed'
+                  : 'bg-white text-red-dark border border-red hover:bg-red hover:text-white'
+              }`}
             >
-              갤러리에 저장하기
+              {saved ? '✔︎ 보관됨' : '보관하기'}
             </button>
           </div>
 
-          <button
-            onClick={saveAnswerRecord}
-            disabled={saved}
-            className={`w-full py-3 font-bold rounded-4xl transition ${
-              saved
-                ? 'bg-red text-white cursor-not-allowed'
-                : 'bg-white text-red-dark border border-red hover:bg-red hover:text-white'
-            }`}
-          >
-            {saved ? '✔︎ 보관됨' : '보관하기'}
-          </button>
-
+          {/* 2행: 새로운 문답 */}
           <button
             onClick={() => router.push('/ask')}
             className="w-full py-3 bg-red-light text-white font-bold rounded-4xl hover:bg-red transition"
@@ -386,6 +305,7 @@ export default function AnswerClient() {
             새로운 문답을 시작합니다
           </button>
 
+          {/* 3행: 문답 이어가기 */}
           <button
             onClick={() => {
               setQuestion('');

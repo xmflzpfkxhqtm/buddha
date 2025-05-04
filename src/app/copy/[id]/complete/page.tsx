@@ -220,7 +220,7 @@ export default function CompletePage() {
   if (isLoading)   return <p className="text-center py-12">시트 불러오는 중…</p>;
 
   return (
-    <main className="p-4 max-w-[460px] my-4 mx-auto">
+    <main className="p-6 max-w-[460px] my-4">
       <h1 className="font-bold text-red mb-4 text-2xl">
         {textObj.title} ({lang === 'han' ? '한문' : '한글'})
       </h1>
@@ -316,13 +316,13 @@ export default function CompletePage() {
 function KoreanSheet({ chars, svgs }: { chars: string[]; svgs: (string | null)[] }) {
   const rows = Array.from({ length: 6 }, (_, r) => chars.slice(r * 7, (r + 1) * 7));
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col border border-red-light rounded-lg p-2">
       {rows.map((row, r) => (
         <div key={r} className="flex">
           {row.map((c, cIdx) => {
             const idx = r * 7 + cIdx;
             return (
-              <div key={cIdx} className="w-[50px] h-[50px] border border-red-light relative flex items-center justify-center rounded">
+              <div key={cIdx} className="w-[50px] h-[50px] relative flex items-center justify-center rounded">
                 <span className="absolute inset-0 flex items-center leading-none justify-center opacity-10 select-none text-2xl font-['MaruBuri'] text-red-dark">
                   {c}
                 </span>
