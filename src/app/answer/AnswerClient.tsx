@@ -1,25 +1,29 @@
+/******************************************************
+ *  AnswerClient.tsx
+ *  iOS:  @capacitor-community/media  (앨범 저장)
+ *  Android: @capacitor/filesystem    (Pictures/ 저장)
+ *****************************************************/
 'use client';
 
 export const dynamic = 'force-dynamic';
 
+/* ----------------------------- 외부 라이브러리 ----------------------------- */
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
-import type { User } from '@supabase/supabase-js';
-import { useAskStore } from '@/stores/askStore';
-import { useBookmarkStore } from '@/stores/useBookmarkStore';
 import { toPng } from 'html-to-image';
 
-import { Capacitor } from '@capacitor/core';
-import { Share } from '@capacitor/share';
-import {
-  Filesystem,
-  Directory, } from '@capacitor/filesystem';
+import { Capacitor }               from '@capacitor/core';
+import { Share }                   from '@capacitor/share';
+import { Filesystem, Directory }   from '@capacitor/filesystem';
+import { Media }                   from '@capacitor-community/media';
 
-/* -------------------------------------------------------------------------- */
-/* UTILS                                                                      */
-/* -------------------------------------------------------------------------- */
-function levenshtein(a: string, b: string): number {
+import { supabase }                from '@/lib/supabaseClient';
+import type { User }               from '@supabase/supabase-js';
+import { useAskStore }             from '@/stores/askStore';
+import { useBookmarkStore }        from '@/stores/useBookmarkStore';
+
+/* -------------------- 문자열 유사도 + 경전 제목 매칭 ----------------------- */
+function levenshtein(a: string, b: string) {
   const dp = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
   for (let j = 0; j <= b.length; j++) dp[0][j] = j;
   for (let i = 1; i <= a.length; i++) {
@@ -27,7 +31,7 @@ function levenshtein(a: string, b: string): number {
       dp[i][j] = Math.min(
         dp[i - 1][j] + 1,
         dp[i][j - 1] + 1,
-        dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+        dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1),
       );
     }
   }
@@ -36,14 +40,13 @@ function levenshtein(a: string, b: string): number {
 
 type ScriptureMatch = { title: string; volume?: number };
 
-function filterKnownScriptures(answer: string, known: string[]): ScriptureMatch[] {
-  const matches: ScriptureMatch[] = [];
-  const normTitles = known.map((t) => ({
-    raw: t,
+function filterKnownScriptures(answer: string, known: string[]) {
+  const norm = known.map(t => ({
+    raw : t,
     base: t
       .replace(/_GPT\d+(\.\d+)?번역/, '')
       .replace(/_?\d+권/, '')
-      .replace(/_/g, '')
+      .replace(/_/g , '')
       .replace(/\s/g, '')
       .normalize('NFC'),
   }));
@@ -55,28 +58,35 @@ function filterKnownScriptures(answer: string, known: string[]): ScriptureMatch[
     /『(.+?)』/g,
   ];
 
-  for (const pat of patterns) {
-    let m;
-    while ((m = pat.exec(answer)) !== null) {
-      const inQuote = m[1];
-      const vol = parseInt(m[2]);
+  const matches: ScriptureMatch[] = [];
+
+  for (const p of patterns) {
+    let m: RegExpExecArray | null;
+    // eslint-disable-next-line no-cond-assign
+    while ((m = p.exec(answer)) !== null) {
+      const [, inQuote, volStr] = m;
+      const vol = parseInt(volStr);
       const baseInQuote = inQuote.replace(/\(.*?\)/g, '').replace(/\s/g, '').normalize('NFC');
 
       let best: string | null = null;
-      let score = Infinity;
-      for (const { raw, base } of normTitles) {
+      let bestScore = Infinity;
+      for (const { raw, base } of norm) {
         const s = levenshtein(baseInQuote, base);
-        if (s < score) {
-          score = s;
-          best = raw;
+        if (s < bestScore) {
+          bestScore = s;
+          best      = raw;
         }
       }
-      if (score <= 5 && best) {
-        matches.push({ title: best.replace(/_GPT.*$/, '').replace(/_\d+권$/, ''), volume: vol });
+      if (bestScore <= 5 && best) {
+        matches.push({
+          title : best.replace(/_GPT.*$/, '').replace(/_\d+권$/, ''),
+          volume: vol,
+        });
       }
     }
   }
 
+  /* 중복 제거 */
   const seen = new Set<string>();
   return matches.filter(({ title, volume }) => {
     const key = `${title}_${volume ?? 'no'}`;
@@ -86,61 +96,68 @@ function filterKnownScriptures(answer: string, known: string[]): ScriptureMatch[
   });
 }
 
-const fmtTitle = (raw: string, volume?: number) => {
-  const base = raw.replace(/_GPT\d+(\.\d+)?번역/, '').replace(/_\d+권/, '').replace(/_/g, ' ');
-  return volume ? `${base} ${volume}권` : base;
-};
+const fmtTitle = (raw: string, volume?: number) =>
+  raw
+    .replace(/_GPT\d+(\.\d+)?번역/, '')
+    .replace(/_\d+권/, '')
+    .replace(/_/g, ' ') + (volume ? ` ${volume}권` : '');
 
-/* -------------------------------------------------------------------------- */
-/* 파일 시스템 helper (① ~ ③)                                               */
-/* -------------------------------------------------------------------------- */
+/* -------------------- 플랫폼별 갤러리 저장 Helper ------------------------- */
+// -- Android : Pictures/ 이하에 파일 기록 -----------------------------------
 const ensurePublicWrite = async () => {
   const { publicStorage } = await Filesystem.checkPermissions();
   if (publicStorage !== 'granted') {
     const res = await Filesystem.requestPermissions();
-    if (res.publicStorage !== 'granted') {
-      throw new Error('저장 권한 거부됨');
-    }
+    if (res.publicStorage !== 'granted') throw new Error('저장 권한이 거부되었습니다');
   }
 };
 
-const savePngToGallery = async (dataUrl: string) => {
-  await ensurePublicWrite(); // ① 권한
-
-  const b64 = dataUrl.split(',')[1];
-  const fileName = `buddha_${Date.now()}.png`;
-
-  const { uri } = await Filesystem.writeFile({
-    directory: Directory.ExternalStorage,          // ② Pictures/…
-    path: `Pictures/${fileName}`,
-    data: b64,
+const saveToPicturesDir = async (dataUrl: string) => {
+  await ensurePublicWrite();
+  const base64 = dataUrl.split(',')[1];
+  const filePath = `Pictures/buddha_${Date.now()}.png`;
+  await Filesystem.writeFile({
+    directory: Directory.ExternalStorage,
+    path     : filePath,
+    data     : base64,
   });
+};
 
-  return uri;
+// -- iOS : Media 플러그인 ----------------------------------------------------
+const saveWithMedia = async (dataUrl: string) => {
+  /* Media v8 이상: savePhoto 호출 시 권한 자동 요청됨 */
+  await Media.savePhoto({
+    path: dataUrl,            // data:image/png;base64,....
+    albumIdentifier: 'Buddha' // 앨범 없으면 생성
+  });
 };
 
 /* -------------------------------------------------------------------------- */
-/* COMPONENT                                                                  */
+/*                                  COMPONENT                                 */
 /* -------------------------------------------------------------------------- */
 export default function AnswerClient() {
-  const router = useRouter();
-  const params = useSearchParams();
-  const questionId = params.get('questionId');
+  /* ------- Router & Query Param ---------------------------------------- */
+  const router      = useRouter();
+  const params      = useSearchParams();
+  const questionId  = params.get('questionId');
 
-  const [question, setQuestion] = useState('');
-  const [fullAnswer, setFullAnswer] = useState('');
-  const [scriptureTitles, setScriptureTitles] = useState<string[]>([]);
-  const [done, setDone] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [saved, setSaved] = useState(false);
-  const [showCopied, setShowCopied] = useState(false);
-
+  /* ------- Global State ------------------------------------------------ */
   const { setParentId } = useAskStore();
   const { setBookmark } = useBookmarkStore();
 
+  /* ------- Local State ------------------------------------------------- */
+  const [question        , setQuestion]        = useState('');
+  const [fullAnswer      , setFullAnswer]      = useState('');
+  const [scriptureTitles , setScriptureTitles] = useState<string[]>([]);
+  const [done            , setDone]            = useState(false);
+
+  const [user            , setUser]           = useState<User | null>(null);
+  const [saved           , setSaved]          = useState(false);
+  const [showCopied      , setShowCopied]     = useState(false);
+
   const answerRef = useRef<HTMLDivElement>(null);
 
-  /* 데이터 로드 */
+  /* ----------------------- Supabase & 데이터 로딩 ----------------------- */
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
   }, []);
@@ -148,6 +165,7 @@ export default function AnswerClient() {
   useEffect(() => {
     if (!questionId) return;
 
+    /* 질문 + 답변 로드 */
     supabase
       .from('temp_answers')
       .select('question, answer')
@@ -163,69 +181,77 @@ export default function AnswerClient() {
         setDone(true);
       });
 
+    /* 경전 제목 리스트 로드 */
     fetch('/api/scripture/list')
-      .then((r) => r.json())
-      .then((j) => setScriptureTitles(j.titles || []));
+      .then(r => r.json())
+      .then(j => setScriptureTitles(j.titles || []));
   }, [questionId]);
 
-  /* 공유 */
+  /* -------------------- 이미지 공유 / 저장 ----------------------------- */
+  /** 카드 → 이미지 → Share */
   const shareImage = async () => {
     if (!answerRef.current) return;
+
     const dataUrl = await toPng(answerRef.current, {
-      quality: 1,
-      pixelRatio: 2,
-      backgroundColor: '#f8f5ee',
-      style: { padding: '32px', borderRadius: '1rem', boxSizing: 'border-box' },
+      pixelRatio      : 2,
+      backgroundColor : '#f8f5ee',
+      style           : { padding: '32px', borderRadius: '1rem', boxSizing: 'border-box' },
     });
 
     if (Capacitor.isNativePlatform()) {
-      // native → 캐시에 저장 후 Share
-      const b64 = dataUrl.split(',')[1];
-      const name = `buddha_${Date.now()}.png`;
+      /* 네이티브: 임시 파일 만들고 Share */
+      const name  = `buddha_${Date.now()}.png`;
+      const b64   = dataUrl.split(',')[1];
       const { uri } = await Filesystem.writeFile({
-        path: name,
-        data: b64,
         directory: Directory.Cache,
+        path     : name,
+        data     : b64,
       });
       await Share.share({
         title: '마음속 부처님과 나눈 이야기',
-        text: '오늘 마음에 닿은 말씀을 함께 나눕니다.',
+        text : '오늘 마음에 닿은 말씀을 함께 나눕니다.',
         files: [uri],
       });
       return;
     }
 
-    /* Web share → blob */
+    /* Web Share */
     if (navigator.share) {
       const blob = await (await fetch(dataUrl)).blob();
       await navigator.share({
         title: '마음속 부처님과 나눈 이야기',
-        text: '오늘 마음에 닿은 말씀을 함께 나눕니다.',
+        text : '오늘 마음에 닿은 말씀을 함께 나눕니다.',
         files: [new File([blob], 'buddha.png', { type: 'image/png' })],
       });
       return;
     }
 
-    /* Fallback 복사 */
+    /* Fallback: URL 복사 */
     await navigator.clipboard.writeText(dataUrl);
     setShowCopied(true);
     setTimeout(() => setShowCopied(false), 2000);
   };
 
-  /* 갤러리 저장 */
-  const saveToGallery = async () => {
+  /** 카드 → 이미지 → 갤러리 저장 */
+  const saveImageToGallery = async () => {
     if (!answerRef.current) return;
     try {
       const dataUrl = await toPng(answerRef.current, { quality: 1, pixelRatio: 2 });
-      await savePngToGallery(dataUrl);
+
+      if (Capacitor.getPlatform() === 'ios') {
+        await saveWithMedia(dataUrl);
+      } else {
+        await saveToPicturesDir(dataUrl);
+      }
+
       alert('✅ 갤러리에 저장되었습니다!');
-    } catch (err) {
-      console.error(err);
-      alert('저장 실패: ' + (err as Error).message);
+    } catch (e) {
+      console.error(e);
+      alert(`저장 실패: ${(e as Error).message}`);
     }
   };
 
-  /* Supabase 보관 */
+  /* -------------------- 답변 기록을 Supabase 에 보관 -------------------- */
   const saveAnswerRecord = async () => {
     if (!user) return alert('로그인이 필요합니다!');
     if (!questionId) return;
@@ -242,25 +268,24 @@ export default function AnswerClient() {
     }
   };
 
-  /* 렌더 */
+  /* -------------------- UI 렌더 ---------------------------------------- */
   const formatted = fullAnswer.replace(/『(.+?)』/g, (_, p1) => {
-    const raw = scriptureTitles.find((t) => t.startsWith(p1)) || p1;
+    const raw = scriptureTitles.find(t => t.startsWith(p1)) || p1;
     return `『${fmtTitle(raw)}』`;
   });
 
-  const refs = filterKnownScriptures(fullAnswer, scriptureTitles);
+  const refs  = filterKnownScriptures(fullAnswer, scriptureTitles);
   const dedup = new Set<string>();
 
   return (
     <main className="relative min-h-screen w-full max-w-[460px] flex flex-col items-center mx-auto bg-white px-6 py-10">
-      {/* 카드 본문 */}
+      {/* ======================== 카드 영역 ======================== */}
       <div ref={answerRef} className="rounded-2xl px-2">
         <h2 className="text-2xl text-red font-semibold mt-4">
           부처님이라면 분명<br />이렇게 말씀하셨을 것입니다
         </h2>
 
-
-        {/* 답변 */}
+        {/* ----------- 답변 ----------- */}
         <section className="mt-6">
           <header className="h-12 bg-red-light rounded-xl flex items-center pl-3 text-white font-semibold">
             🪷 이르시길
@@ -270,7 +295,7 @@ export default function AnswerClient() {
           </div>
         </section>
 
-        {/* 질문 */}
+        {/* ----------- 질문 ----------- */}
         <section className="mt-8">
           <header className="h-12 bg-red-light rounded-xl flex items-center pl-3 text-white font-semibold">
             🪷 나의 물음
@@ -280,7 +305,7 @@ export default function AnswerClient() {
           </div>
         </section>
 
-        {/* 인용 경전 */}
+        {/* ----------- 인용 경전 ----------- */}
         {refs.length > 0 && (
           <section className="my-12">
             <p className="text-sm text-red-dark font-semibold mb-2">📖 인용된 경전</p>
@@ -292,11 +317,10 @@ export default function AnswerClient() {
 
                 const match =
                   volume
-                    ? scriptureTitles.find((t) =>
-                        new RegExp(`^${title}[_ ]?${volume}권`).test(t)
-                      )
-                    : scriptureTitles.find((t) => t === title) ||
-                      scriptureTitles.find((t) => t.startsWith(title));
+                    ? scriptureTitles.find(t => new RegExp(`^${title}[_ ]?${volume}권`).test(t))
+                    : scriptureTitles.find(t => t === title) ||
+                      scriptureTitles.find(t => t.startsWith(title));
+
                 if (!match) return null;
 
                 return (
@@ -317,25 +341,23 @@ export default function AnswerClient() {
         )}
       </div>
 
-      {/* 액션 버튼 */}
+      {/* ======================== 액션 버튼 ======================== */}
       {done && (
         <div className="w-full flex flex-col space-y-4 mt-12 mb-12 px-2">
           <div className="flex space-x-4">
-          <button
+            <button
               onClick={shareImage}
               className="w-full py-3 bg-white text-red-dark border border-red font-bold rounded-4xl hover:bg-red hover:text-white transition"
             >
               이미지로 공유하기
             </button>
             <button
-              onClick={saveToGallery}
+              onClick={saveImageToGallery}
               className="w-full py-3 bg-white text-red-dark border border-red font-bold rounded-4xl hover:bg-red hover:text-white transition"
             >
               갤러리에 저장하기
             </button>
           </div>
-
-
 
           <button
             onClick={saveAnswerRecord}
@@ -369,7 +391,7 @@ export default function AnswerClient() {
         </div>
       )}
 
-      {/* URL 복사 모달 */}
+      {/* ---------------- Toast (URL 복사) ---------------- */}
       {showCopied && (
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-black text-white text-sm px-4 py-2 rounded-full shadow-md z-50">
           ✅ 주소가 복사되었습니다

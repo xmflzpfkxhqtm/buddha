@@ -240,7 +240,7 @@ export default function Home() {
                 <div className="h-[280px] w-full relative rounded-2xl overflow-hidden">
                   <Image
                     src="/banner_2.jpg"
-                    alt="호날두께 여쭙기"
+                    alt="디지털 팔만대장경"
                     fill
                     className="object-cover"
                     priority
@@ -254,6 +254,31 @@ export default function Home() {
                 </div>
               </div>
             </div>
+            <div className="flex space-x-4 overflow-x-auto no-scrollbar mt-4 py-2">
+
+{/* 카드 3 */}
+<div
+  onClick={() => router.push('/copy')}
+  className="min-w-[320px] h-[240px] rounded-2xl overflow-hidden flex flex-col cursor-pointer hover:shadow-lg transition"
+>
+  <div className="h-[280px] w-full relative rounded-2xl overflow-hidden">
+    <Image
+      src="/copy.jpg"
+      alt="사경하기"
+      fill
+      className="object-cover"
+      priority
+    />
+  </div>
+  <div className="flex-1 px-3 py-2">
+    <p className="text-base text-left text-white font-medium">사경하기</p>
+    <p className="text-base text-left text-pink-light font-medium">
+    붓을 들고 호흡을 고르며 한 획 한 획 마음을 담아봅니다<br />
+지금 이 순간에만 머무는 깊은 집중을 경험하세요
+    </p>
+  </div>
+</div>
+</div>
           </div>
 
           <div className="w-full h-[0.5px] opacity-50 bg-[#E0DBCF] mt-6" />
