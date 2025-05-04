@@ -1,19 +1,20 @@
 /* ----------------------------------------------------------
- *  CompletePage.tsx
+ *  CompletePage.tsx  (네이티브 전용 · JPEG 단일 파이프라인)
  *  버튼 구성:
- *    1행 [수정하기] [공유하기(image url)]
+ *    1행 [수정하기] [공유하기]
  *    2행 [나의 사경노트에 저장]
- *  - 갤러리 저장 버튼 제거
- *  - 공유는 PNG dataURL 을 그대로 URL 로 전달
+ *  - Web-Share / 브라우저 분기 · 모달 전부 제거
+ *  - DOM → JPEG(quality 0.8) 한 번 캡처 → ① 네이티브 Share(files) ② Supabase 업로드
  * ---------------------------------------------------------*/
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { toPng } from 'html-to-image';
+import { toJpeg } from 'html-to-image';
 
-import { Capacitor } from '@capacitor/core';
-import { Share }     from '@capacitor/share';
+import { Capacitor }                        from '@capacitor/core';
+import { Share }                            from '@capacitor/share';
+import { Filesystem, Directory }            from '@capacitor/filesystem';
 
 import { copyTexts } from '@/data/copyTexts';
 import { getStroke } from '@/lib/copyStore';
@@ -23,116 +24,88 @@ import { supabase }  from '@/lib/supabaseClient';   // service key 필요 X
 /*                                COMPONENT                              */
 /* ===================================================================== */
 export default function CompletePage() {
-  const params  = useParams();
-  const router  = useRouter();
-  const id      = params.id as string;
-  const sheetRef = useRef<HTMLDivElement>(null);
+  const params    = useParams();
+  const router    = useRouter();
+  const id        = params.id as string;
+  const sheetRef  = useRef<HTMLDivElement>(null);
 
-  const [pngUrl    , setPngUrl]    = useState<string>();
-  const [showShare , setShowShare] = useState(false);
-  const [svgs      , setSvgs]      = useState<(string | null)[]>([]);
-  const [isLoading , setIsLoading] = useState(true);
+  const [jpegUrl , setJpegUrl]  = useState<string>();
+  const [svgs    , setSvgs]     = useState<(string | null)[]>([]);
+  const [loading , setLoading]  = useState(true);
 
-  const isIdString   = typeof id === 'string';
-  const textObj      = isIdString ? copyTexts.find(t => t.id === id) : null;
+  const textObj  = copyTexts.find(t => t.id === id);
   const lang: 'han' | 'kor' = textObj?.lang ?? 'han';
-  const chars = useMemo(() => (textObj ? [...textObj.text] : []), [textObj]);
+  const chars    = useMemo(() => (textObj ? [...textObj.text] : []), [textObj]);
 
   /* ---------------------- SVG 로딩 ---------------------- */
   useEffect(() => {
-    if (!isIdString || !textObj) return;
-    setIsLoading(true);
-    Promise.all(
-      chars.map((_, i) => getStroke(id, i).then(svg => svg ?? null))
-    )
+    if (!textObj) return;
+    setLoading(true);
+    Promise.all(chars.map((_, i) => getStroke(id, i).then(svg => svg ?? null)))
       .then(setSvgs)
-      .finally(() => setIsLoading(false));
-  }, [id, isIdString, textObj, chars]);
+      .finally(() => setLoading(false));
+  }, [id, textObj, chars]);
 
-  /* ---------------------- PNG 캡처 ---------------------- */
+  /* ---------------------- JPEG 캡처 ---------------------- */
   useEffect(() => {
     if (!textObj || !sheetRef.current) return;
     (async () => {
-      await new Promise(r => setTimeout(r, 50));
-      const dataUrl = await toPng(sheetRef.current!, {
-        pixelRatio     : 2,
+      await new Promise(r => setTimeout(r, 50));          // 렌더 안정화
+      const dataUrl = await toJpeg(sheetRef.current!, {
+        pixelRatio : Math.min(2, window.devicePixelRatio),
+        quality    : 0.8,
         backgroundColor: '#f8f5ee',
-        style          : {
-          paddingBottom: '32px',
-          boxSizing    : 'border-box',
-          borderRadius : '1rem',
-        },
+        style      : { paddingBottom: '32px', boxSizing: 'border-box', borderRadius: '1rem' },
       });
-      setPngUrl(dataUrl);
+      setJpegUrl(dataUrl);
     })();
   }, [textObj, svgs]);
 
-  /* ---------------------- 이미지 URL 공유 ---------------------- */
+  /* ---------------------- 네이티브 공유 ------------------ */
   const handleShare = async () => {
-    if (!pngUrl) return;
+    if (!jpegUrl || !Capacitor.isNativePlatform()) return;
 
-    /* 1. 네이티브 Share (URL) */
-    if (Capacitor.isNativePlatform()) {
-      try {
-        await Share.share({
-          title: `${textObj?.title} 사경`,
-          text : '사경한 경전을 함께 나눠요 🙏',
-          url  : pngUrl,                      // data:image/png;base64 …
-        });
-        return;
-      } catch (err) {
-        console.warn('Native share failed, falling back …', err);
-      }
-    }
+    const base64 = jpegUrl.split(',')[1];
+    const name   = `buddha_${Date.now()}.jpg`;
 
-    /* 2. Web Share API */
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `${textObj?.title} 사경`,
-          text : '사경한 경전을 함께 나눠요 🙏',
-          url  : pngUrl,
-        });
-        return;
-      } catch {/* ignore */}
-    }
+    const { uri } = await Filesystem.writeFile({
+      directory: Directory.Cache,
+      path     : name,
+      data     : base64,
+    });
 
-    /* 3. Fallback: 링크/URL 선택 모달 */
-    setShowShare(true);
+    await Share.share({
+      title : `${textObj?.title} 사경`,
+      text  : '사경한 경전을 함께 나눠요 🙏',
+      files : [uri],         // JPEG 파일 첨부
+    });
   };
 
   /* ------------------ 나의 사경노트 저장 ---------------- */
-  async function saveToNotebook() {
-    if (!pngUrl || !textObj) return;
+  const saveToNotebook = async () => {
+    if (!jpegUrl || !textObj) return;
 
-    /* 1. PNG → Blob */
-    const blob     = await (await fetch(pngUrl)).blob();
-    const fileName = `${id}-${Date.now()}.png`;
+    /* 1. JPEG → Blob */
+    const blob     = await (await fetch(jpegUrl)).blob();
+    const fileName = `${id}-${Date.now()}.jpg`;
 
-    /* 2. Storage 업로드 */
+    /* 2. Supabase 업로드 */
     const { error: upErr } = await supabase
       .storage.from('copy-thumbs')
       .upload(`public/${fileName}`, blob, {
-        contentType: 'image/png',
         upsert     : true,
+        contentType: 'image/jpeg',
       });
-    if (upErr) {
-      alert('PNG 업로드 실패 🥲');
-      return;
-    }
+    if (upErr) { alert('이미지 업로드 실패 🥲'); return; }
 
     const { data: { publicUrl } } = supabase
       .storage.from('copy-thumbs')
       .getPublicUrl(`public/${fileName}`);
 
-    /* 3. 유저 확인 */
+    /* 3. 사용자 & DB */
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      alert('로그인이 필요합니다.');
-      return;
-    }
+    if (!user) { alert('로그인이 필요합니다.'); return; }
 
-    /* 4. 새 레코드 INSERT */
     const { error: insertErr } = await supabase.from('copy_notes').insert({
       session_id   : id,
       user_id      : user.id,
@@ -142,27 +115,20 @@ export default function CompletePage() {
       completed    : true,
       thumb_url    : publicUrl,
     });
-    if (insertErr) {
-      console.error(insertErr);
-      alert('사경노트 저장 실패 😢');
-      return;
-    }
+    if (insertErr) { alert('사경노트 저장 실패 😢'); return; }
 
-    /* 5. 진행중 레코드 삭제 */
-    await supabase.from('copy_progress')
+    await supabase.from('copy_progress')      // 진행 중 삭제
       .delete()
       .eq('user_id', user.id)
       .eq('session_id', id)
-      .eq('lang', lang)
-      .eq('completed', false);
+      .eq('lang', lang);
 
     alert('✅ "나의 사경노트"에 저장되었습니다!');
-  }
+  };
 
   /* ---------------------- 렌더링 ------------------------ */
-  if (!isIdString) return null;
-  if (!textObj)    return <p>잘못된 경전 ID입니다.</p>;
-  if (isLoading)   return <p className="text-center py-12">시트 불러오는 중…</p>;
+  if (!textObj) return <p className="text-center py-12">잘못된 경전 ID입니다.</p>;
+  if (loading)   return <p className="text-center py-12">시트 불러오는 중…</p>;
 
   return (
     <main className="p-6 max-w-[460px] my-4">
@@ -174,10 +140,7 @@ export default function CompletePage() {
       </p>
 
       {/* ---------- 시트 ---------- */}
-      <div
-        ref={sheetRef}
-        className="flex justify-center bg-white items-center my-4 py-4 overflow-visible rounded-xl"
-      >
+      <div ref={sheetRef} className="flex justify-center bg-white my-4 py-4 rounded-xl">
         {lang === 'kor'
           ? <KoreanSheet chars={chars} svgs={svgs} />
           : <HanjaSheet   chars={chars} svgs={svgs} />}
@@ -185,73 +148,32 @@ export default function CompletePage() {
 
       {/* ---------- 하단 버튼 ---------- */}
       <div className="flex flex-col space-y-4 mt-8">
-        {/* 1행: 수정하기 / 공유하기 */}
+        {/* 1행 */}
         <div className="flex space-x-4">
-         <button
-   onClick={() => router.push(`/copy/${id}?resume=1`)}  /* 진행도 유지 플래그 */
-            className="w-full py-3 bg-white text-red-dark border border-red font-bold rounded-4xl hover:bg-red hover:text-white transition"
-          >
+          <button
+            onClick={() => router.push(`/copy/${id}?resume=1`)}
+            className="w-full py-3 bg-white text-red-dark border border-red font-bold rounded-4xl hover:bg-red hover:text-white transition">
             수정하기
           </button>
           <button
             onClick={handleShare}
-            disabled={!pngUrl}
-            className="w-full py-3 bg-white text-red-dark border border-red font-bold rounded-4xl hover:bg-red hover:text-white transition disabled:opacity-40"
-          >
+            disabled={!jpegUrl}
+            className="w-full py-3 bg-white text-red-dark border border-red font-bold rounded-4xl hover:bg-red hover:text-white transition disabled:opacity-40">
             공유하기
           </button>
         </div>
 
-        {/* 2행: 노트 저장 */}
+        {/* 2행 */}
         <button
           onClick={saveToNotebook}
-          disabled={!pngUrl}
-          className="w-full py-3 bg-red-light text-white font-bold rounded-4xl hover:bg-red transition disabled:opacity-40"
-        >
+          disabled={!jpegUrl}
+          className="w-full py-3 bg-red-light text-white font-bold rounded-4xl hover:bg-red transition disabled:opacity-40">
           나의 사경노트에 저장
         </button>
       </div>
 
-      {/* ---------- 공유 모달 ---------- */}
-      {showShare && (
-        <Modal onClose={() => setShowShare(false)}>
-          <h2 className="font-bold mb-4">공유하기</h2>
-          <p className="text-sm mb-4">공유할 방법을 고르세요.</p>
-          <div className="space-y-3">
-            <ShareLink
-              href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(
-                pngUrl ?? ''
-              )}&text=${encodeURIComponent('사경한 경전을 함께 나눠요 🙏')}`}
-              label="Twitter"
-            />
-            <ShareLink
-              href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
-                pngUrl ?? ''
-              )}`}
-              label="Facebook"
-            />
-            <ShareLink
-              href={`https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(
-                pngUrl ?? ''
-              )}`}
-              label="Line / 기타"
-            />
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(pngUrl ?? '');
-                alert('이미지 URL이 복사되었습니다.');
-                setShowShare(false);
-              }}
-              className="w-full py-2 rounded bg-gray-200"
-            >
-              URL 복사
-            </button>
-          </div>
-        </Modal>
-      )}
-
-      {/* ---------- PNG 생성 표시 ---------- */}
-      {!pngUrl && <p className="mt-6 text-gray-500">PNG 생성 중…</p>}
+      {/* JPEG 생성 중 표시 */}
+      {!jpegUrl && <p className="mt-6 text-gray-500">이미지 생성 중…</p>}
     </main>
   );
 }
@@ -269,7 +191,7 @@ function KoreanSheet({ chars, svgs }: { chars: string[]; svgs: (string | null)[]
             const idx = r * 7 + cIdx;
             return (
               <div key={cIdx} className="w-[50px] h-[50px] relative flex items-center justify-center rounded">
-                <span className="absolute inset-0 flex items-center leading-none justify-center opacity-10 select-none text-2xl font-['MaruBuri'] text-red-dark">
+                <span className="absolute inset-0 flex items-center justify-center opacity-10 select-none text-2xl font-['MaruBuri'] text-red-dark">
                   {c}
                 </span>
                 {svgs[idx] && (
@@ -306,29 +228,5 @@ function HanjaSheet({ chars, svgs }: { chars: string[]; svgs: (string | null)[] 
         </div>
       ))}
     </div>
-  );
-}
-
-/* ===================================================================== */
-/*                              Modal & Link                             */
-/* ===================================================================== */
-function Modal({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
-  return (
-    <div onClick={onClose} className="fixed inset-0 bg-black/40 flex items-end justify-center z-50">
-      <div onClick={e => e.stopPropagation()} className="w-full max-w-sm bg-white p-6 rounded-t-2xl">
-        {children}
-        <button onClick={onClose} className="mt-4 w-full py-2 text-center rounded bg-gray-100">
-          닫기
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function ShareLink({ href, label }: { href: string; label: string }) {
-  return (
-    <a href={href} target="_blank" rel="noopener noreferrer" className="block w-full py-2 rounded bg-blue-500/10 text-center">
-      {label}
-    </a>
   );
 }

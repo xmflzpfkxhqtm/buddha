@@ -53,6 +53,7 @@ function formatDisplayTitle(rawTitle: string): string {
 
 export default function ScripturePage() {
   // 상태 변수들 (TTS 관련 상태는 isTTSSpeaking만 유지)
+  const [isTTSSpeaking, setIsTTSSpeaking] = useState(false);
   const [displayParagraphs, setDisplayParagraphs] = useState<string[][]>([]);
   const router = useRouter();
   const [list, setList] = useState<string[]>([]);
@@ -276,32 +277,30 @@ export default function ScripturePage() {
 
   // 스크롤 위치에 따른 현재 인덱스 동기화 (원본 유지)
   useEffect(() => {
-    if (displaySentences.length === 0 || ttsSentences.length === 0) return;
     const onScroll = () => {
-      const viewportHeight = window.innerHeight;
-      const scrollTop = window.scrollY;
-      const centerY = scrollTop + viewportHeight / 2;
-
-      let closestIndex = 0;
-      let minDistance = Infinity;
-
-      sentenceRefs.current.forEach((ref, index) => {
-        if (!ref) return;
-        const rect = ref.getBoundingClientRect();
-        const elementCenterY = rect.top + rect.height / 2 + scrollTop;
-        const distance = Math.abs(elementCenterY - centerY);
-        if (distance < minDistance) {
-          minDistance = distance;
-          closestIndex = index;
+      if (isTTSSpeaking) return;
+      const centerY = window.innerHeight / 2;
+      let closestIndex = -1;
+      let closestDistance = Infinity;
+      if (!sentenceRefs.current || sentenceRefs.current.length === 0) return;
+      sentenceRefs.current.forEach((el, i) => {
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        if (rect.bottom < 0 || rect.top > window.innerHeight) return;
+        const elementCenter = rect.top + rect.height / 2;
+        const distance = Math.abs(elementCenter - centerY);
+        if (distance < closestDistance) {
+          closestIndex = i;
+          closestDistance = distance;
         }
       });
-
-      setCurrentIndex(closestIndex);
+      if (closestIndex !== -1 && closestIndex !== currentIndex) {
+        setCurrentIndex(closestIndex);
+      }
     };
-
-    window.addEventListener('scroll', onScroll);
+    window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-  }, [displaySentences.length, ttsSentences.length, setCurrentIndex]);
+  }, [currentIndex, isTTSSpeaking]); // 원본 의존성 배열 유지
 
   // 북마크 핸들러 (원본 유지)
   const handleBookmark = async () => {
@@ -326,17 +325,13 @@ export default function ScripturePage() {
   // 전체 검색 핸들러 (원본 유지)
   const handleGlobalSearch = async () => {
     if (!search.trim()) return;
-    setIsSearching(true);
-    setGlobalResults([]);
-    try {
+    setIsSearching(true); setGlobalResults([]);
+    try { /* 검색 로직 */
       const res = await fetch(`/api/global-search?query=${encodeURIComponent(search)}`);
       const data = await res.json();
       setGlobalResults(data.results || []);
-    } catch {
-      // 에러 무시
-    } finally {
-      setIsSearching(false);
-    }
+    } catch (err) { /* 에러 처리 */ }
+    finally { setIsSearching(false); }
   };
 
   // === 플레이어 렌더링 로직 추가 ===
@@ -351,7 +346,7 @@ export default function ScripturePage() {
       currentIndex: currentIndex,
       setCurrentIndex: setCurrentIndex,
       smoothCenter: smoothCenter,
-      onPlaybackStateChange: () => {}, // 빈 함수 추가
+      onPlaybackStateChange: setIsTTSSpeaking,
     };
 
     return platformInfo.isNative
@@ -434,6 +429,7 @@ export default function ScripturePage() {
           currentIndex={currentIndex}
           setCurrentIndex={setCurrentIndex}
           smoothCenter={smoothCenter}
+          onPlaybackStateChange={setIsTTSSpeaking}
         />
       )}
       */}
