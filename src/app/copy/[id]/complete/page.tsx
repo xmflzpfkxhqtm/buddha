@@ -24,8 +24,8 @@ export default function CompletePage() {
   const isIdString = typeof id === 'string';
   const textObj = isIdString ? copyTexts.find(t => t.id === id) : null;
 
-  const lang: 'han' | 'kor' = textObj ? (textObj.lang as 'han' | 'kor') : 'han';
-  const chars = textObj ? [...textObj[lang]] : [];
+  const lang: 'han' | 'kor' = textObj?.lang ?? 'han';
+  const chars = textObj ? [...textObj.text] : [];
 
   // 모든 SVG 불러오기
   useEffect(() => {

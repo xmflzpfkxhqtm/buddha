@@ -51,17 +51,18 @@ export default function CopyHome() {
       <h1 className="text-xl text-red-dark font-bold">사경할 경전 선택</h1>
 
       <ul className="space-y-3">
-        {copyTexts.map(t => (
-          <li key={t.id}>
-            {/* ✅ 클릭 가능 영역  ─ lang 쿼리 파라미터 전달 */}
-            <Link
-              href={`/copy/${t.id}?lang=${lang}`} // 예) /copy/heart?lang=kor
-              className="block border border-red-light bg-red-light text-beige p-4 rounded-xl hover:bg-white hover:border hover:border-red-light hover:text-red-dark transition-colors" // transition 추가
-            >
-              {t.title}
-            </Link>
-          </li>
-        ))}
+        {copyTexts
+          .filter(t => t.lang === lang)
+          .map(t => (
+            <li key={t.id}>
+              <Link
+                href={`/copy/${t.id}`}
+                className="block border border-red-light bg-red-light text-beige p-4 rounded-xl hover:bg-white hover:border hover:border-red-light hover:text-red-dark transition-colors"
+              >
+                {t.title}
+              </Link>
+            </li>
+          ))}
       </ul>
 
       {/* --- ▼▼▼ 2. 사용법/주의사항 텍스트 공간 추가 ▼▼▼ --- */}

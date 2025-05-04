@@ -21,8 +21,8 @@ export default function CopySession() {
   const isIdString = typeof id === 'string';
   const sessionId  = isIdString ? (id as string) : '';
   const textObj    = isIdString ? copyTexts.find(t => t.id === sessionId) : null;
-  const lang: 'han' | 'kor' = (search.get('lang') as 'kor' | 'han') ?? 'han';
-  const chars = textObj ? [...textObj[lang]] : [];
+  const lang: 'han' | 'kor' = textObj?.lang ?? 'han';
+  const chars = textObj ? [...textObj.text] : [];
 
   /* ───────── 상태 ───────── */
   const [idx,        setIdx]        = useState(0);                     // 현재 인덱스
