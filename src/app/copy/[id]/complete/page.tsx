@@ -1,80 +1,49 @@
 /* ----------------------------------------------------------
  *  CompletePage.tsx
- *  iOS  : @capacitor-community/media 로 앨범 저장
- *  Android : @capacitor/filesystem (Pictures/)
+ *  버튼 구성:
+ *    1행 [수정하기] [공유하기(image url)]
+ *    2행 [나의 사경노트에 저장]
+ *  - 갤러리 저장 버튼 제거
+ *  - 공유는 PNG dataURL 을 그대로 URL 로 전달
  * ---------------------------------------------------------*/
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { toPng } from 'html-to-image';
 
-import { Capacitor }                        from '@capacitor/core';
-import { Share }                            from '@capacitor/share';
-import { Filesystem, Directory }            from '@capacitor/filesystem';
-import { Media }                            from '@capacitor-community/media';
+import { Capacitor } from '@capacitor/core';
+import { Share }     from '@capacitor/share';
 
-import { copyTexts }   from '@/data/copyTexts';
-import { getStroke }   from '@/lib/copyStore';
-import { supabase }    from '@/lib/supabaseClient';   // service key 필요 X
-
-/* ===================================================================== */
-/*                    Android 저장 Helper + 권한 처리                     */
-/* ===================================================================== */
-const ensurePublicWrite = async () => {
-  const { publicStorage } = await Filesystem.checkPermissions();
-  if (publicStorage !== 'granted') {
-    const res = await Filesystem.requestPermissions();
-    if (res.publicStorage !== 'granted') throw new Error('저장 권한 거부됨');
-  }
-};
-
-const saveToPicturesDir = async (dataUrl: string) => {
-  await ensurePublicWrite();
-  const b64  = dataUrl.split(',')[1];
-  const name = `Pictures/buddha_${Date.now()}.png`;
-  await Filesystem.writeFile({
-    directory: Directory.ExternalStorage,
-    path     : name,
-    data     : b64,
-  });
-};
-
-/* ===================================================================== */
-/*                       iOS 저장 Helper (Media 플러그인)                 */
-/* ===================================================================== */
-const saveWithMedia = async (dataUrl: string) => {
-  /* Media v8+: savePhoto 가 내부에서 권한 요청 */
-  await Media.savePhoto({
-    path            : dataUrl,   // data:image/png;base64,....
-    albumIdentifier : 'Buddha',
-  });
-};
+import { copyTexts } from '@/data/copyTexts';
+import { getStroke } from '@/lib/copyStore';
+import { supabase }  from '@/lib/supabaseClient';   // service key 필요 X
 
 /* ===================================================================== */
 /*                                COMPONENT                              */
 /* ===================================================================== */
 export default function CompletePage() {
-  const params = useParams();
-  const id = params.id as string;
+  const params  = useParams();
+  const router  = useRouter();
+  const id      = params.id as string;
   const sheetRef = useRef<HTMLDivElement>(null);
 
-  const [pngUrl     , setPngUrl]   = useState<string>();
-  const [showShare  , setShowShare] = useState(false);
-  const [svgs       , setSvgs]      = useState<(string | null)[]>([]);
-  const [isLoading  , setIsLoading] = useState(true);
+  const [pngUrl    , setPngUrl]    = useState<string>();
+  const [showShare , setShowShare] = useState(false);
+  const [svgs      , setSvgs]      = useState<(string | null)[]>([]);
+  const [isLoading , setIsLoading] = useState(true);
 
-  const isIdString     = typeof id === 'string';
-  const textObj        = isIdString ? copyTexts.find(t => t.id === id) : null;
+  const isIdString   = typeof id === 'string';
+  const textObj      = isIdString ? copyTexts.find(t => t.id === id) : null;
   const lang: 'han' | 'kor' = textObj?.lang ?? 'han';
-  const chars = useMemo(() => textObj ? [...textObj.text] : [], [textObj]);
+  const chars = useMemo(() => (textObj ? [...textObj.text] : []), [textObj]);
 
   /* ---------------------- SVG 로딩 ---------------------- */
   useEffect(() => {
     if (!isIdString || !textObj) return;
     setIsLoading(true);
     Promise.all(
-      chars.map((_, i) => getStroke(id as string, i).then(svg => svg ?? null))
+      chars.map((_, i) => getStroke(id, i).then(svg => svg ?? null))
     )
       .then(setSvgs)
       .finally(() => setIsLoading(false));
@@ -98,24 +67,17 @@ export default function CompletePage() {
     })();
   }, [textObj, svgs]);
 
-  /* ---------------------- 공유 -------------------------- */
+  /* ---------------------- 이미지 URL 공유 ---------------------- */
   const handleShare = async () => {
     if (!pngUrl) return;
 
-    /* 1. 네이티브 Share */
+    /* 1. 네이티브 Share (URL) */
     if (Capacitor.isNativePlatform()) {
       try {
-        const b64  = pngUrl.split(',')[1];
-        const name = `buddha_${Date.now()}.png`;
-        const { uri } = await Filesystem.writeFile({
-          directory: Directory.Cache,
-          path     : name,
-          data     : b64,
-        });
         await Share.share({
           title: `${textObj?.title} 사경`,
           text : '사경한 경전을 함께 나눠요 🙏',
-          files: [uri],
+          url  : pngUrl,                      // data:image/png;base64 …
         });
         return;
       } catch (err) {
@@ -123,37 +85,20 @@ export default function CompletePage() {
       }
     }
 
-    /* 2. Web Share */
+    /* 2. Web Share API */
     if (navigator.share) {
       try {
-        const blob = await (await fetch(pngUrl)).blob();
         await navigator.share({
           title: `${textObj?.title} 사경`,
           text : '사경한 경전을 함께 나눠요 🙏',
-          files: [new File([blob], `${textObj?.title}.png`, { type: 'image/png' })],
+          url  : pngUrl,
         });
         return;
       } catch {/* ignore */}
     }
 
-    /* 3. Fallback */
+    /* 3. Fallback: 링크/URL 선택 모달 */
     setShowShare(true);
-  };
-
-  /* ---------------------- 갤러리 저장 ------------------- */
-  const saveToGallery = async () => {
-    if (!pngUrl) return;
-    try {
-      if (Capacitor.getPlatform() === 'ios') {
-        await saveWithMedia(pngUrl);
-      } else {
-        await saveToPicturesDir(pngUrl);
-      }
-      alert('✅ 갤러리에 저장되었습니다!');
-    } catch (err) {
-      console.error(err);
-      alert('저장 실패: ' + (err as Error).message);
-    }
   };
 
   /* ------------------ 나의 사경노트 저장 ---------------- */
@@ -204,7 +149,7 @@ export default function CompletePage() {
     }
 
     /* 5. 진행중 레코드 삭제 */
-    await supabase.from('copy_notes')
+    await supabase.from('copy_progress')
       .delete()
       .eq('user_id', user.id)
       .eq('session_id', id)
@@ -240,23 +185,24 @@ export default function CompletePage() {
 
       {/* ---------- 하단 버튼 ---------- */}
       <div className="flex flex-col space-y-4 mt-8">
+        {/* 1행: 수정하기 / 공유하기 */}
         <div className="flex space-x-4">
+         <button
+   onClick={() => router.push(`/copy/${id}?resume=1`)}  /* 진행도 유지 플래그 */
+            className="w-full py-3 bg-white text-red-dark border border-red font-bold rounded-4xl hover:bg-red hover:text-white transition"
+          >
+            수정하기
+          </button>
           <button
             onClick={handleShare}
             disabled={!pngUrl}
             className="w-full py-3 bg-white text-red-dark border border-red font-bold rounded-4xl hover:bg-red hover:text-white transition disabled:opacity-40"
           >
-            이미지로 공유하기
-          </button>
-          <button
-            onClick={saveToGallery}
-            disabled={!pngUrl}
-            className="w-full py-3 bg-white text-red-dark border border-red font-bold rounded-4xl hover:bg-red hover:text-white transition disabled:opacity-40"
-          >
-            갤러리에 저장하기
+            공유하기
           </button>
         </div>
 
+        {/* 2행: 노트 저장 */}
         <button
           onClick={saveToNotebook}
           disabled={!pngUrl}
@@ -273,9 +219,9 @@ export default function CompletePage() {
           <p className="text-sm mb-4">공유할 방법을 고르세요.</p>
           <div className="space-y-3">
             <ShareLink
-              href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
-                '사경한 경전을 함께 나눠요 🙏'
-              )}`}
+              href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(
+                pngUrl ?? ''
+              )}&text=${encodeURIComponent('사경한 경전을 함께 나눠요 🙏')}`}
               label="Twitter"
             />
             <ShareLink
@@ -316,9 +262,9 @@ export default function CompletePage() {
 function KoreanSheet({ chars, svgs }: { chars: string[]; svgs: (string | null)[] }) {
   const rows = Array.from({ length: 6 }, (_, r) => chars.slice(r * 7, (r + 1) * 7));
   return (
-    <div className="flex flex-col border border-red-light rounded-lg p-2">
+    <div className="flex flex-col shadow rounded p-2">
       {rows.map((row, r) => (
-        <div key={r} className="flex">
+        <div key={r} className="flex border-red-light border-t">
           {row.map((c, cIdx) => {
             const idx = r * 7 + cIdx;
             return (
@@ -341,13 +287,13 @@ function KoreanSheet({ chars, svgs }: { chars: string[]; svgs: (string | null)[]
 function HanjaSheet({ chars, svgs }: { chars: string[]; svgs: (string | null)[] }) {
   const cols = Array.from({ length: 8 }, (_, c) => chars.slice(c * 5, (c + 1) * 5));
   return (
-    <div className="flex flex-row-reverse gap-1">
+    <div className="flex flex-row-reverse shadow rounded p-2">
       {cols.map((col, c) => (
-        <div key={c} className="flex flex-col">
+        <div key={c} className="flex flex-col border-red-light border-r">
           {col.map((ch, rIdx) => {
             const idx = c * 5 + rIdx;
             return (
-              <div key={rIdx} className="w-[50px] h-[50px] border border-red-light relative flex items-center justify-center rounded">
+              <div key={rIdx} className="w-[50px] h-[50px] relative flex items-center justify-center rounded">
                 <span className="absolute inset-0 flex items-center justify-center opacity-10 select-none text-2xl font-['Yuji_Mai'] text-red-dark">
                   {ch}
                 </span>

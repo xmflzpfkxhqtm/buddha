@@ -8,6 +8,7 @@ import { copyTexts } from '@/data/copyTexts';
 import TracingCanvas from '../../../../components/TracingCanvas';
 import { saveStroke, getStroke, deleteStroke, clearSession } from '@/lib/copyStore';
 import { supabase } from '@/lib/supabaseClient';
+import { useSearchParams } from 'next/navigation';
 
 const WINDOW = 7;   // 한 줄 7칸
 const CURCOL = 3;   // 중앙(4번째) 칸
@@ -17,6 +18,9 @@ export default function CopySession() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
+   const search = useSearchParams();
+  const resume = search.get('resume') === '1';   // 수정하기로 왔는지?
+
 
   const textObj = copyTexts.find(t => t.id === id);
   const lang: 'han' | 'kor' = textObj?.lang ?? 'han';
@@ -26,8 +30,9 @@ export default function CopySession() {
   const [idx,        setIdx]        = useState(0);                     // 현재 인덱스
   const [guide,      setGuide]      = useState<string[]>(Array(WINDOW).fill(''));
   const [prevSvgs,   setPrevSvgs]   = useState<(string | null)[]>(Array(WINDOW).fill(null));
-  const [currentSvg, setCurrentSvg] = useState<string | null>(null);
-
+   const [currentSvg, setCurrentSvg] = useState<string | null>(null);
+   const [strokesDone, setStrokesDone] = useState<boolean[]>([]);   // ← 추가
+  
   /* ───────── 유틸 ───────── */
   const isSkippable = (c: string) => lang === 'kor' && c === ' ';
   const findNext = (i: number) => { let k=i+1; while(k<chars.length&&isSkippable(chars[k])) k++; return k; };
@@ -44,7 +49,7 @@ export default function CopySession() {
       const { data:{ user } } = await supabase.auth.getUser();
       if (user) {
         const { data: note } = await supabase
-          .from('copy_notes')
+          .from('copy_progress')
           .select('progress_idx, completed')
           .eq('user_id', user.id)
           .eq('session_id', id)
@@ -52,20 +57,24 @@ export default function CopySession() {
           .single();
 
         if (note) {
-          if (note.completed) {
+          if (note.completed && !resume) {
             await clearSession(id);
             start = 0;
           } else {
             start = Math.min(note.progress_idx ?? 0, chars.length - 1);
           }
-        } else {
+        } else if (!resume) {
           await clearSession(id);
         }
-      } else {
+      } else if (!resume) {
         await clearSession(id);
       }
 
       await loadWindow(start);
+      const all = await Promise.all(
+        chars.map((_, i) => isSkippable(chars[i]) ? true : getStroke(id, i).then(svg => !!svg))
+      );
+      setStrokesDone(all);
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, textObj, lang]);
@@ -84,8 +93,13 @@ export default function CopySession() {
     for (let col = 0; col < WINDOW; col++) {
       const gi = i - CURCOL + col;
       g.push(gi >= 0 && gi < chars.length ? chars[gi] : '');
-      p.push(gi >= 0 && gi < i ? (await getStroke(id, gi)) ?? null : null);
-    }
+       // ▶ 왼쪽이든 오른쪽이든, 윈도 안 글자는 모두 SVG 조회
+       p.push(
+         gi >= 0 && gi < chars.length
+           ? (await getStroke(id, gi)) ?? null
+           : null
+       );
+         }
 
     setGuide(g);
     setPrevSvgs(p);
@@ -100,9 +114,16 @@ export default function CopySession() {
     setCurrentSvg(svg);
 
     setPrevSvgs(prev => { const cp=[...prev]; cp[CURCOL]=svg; return cp; });
-
+     // ✅ 현재 글자 완료 표시
+     setStrokesDone(prev => { const cp=[...prev]; cp[idx] = true; return cp; });
+    
     const next = findNext(idx);
-    if (next < chars.length) loadWindow(next);
+    if (next < chars.length) {
+      await loadWindow(next);
+    } else {
+      // 마지막 글자를 방금 저장했다면 바로 완료 페이지로 이동
+      gotoComplete();
+    }
   };
 
   const handleClear = async () => {
@@ -110,6 +131,9 @@ export default function CopySession() {
     await deleteStroke(id, idx);
     setCurrentSvg(null);
     setPrevSvgs(prev => { const cp=[...prev]; cp[CURCOL]=null; return cp; });
+   // ✅ 현재 글자 미완료 표시
+ setStrokesDone(prev => { const cp=[...prev]; cp[idx] = false; return cp; });
+
   };
 
   const handleMidSave = async () => {
@@ -121,10 +145,10 @@ export default function CopySession() {
 
     const nextIdx = currentSvg ? findNext(idx) : idx;
 
-    const { error } = await supabase.from('copy_notes').upsert(
+    const { error } = await supabase.from('copy_progress').upsert(
       {
         user_id:user.id, session_id:id, title:textObj.title,
-        progress_idx:nextIdx, completed:false, lang
+        progress_idx:nextIdx, lang
       },
       { onConflict:'session_id,user_id,lang' }
     );
@@ -143,9 +167,10 @@ export default function CopySession() {
   const gotoComplete = () => router.push(`/copy/${id}/complete`);
 
   /* ───────── 파생값 ───────── */
-  const isLast      = idx === chars.length - 1;
-  const isFinished  = isLast && currentSvg !== null;
-
+const everyDone   = strokesDone.length === chars.length &&
+                       strokesDone.every(Boolean);
+   const isFinished  = everyDone;
+  
   /* ───────── 렌더 ───────── */
   if (!id) return null;
   if (!textObj)    return <p>잘못된 경전 ID입니다.</p>;
@@ -182,10 +207,7 @@ export default function CopySession() {
         onFinish={handleDone}
         onClear={handleClear}
         onPrev={findPrev(idx)>=0 ? ()=>loadWindow(findPrev(idx)) : undefined}
-        onNext={!isLast ? ()=>loadWindow(findNext(idx)) : undefined}
         canPrev={findPrev(idx)>=0}
-        canNext={currentSvg !== null && !isLast}
-        isLast={isLast}
       />
 
       {/* 하단 버튼들 */}
