@@ -330,7 +330,7 @@ export default function ScripturePage() {
       const res = await fetch(`/api/global-search?query=${encodeURIComponent(search)}`);
       const data = await res.json();
       setGlobalResults(data.results || []);
-    } catch (err) { /* 에러 처리 */ }
+    } catch { }
     finally { setIsSearching(false); }
   };
 
