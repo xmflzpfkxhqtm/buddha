@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "648371757234",
+    "project_id": "buddha-e37dc",
+    "storage_bucket": "buddha-e37dc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:648371757234:android:748b6b1e8bd72d83d429ab",
+        "android_client_info": {
+          "package_name": "com.lotuslantern.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyADY4u2BJhAkrwojwpCf4FAMaxcYmbYPw8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
