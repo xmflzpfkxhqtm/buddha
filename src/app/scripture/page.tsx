@@ -359,7 +359,7 @@ export default function ScripturePage() {
     if (displaySentences.length > 0 && ttsSentences.length > 0) {
       // ... existing code ...
     }
-  }, [displaySentences.length, ttsSentences.length, setCurrentIndex, smoothCenter]);
+  }, [displaySentences.length, ttsSentences.length, setCurrentIndex, smoothCenter, isTTSSpeaking]);
 
   return (
     // JSX 구조 및 클래스명 원본 유지
