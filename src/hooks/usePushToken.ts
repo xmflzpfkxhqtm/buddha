@@ -6,6 +6,8 @@ import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/lib/supabaseClient';
 import { getPlatform } from '@/lib/platform';
 
+type SetBookmarkFunction = (title: string, index: number) => void;
+
 export function usePushToken() {
   const registeredRef = useRef(false);
 
@@ -70,10 +72,7 @@ export function usePushToken() {
           const { title, index } = notification.data ?? {};
           if (title && index !== undefined) {
             // 예시: 북마크 → /scripture
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const setBookmark = (
-              window as any
-            ).__NEXT_DATA__?.props?.pageProps?.setBookmark;
+            const setBookmark = (window as unknown as { __NEXT_DATA__?: { props?: { pageProps?: { setBookmark?: SetBookmarkFunction } } } }).__NEXT_DATA__?.props?.pageProps?.setBookmark;
             try {
               setBookmark?.(title, Number(index));
             } catch {

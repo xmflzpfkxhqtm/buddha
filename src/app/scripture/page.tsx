@@ -355,6 +355,12 @@ export default function ScripturePage() {
   };
   // === ===
 
+  useEffect(() => {
+    if (displaySentences.length > 0 && ttsSentences.length > 0) {
+      // ... existing code ...
+    }
+  }, [displaySentences.length, ttsSentences.length, setCurrentIndex, smoothCenter]);
+
   return (
     // JSX 구조 및 클래스명 원본 유지
     <main className="p-4 pb-[120px] max-w-[460px] mx-auto relative">

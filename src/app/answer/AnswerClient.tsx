@@ -59,7 +59,6 @@ function filterKnownScriptures(answer: string, known: string[]) {
 
   for (const p of patterns) {
     let m: RegExpExecArray | null;
-    // eslint-disable-next-line no-cond-assign
     while ((m = p.exec(answer)) !== null) {
       const [, inQuote, volStr] = m;
       const vol = parseInt(volStr);
