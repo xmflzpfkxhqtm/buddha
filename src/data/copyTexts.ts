@@ -37,7 +37,7 @@ export const copyTexts = [
     },
     {
       id: 'sutra38-kor',
-      title: '법구경 제38게송',
+      title: '법dd구경 제38게송',
       lang: 'kor',
       text: '방일한 이는 부처님 법을 보지 못해 큰 이익을 잃고 고통 속에 머무른다'
     }
