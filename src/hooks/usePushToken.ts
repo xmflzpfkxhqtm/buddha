@@ -70,6 +70,7 @@ export function usePushToken() {
           const { title, index } = notification.data ?? {};
           if (title && index !== undefined) {
             // 예시: 북마크 → /scripture
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const setBookmark = (
               window as any
             ).__NEXT_DATA__?.props?.pageProps?.setBookmark;
