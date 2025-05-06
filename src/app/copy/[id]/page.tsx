@@ -176,16 +176,12 @@ const everyDone   = strokesDone.length === chars.length &&
   if (!textObj)    return <p>잘못된 경전 ID입니다.</p>;
 
   return (
-    <main className="flex flex-col max-w-[460px] items-center p-4 select-none">
+    <main className="flex flex-col max-w-[460px] items-center p-6 select-none">
       {/* 뒤로가기 */}
-      <button onClick={()=>router.push('/copy')}
-              className="self-start mb-2 flex items-center gap-1 text-gray-600 hover:text-black">
-        <ArrowLeft size={20} className="text-red-dark"/>
-        <span className="text-base text-red-dark">뒤로가기</span>
-      </button>
+
 
       {/* 제목 */}
-      <div className="w-full h-16 bg-red-light rounded-xl flex items-center my-4 pl-1">
+      <div className="w-full h-16 bg-red-light rounded-xl flex items-center mb-4 pl-1">
         <Image src="/lotusbeige.png" alt="lotus" width={48} height={48}
                className="object-contain border-beige mx-2"/>
         <div>

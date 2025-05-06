@@ -2,6 +2,7 @@ import UIKit
 import Capacitor
 import FirebaseCore              // ← ✅ 이미 추가하셨음
 import FirebaseMessaging         // ← ✅ 토큰 전달용 (추가)
+import WebKit          // ★ 추가
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -18,12 +19,21 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   }
 
   // 2) (선택) APNs 토큰을 FCM에 연결 — 푸시 수신용
-  func application(
-    _ application: UIApplication,
-    didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
-  ) {
-    Messaging.messaging().apnsToken = deviceToken
+func application(
+  _ application: UIApplication,
+  didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+) -> Bool {
+  FirebaseApp.configure()                    // (기존)
+
+  // ────── ★ iOS 엣지-스와이프 뒤로가기 활성화 ──────
+  if let vc = window?.rootViewController as? CAPBridgeViewController,
+     let webView = vc.webView as? WKWebView {
+    webView.allowsBackForwardNavigationGestures = true
   }
+  // ────────────────────────────────────────────────
+
+  return true
+}
 
   // ─────(아래 기존 코드 그대로)─────
   func applicationWillResignActive(_ application: UIApplication) { }

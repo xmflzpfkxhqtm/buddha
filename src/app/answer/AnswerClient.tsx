@@ -209,10 +209,10 @@ export default function AnswerClient() {
   const dedup = new Set<string>();
 
   return (
-    <main className="relative min-h-screen w-full max-w-[460px] flex flex-col items-center mx-auto bg-white px-6 py-10">
+    <main className="relative min-h-screen w-full max-w-[460px] flex flex-col items-center mx-auto bg-white px-6 py-6">
       {/* ======================== 카드 영역 ======================== */}
       <div className="rounded-2xl px-2">
-        <h2 className="text-2xl text-red font-semibold mt-4">
+        <h2 className="text-2xl text-red font-semibold">
           부처님이라면 분명<br />이렇게 말씀하셨을 것입니다
         </h2>
 
