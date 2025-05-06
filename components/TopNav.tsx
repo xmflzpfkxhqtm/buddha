@@ -34,8 +34,8 @@ export default function TopNav() {
     const map: Record<string, string> = {
       '/': '홈',
       '/scripture': '불경',
-      '/ask': '질문',
-      '/copy': '사경',
+      '/ask': '부처님께 여쭙기',
+      '/copy': '사경하기',
       '/me': '내 정보',
       '/answer': '답변',
     };
