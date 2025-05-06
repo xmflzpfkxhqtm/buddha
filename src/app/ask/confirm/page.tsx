@@ -181,7 +181,7 @@ export default function ConfirmPage() {
         setFadeOut(true);
 
         await new Promise((resolve) => setTimeout(resolve, 1000)); // ✅ 안정성 개선
-        router.push(`/answer?questionId=${data.questionId}`);
+        router.replace(`/answer?questionId=${data.questionId}`);
       } else {
         throw new Error(data?.message || data?.error || '답변을 받아오는 데 실패했습니다.');
       }
