@@ -13,31 +13,34 @@ const HIDDEN_PATHS: (string | RegExp)[] = [
 ];
 
 export default function TopNav() {
-  const router   = useRouter();
-  const pathname = usePathname();
-
-  /* 숨길 페이지인지 체크 */
-  const shouldHide = HIDDEN_PATHS.some((rule) =>
-    typeof rule === 'string' ? rule === pathname : rule.test(pathname)
-  );
-  if (shouldHide) return null;            // ← TopNav + 스페이서 둘 다 안 보임
-
-  /* 라벨 매핑 */
-  const [label, setLabel] = useState('');
-  useEffect(() => {
-    const map: Record<string, string> = {
-      '/': '홈',
-      '/scripture': '불경',
-      '/ask': '질문',
-      '/copy': '사경',
-      '/me': '내 정보',
-      '/answer': '답변',
-    };
-    setLabel(map[pathname] ?? '');
-  }, [pathname]);
-
-  const showBack = pathname !== '/';
-
+    const router   = useRouter();
+    const pathname = usePathname();
+  
+    /* ── ① Hook은 무조건 첫 줄에서 호출 ── */
+    const [label, setLabel] = useState('');
+  
+    /* 라벨만 바꾸는 effect → 여기선 항상 실행돼도 부하 없음 */
+    useEffect(() => {
+      const map: Record<string, string> = {
+        '/': '홈',
+        '/scripture': '불경',
+        '/ask': '질문',
+        '/copy': '사경',
+        '/me': '내 정보',
+        '/answer': '답변',
+      };
+      setLabel(map[pathname] ?? '');
+    }, [pathname]);
+  
+    /* ── ② 그 다음 숨김 여부 계산 ── */
+    const shouldHide = HIDDEN_PATHS.some((rule) =>
+      typeof rule === 'string' ? rule === pathname : rule.test(pathname)
+    );
+    if (shouldHide) return null;
+  
+    const showBack = pathname !== '/';
+  
+  
   return (
     <>
       {/* ───── 고정 상단바 ───── */}

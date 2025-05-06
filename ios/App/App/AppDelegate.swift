@@ -1,39 +1,39 @@
 import UIKit
 import Capacitor
-import FirebaseCore              // ← ✅ 이미 추가하셨음
-import FirebaseMessaging         // ← ✅ 토큰 전달용 (추가)
-import WebKit          // ★ 추가
+import WebKit
+import FirebaseCore
+import FirebaseMessaging         // FCM 토큰 전달용
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
   var window: UIWindow?
 
-  // 1) 앱 시작 시 Firebase 초기화
+  // 앱 시작 시
   func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
   ) -> Bool {
-    FirebaseApp.configure()      // ← ✅ 이 한 줄만 추가하면 끝
+
+    // 1️⃣ Firebase 초기화
+    FirebaseApp.configure()
+
+    // 2️⃣ iOS 엣지-스와이프 뒤로가기 활성화
+    if let vc = window?.rootViewController as? CAPBridgeViewController,
+       let webView = vc.webView as? WKWebView {
+      webView.allowsBackForwardNavigationGestures = true
+    }
+
     return true
   }
 
-  // 2) (선택) APNs 토큰을 FCM에 연결 — 푸시 수신용
-func application(
-  _ application: UIApplication,
-  didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
-) -> Bool {
-  FirebaseApp.configure()                    // (기존)
-
-  // ────── ★ iOS 엣지-스와이프 뒤로가기 활성화 ──────
-  if let vc = window?.rootViewController as? CAPBridgeViewController,
-     let webView = vc.webView as? WKWebView {
-    webView.allowsBackForwardNavigationGestures = true
+  // (선택) APNs 토큰을 FCM에 연결
+  func application(
+    _ application: UIApplication,
+    didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+  ) {
+    Messaging.messaging().apnsToken = deviceToken
   }
-  // ────────────────────────────────────────────────
-
-  return true
-}
 
   // ─────(아래 기존 코드 그대로)─────
   func applicationWillResignActive(_ application: UIApplication) { }
@@ -50,7 +50,10 @@ func application(
   func application(_ application: UIApplication,
                    continue userActivity: NSUserActivity,
                    restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
-    return ApplicationDelegateProxy.shared.application(application,
-            continue: userActivity, restorationHandler: restorationHandler)
+    return ApplicationDelegateProxy.shared.application(
+      application,
+      continue: userActivity,
+      restorationHandler: restorationHandler
+    )
   }
 }
