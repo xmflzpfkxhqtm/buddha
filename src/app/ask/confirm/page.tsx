@@ -6,6 +6,37 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import Loading from '../../../../components/Loading';
 
+// 재시도 유틸리티 함수
+async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3, delay = 1500): Promise<Response> {
+  let lastError: Error | unknown;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+      if (response.ok) return response;
+      
+      // 5xx 서버 오류일 경우만 재시도
+      if (response.status >= 500) {
+        const errorText = await response.text();
+        throw new Error(`서버 오류 ${response.status}: ${errorText}`);
+      }
+      
+      // 4xx 클라이언트 오류는 재시도하지 않고 바로 반환
+      return response;
+    } catch (error) {
+      lastError = error;
+      console.warn(`⚠️ API 요청 실패 (시도 ${attempt}/${maxRetries}):`, error);
+      
+      if (attempt < maxRetries) {
+        console.log(`🔄 ${delay}ms 후 재시도...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  throw new Error(`API 요청 실패: 최대 재시도 횟수(${maxRetries}회) 초과. 마지막 오류: ${lastError}`);
+}
+
 export default function ConfirmPage() {
   const router = useRouter();
   const { question, setQuestion, parentId, setParentId, selectedLength } = useAskStore();
@@ -13,27 +44,72 @@ export default function ConfirmPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [fadeOut, setFadeOut] = useState(false);
   const [showLoading, setShowLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [previousQA, setPreviousQA] = useState<{ question: string; answer: string } | null>(null);
   const [confirmCancelModal, setConfirmCancelModal] = useState(false);
 
   const questionIdRef = useRef<string | null>(null); // ✅ 새로 추가됨
+  const warmupAttempted = useRef(false);
+  const submitAttemptCount = useRef(0);
+
+  // API 웜업 함수 - 수파베이스 벡터 검색만 웜업하는 함수
+  const warmupApi = async () => {
+    if (warmupAttempted.current) return;
+    warmupAttempted.current = true;
+    
+    try {
+      console.log('✅ 벡터 검색 및 임베딩 API 웜업 시작...');
+      
+      // 가벼운 샘플 질문으로 웜업 요청 전송 (재시도 로직 적용)
+      const warmupResponse = await fetchWithRetry(
+        '/api/ask/warmup', 
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            query: '평온한 마음을 가지려면 어떻게 해야 하나요?'
+          })
+        },
+        3,  // 최대 3회 재시도
+        1000 // 1초 간격
+      );
+      
+      if (warmupResponse.ok) {
+        console.log('✅ API 웜업 성공');
+        const data = await warmupResponse.json();
+        console.log('📊 웜업 통계:', data?.stats);
+      } else {
+        console.warn('⚠️ API 웜업 응답 실패:', await warmupResponse.text());
+      }
+    } catch (error) {
+      console.error('❌ API 웜업 요청 실패:', error);
+    }
+  };
 
   useEffect(() => {
-    // 백엔드 API pre-warm
-    fetch('/api/ask/ping').catch(() => {});
+    // 페이지 로드 즉시 API 웜업 시작
+    warmupApi();
+    
+    // 기존 핑 요청도 유지 (재시도 로직 적용)
+    fetchWithRetry('/api/ask/ping', {}, 3, 1000)
+      .catch(() => console.warn('⚠️ 핑 요청 실패'));
   }, []);
 
   useEffect(() => {
     const fetchPrevious = async () => {
       if (!parentId) return;
-      const { data, error } = await supabase
-        .from('temp_answers')
-        .select('question, answer')
-        .eq('id', parentId)
-        .single();
-      if (data && !error) {
-        setPreviousQA({ question: data.question, answer: data.answer });
+      try {
+        const { data, error } = await supabase
+          .from('temp_answers')
+          .select('question, answer')
+          .eq('id', parentId)
+          .single();
+        if (data && !error) {
+          setPreviousQA({ question: data.question, answer: data.answer });
+        }
+      } catch (error) {
+        console.error('❌ 이전 대화 조회 실패:', error);
       }
     };
     fetchPrevious();
@@ -57,19 +133,29 @@ export default function ConfirmPage() {
 
     setIsLoading(true);
     setShowLoading(true);
+    setErrorMessage(null);
+    submitAttemptCount.current += 1;
+    const currentAttempt = submitAttemptCount.current;
 
     try {
       const minimumTimePromise = new Promise((resolve) => setTimeout(resolve, 3000));
 
-      const response = await fetch('/api/ask', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question, parentId, length: selectedLength }),
-      });
+      // 재시도 로직 적용한 fetch 사용
+      const response = await fetchWithRetry(
+        '/api/ask',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question, parentId, length: selectedLength }),
+        },
+        3,  // 최대 3회 재시도
+        2000 // 2초 간격
+      );
 
       type AskResponse = {
         questionId?: string;
         error?: string;
+        message?: string;
       };
 
       let data: AskResponse = {};
@@ -77,13 +163,16 @@ export default function ConfirmPage() {
         data = await response.json();
       } catch (jsonError) {
         console.error('❌ JSON 파싱 실패:', jsonError);
-        alert('서버 응답이 올바르지 않습니다.');
-        setIsLoading(false);
-        setShowLoading(false);
-        return;
+        throw new Error('서버 응답이 올바르지 않습니다.');
       }
 
       await minimumTimePromise;
+
+      // 현재 시도가 최신 시도인지 확인 (중복 제출 방지)
+      if (currentAttempt !== submitAttemptCount.current) {
+        console.log('🔄 더 최근 제출이 있어 이 응답은 무시됨');
+        return;
+      }
 
       if (response.ok && data.questionId) {
         questionIdRef.current = data.questionId; // ✅ push 실패 대비 ref 저장
@@ -94,14 +183,15 @@ export default function ConfirmPage() {
         await new Promise((resolve) => setTimeout(resolve, 1000)); // ✅ 안정성 개선
         router.push(`/answer?questionId=${data.questionId}`);
       } else {
-        alert(data?.error || '답변을 받아오는 데 실패했습니다.');
-        setIsLoading(false);
-        setShowLoading(false);
+        throw new Error(data?.message || data?.error || '답변을 받아오는 데 실패했습니다.');
       }
     } catch (error) {
-      console.error('❌ fetch 실패 또는 네트워크 오류:', error);
-      if (!isLoading) return;
-      alert('잠시 후 다시 시도해주세요.');
+      console.error('❌ 요청 실패:', error);
+      
+      // 현재 시도가 최신 시도인지 확인
+      if (currentAttempt !== submitAttemptCount.current) return;
+      
+      setErrorMessage(error instanceof Error ? error.message : '잠시 후 다시 시도해주세요.');
       setIsLoading(false);
       setShowLoading(false);
     }
@@ -156,6 +246,16 @@ export default function ConfirmPage() {
         <div className="min-h-[12rem] w-full bg-[#FFFDF8] border border-red-light rounded-xl p-4 text-base text-gray-500 whitespace-pre-wrap mb-4">
           {question}
         </div>
+
+        {errorMessage && (
+          <div className="w-full bg-red-50 border border-red-200 p-3 rounded-lg mb-4 text-sm text-red-600">
+            <p className="flex items-center">
+              <span className="mr-2">⚠️</span>
+              {errorMessage}
+            </p>
+            <p className="text-xs mt-1 text-red-500">네트워크 상태를 확인하시고 다시 시도해주세요.</p>
+          </div>
+        )}
 
         <div className="flex flex-row w-full space-x-6 mb-4">
           <p className="text-start text-red text-sm mb-4">

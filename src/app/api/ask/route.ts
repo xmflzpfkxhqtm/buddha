@@ -1,6 +1,5 @@
 export const runtime = 'nodejs';
 
-
 import { NextRequest, NextResponse } from 'next/server';
 import { generateEmbeddingBatch } from '@/utils/upstage';
 import { searchSimilarDocuments } from '@/utils/supabase';
@@ -113,6 +112,32 @@ async function callGrok(messages: ChatMessage[], model: string, maxTokens: numbe
     usage: data.usage
   };
 }
+
+// 재시도 로직 구현
+async function withRetry<T>(fn: () => Promise<T>, maxRetries: number, delayMs: number, operationName: string): Promise<T> {
+  let lastError: Error | unknown;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      console.warn(`⚠️ ${operationName} 실패 (시도 ${attempt}/${maxRetries}):`, error);
+      
+      if (attempt < maxRetries) {
+        console.log(`🔄 ${delayMs}ms 후 재시도...`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+  
+  throw new Error(`${operationName} 실패: 최대 재시도 횟수(${maxRetries}회) 초과. 마지막 오류: ${lastError}`);
+}
+
+// 재시도 설정
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000; // ms
+
 type AskRequestBody = {
   question?: string;
   model?: string;
@@ -122,7 +147,7 @@ type AskRequestBody = {
 
 export async function POST(request: NextRequest) {
   try {
-    let body: AskRequestBody = {}; // ✅ any 대신 명확한 타입 사용
+    let body: AskRequestBody = {};
 
     try {
       body = await request.json();
@@ -139,17 +164,53 @@ export async function POST(request: NextRequest) {
     
     const { charLimit, maxTokens } = lengthSetting[length as keyof typeof lengthSetting] || lengthSetting.long;
 
+    // 이전 대화 가져오기
     let previousQA = '';
     if (parentId) {
-      const { data: parent } = await supabase.from('temp_answers').select('question, answer').eq('id', parentId).single();
-      if (parent) {
-        previousQA = `이전 질문: ${parent.question}\n부처님의 응답: ${parent.answer}\n\n`;
+      try {
+        const { data: parent } = await supabase
+          .from('temp_answers')
+          .select('question, answer')
+          .eq('id', parentId)
+          .single();
+        
+        if (parent) {
+          previousQA = `이전 질문: ${parent.question}\n부처님의 응답: ${parent.answer}\n\n`;
+        }
+      } catch (error) {
+        console.error('⚠️ 이전 대화 조회 실패:', error);
       }
     }
 
-    const [questionEmbedding] = await generateEmbeddingBatch([question]);
-    const relevantDocuments = await searchSimilarDocuments(questionEmbedding, 10);
-    const contextText = relevantDocuments.map(doc => doc.content).join('\n\n');
+    // 임베딩 생성 및 벡터 검색
+    let contextText = '';
+    try {
+      // 임베딩 생성
+      const embeddings = await withRetry(
+        () => generateEmbeddingBatch([question]),
+        MAX_RETRIES,
+        RETRY_DELAY,
+        '임베딩 생성'
+      );
+      
+      console.log('✅ 임베딩 생성 완료');
+      
+      if (embeddings.length > 0) {
+        // 벡터 검색
+        const documents = await withRetry(
+          () => searchSimilarDocuments(embeddings[0], 10),
+          MAX_RETRIES,
+          RETRY_DELAY,
+          '벡터 검색'
+        );
+        
+        console.log('✅ 벡터 검색 완료, 결과 수:', documents.length);
+        contextText = documents.map(doc => doc.content).join('\n\n');
+      }
+    } catch (error) {
+      console.error('❌ 벡터 검색 또는 임베딩 생성 실패:', error);
+      contextText = '벡터 검색 실패. 일반적인 지식으로 응답합니다.';
+    }
 
     const messages: ChatMessage[] = [
       {
@@ -188,42 +249,70 @@ export async function POST(request: NextRequest) {
       }
     ];
 
+    // LLM API 호출
     const apiModel = modelMapping[model as keyof typeof modelMapping] || 'gpt-4.1-mini';
     let data;
     
     try {
-      if (model === 'gpt-4.1-mini') {
-        data = await callOpenAI(messages, apiModel, maxTokens);
-      } else if (model.startsWith('claude')) {
-        data = await callClaude(messages, apiModel, maxTokens);
-      } else if (model.startsWith('gemini')) {
-        data = await callGemini(messages, apiModel);
-      } else if (model === 'grok') {
-        data = await callGrok(messages, apiModel, maxTokens);
-      } else {
-        // fallback은 무조건 gpt-4.1-mini
-        data = await callOpenAI(messages, 'gpt-4.1-mini', maxTokens);
-      }
+      // 각 모델별 API 호출
+      data = await withRetry(
+        async () => {
+          if (model.startsWith('claude')) {
+            return await callClaude(messages, apiModel, maxTokens);
+          } else if (model.startsWith('gemini')) {
+            return await callGemini(messages, apiModel);
+          } else if (model === 'grok') {
+            return await callGrok(messages, apiModel, maxTokens);
+          } else {
+            // 기본은 OpenAI
+            return await callOpenAI(messages, apiModel, maxTokens);
+          }
+        },
+        MAX_RETRIES,
+        RETRY_DELAY,
+        'LLM API 호출'
+      );
     } catch (apiError) {
       console.warn('⚠️ API 모델 호출 실패, fallback 시도:', apiError);
-      data = await callOpenAI(messages, 'gpt-4.1-mini', maxTokens);
+      try {
+        data = await callOpenAI(messages, 'gpt-4.1-mini', maxTokens);
+      } catch (fallbackError) {
+        console.error('❌ Fallback API도 실패:', fallbackError);
+        data = { 
+          choices: [{ message: { content: '부처님께서 지금은 깊은 명상 중이시어 응답할 수 없습니다. 잠시 후 다시 여쭤보세요.' } }],
+          usage: { total_tokens: 0 }
+        };
+      }
     }
     
     const answer = data.choices?.[0]?.message?.content || '부처님께서 조용히 침묵하십니다.';
     console.log('📊 사용 토큰 정보:', { model, usage: data.usage, question, length });
 
-    const { data: inserted, error } = await supabase
-      .from('temp_answers')
-      .insert([{ question, answer, parent_id: parentId }])
-      .select()
-      .single();
-
-    if (error || !inserted) {
-      console.error('❌ Supabase 저장 실패:', error);
+    // Supabase 저장
+    try {
+      const { data: inserted, error } = await withRetry(
+        async () => {
+          // async 함수로 감싸서 Promise 반환
+          return await supabase
+            .from('temp_answers')
+            .insert([{ question, answer, parent_id: parentId }])
+            .select()
+            .single();
+        },
+        MAX_RETRIES,
+        RETRY_DELAY,
+        'Supabase 저장'
+      );
+      
+      if (error || !inserted) {
+        throw new Error(error?.message || 'Unknown error');
+      }
+      
+      return NextResponse.json({ success: true, questionId: inserted.id });
+    } catch (dbError) {
+      console.error('❌ Supabase 저장 실패:', dbError);
       return NextResponse.json({ success: false, message: 'Supabase 저장에 실패했습니다.' }, { status: 500 });
     }
-
-    return NextResponse.json({ success: true, questionId: inserted.id });
   
   } catch (error: unknown) {
     console.error('❌ 최상위 오류 발생:', error);
@@ -239,4 +328,4 @@ export async function POST(request: NextRequest) {
   
     return NextResponse.json({ success: false, message }, { status: 500 });
   }
-  }
+}
