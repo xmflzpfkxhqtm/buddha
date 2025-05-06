@@ -73,7 +73,7 @@ export default function MePage() {
           className="cursor-pointer px-4 py-4 flex items-center justify-between hover:bg-beige"
         >
           <div>
-            <p className="font-semibold  text-red-dark">👤 프로필 관리</p>
+            <p className="font-semibold  text-red-dark">프로필 관리</p>
             <p className="text-sm text-gray-600">이름, 이메일, 기본 정보를 확인하거나 수정합니다.</p>
           </div>
           <ChevronRight size={16} className="text-gray-400" />
@@ -84,7 +84,7 @@ export default function MePage() {
           className="cursor-pointer px-4 py-4 flex items-center justify-between hover:bg-beige"
         >
           <div>
-            <p className="font-semibold text-red-dark">📌 저장한 책갈피</p>
+            <p className="font-semibold text-red-dark">저장한 책갈피</p>
             <p className="text-sm text-gray-600">경전의 구절을 저장한 목록입니다.</p>
           </div>
           <div className="flex items-center gap-2 text-gray-400 text-sm">
@@ -97,7 +97,7 @@ export default function MePage() {
           className="cursor-pointer px-4 py-4 flex items-center justify-between hover:bg-beige"
         >
           <div>
-            <p className="font-semibold text-red-dark">🪷 내가 저장한 말씀들</p>
+            <p className="font-semibold text-red-dark">내가 저장한 말씀들</p>
             <p className="text-sm text-gray-600">당신의 질문과 부처님의 답변입니다.</p>
           </div>
           <div className="flex items-center gap-2 text-gray-400 text-sm">
@@ -111,7 +111,7 @@ export default function MePage() {
           className="cursor-pointer px-4 py-4 flex items-center justify-between hover:bg-beige"
         >
           <div>
-            <p className="font-semibold text-red-dark">🖊️ 나의 사경노트</p>
+            <p className="font-semibold text-red-dark">나의 사경노트</p>
             <p className="text-sm text-gray-600">당신의 질문과 부처님의 답변입니다.</p>
           </div>
           <div className="flex items-center gap-2 text-gray-400 text-sm">
@@ -126,7 +126,7 @@ export default function MePage() {
   className="cursor-pointer px-4 py-4 flex items-center justify-between hover:bg-beige"
 >
   <div>
-    <p className="font-semibold text-red-dark">⚙️ 설정</p>
+    <p className="font-semibold text-red-dark">설정</p>
     <p className="text-sm text-gray-600">알림, 소리 등 앱 환경을 조정합니다.</p>
   </div>
   <ChevronRight size={16} className="text-gray-400" />
@@ -136,7 +136,7 @@ export default function MePage() {
           className="cursor-pointer px-4 py-4 flex items-center justify-between hover:bg-beige"
         >
           <div>
-            <p className="font-semibold  text-red-dark">💬 제안 및 문의 보내기</p>
+            <p className="font-semibold  text-red-dark">제안 및 문의 보내기</p>
             <p className="text-sm text-gray-600">불편한 점이나 바라는 점을 알려주세요.</p>
           </div>
           <ChevronRight size={16} className="text-gray-400" />
@@ -148,7 +148,7 @@ export default function MePage() {
           className="cursor-pointer px-4 py-4 flex items-center justify-between hover:bg-gray-50"
         >
           <div>
-            <p className="font-semibold text-red">🚪 로그아웃</p>
+            <p className="font-semibold text-red-light">로그아웃</p>
             <p className="text-sm text-gray-600">계정에서 로그아웃합니다.</p>
           </div>
           <ChevronRight size={16} className="text-gray-400" />

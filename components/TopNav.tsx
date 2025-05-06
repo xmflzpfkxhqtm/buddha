@@ -46,8 +46,8 @@ export default function TopNav() {
         {showBack && (
           <button
             onClick={() => router.back()}
-            className="absolute left-4 flex items-center gap-1 text-red-dark
-                    active:scale-95 h-10 px-2"
+            className="absolute flex items-center gap-1 font-semibold text-red-dark
+                    active:scale-95 h-10"
           >
             <ChevronLeft size={24} />
             돌아가기
