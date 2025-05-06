@@ -2,7 +2,6 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 import { copyTexts } from '@/data/copyTexts';
 import TracingCanvas from '../../../../components/TracingCanvas';
