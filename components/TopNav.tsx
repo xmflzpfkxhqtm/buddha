@@ -60,7 +60,7 @@ export default function TopNav() {
       {/* ───── 고정 상단바 ───── */}
       <header
         className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[460px] h-[48px]
-                   bg-white border-red z-40 select-none flex items-center"
+                   bg-white z-40 select-none flex items-center border-b border-grey/50"
       >
         {showBack && (
           <button
