@@ -17,13 +17,13 @@ export const copyTexts = [
     /* 금강경 제1분 */
     {
       id: 'diamond-han',
-      title: '금강경 제1분',
+      title: '금강경',
       lang: 'han',
       text: '如是我聞一時佛在舍衛國祇樹給孤獨園與大比丘眾千二百五十人俱爾時世尊'
     },
     {
       id: 'diamond-kor',
-      title: '금강경 제1분',
+      title: '금강경',
       lang: 'kor',
       text: '이와 같이 들었다. 어느 때 부처님께서 사위국 기수급고독원에 계셨다'
     },
@@ -31,13 +31,13 @@ export const copyTexts = [
     /* 법구경 제38게송 */
     {
       id: 'sutra38-han',
-      title: '법구경 제38게송',
+      title: '법구경',
       lang: 'han',
       text: '放逸者不觀佛法失大利終受苦惡道久處恒流轉不能得安樂常沈輪迴海'
     },
     {
       id: 'sutra38-kor',
-      title: '법dd구경 제38게송',
+      title: '법구경',
       lang: 'kor',
       text: '방일한 이는 부처님 법을 보지 못해 큰 이익을 잃고 고통 속에 머무른다'
     }
