@@ -6,6 +6,11 @@ import { Browser } from '@capacitor/browser';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import type { PluginListenerHandle } from '@capacitor/core';
+import { AuthError } from '@supabase/supabase-js';
+
+/* 로깅 */
+const log = (tag: string, payload?: string | Record<string, unknown> | AuthError) =>
+  console.log(`[DLINK][${tag}]`, payload ?? '');
 
 export default function DeepLinkHandler() {
   const router = useRouter();
@@ -15,26 +20,27 @@ export default function DeepLinkHandler() {
 
     (async () => {
       sub = await App.addListener('appUrlOpen', async ({ url }) => {
-        console.log('[DeepLink] RAW URL →', url);
+        log('RAW', url);
 
-        if (!url?.startsWith('yeondeung://auth/callback')) return;
+        if (!url?.startsWith('https://buddha-dusky.vercel.app/auth/deeplink'))
+          return; // 커스텀 스킴 쓴다면 조건 변경
 
-        /* ────────── ① PKCE : ?code= ────────── */
+        /* ────────── PKCE : ?code= ────────── */
         if (url.includes('?code=')) {
-          console.log('[DeepLink] PKCE path');
+          log('PKCE', 'exchange start');
           const { error } = await supabase.auth.exchangeCodeForSession(url);
-          if (error) {
-            console.error('[DeepLink] exchangeCodeForSession 실패', error);
-            return;
+          log('PKCE', error ?? 'success');
+
+          if (!error) {
+            await Browser.close();
+            router.replace('/me');
           }
-          await Browser.close();
-          router.replace('/me');
           return;
         }
 
-        /* ────────── ② implicit : #access_token= ────────── */
+        /* ────────── Implicit : #access_token= ────────── */
         if (url.includes('#access_token=')) {
-          console.log('[DeepLink] Implicit path');
+          log('IMPLICIT', 'hash parse');
           const [, fragment] = url.split('#');
           const p = new URLSearchParams(fragment);
 
@@ -42,21 +48,17 @@ export default function DeepLinkHandler() {
           const refresh_token = p.get('refresh_token');
 
           if (!access_token || !refresh_token) {
-            console.error('[DeepLink] 해시 파싱 실패');
+            log('IMPLICIT', 'parse fail');
             return;
           }
 
-          await supabase.auth.setSession({
-            access_token,
-            refresh_token,
-          });
-
+          await supabase.auth.setSession({ access_token, refresh_token });
           await Browser.close();
           router.replace('/me');
           return;
         }
 
-        console.warn('[DeepLink] 알 수 없는 URL 형식, 무시');
+        log('SKIP', 'unknown format');
       });
     })();
 
