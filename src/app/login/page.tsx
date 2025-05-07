@@ -40,13 +40,12 @@ export default function LoginPage() {
   const isLocal =
     typeof window !== 'undefined' && window.location.hostname === 'localhost';
 
-    const redirectTo = IS_NATIVE
-    ? 'yeondeung://auth/callback'
+  const redirectTo = IS_NATIVE
+    ? 'https://buddha-dusky.vercel.app/auth/deeplink'
     : isLocal
       ? 'http://localhost:3000/auth/deeplink'
       : 'https://buddha-dusky.vercel.app/auth/deeplink';
 
-      
   log('INIT', { IS_NATIVE, platform, redirectTo });
 
   /* ---------- 공통 OAuth 헬퍼 ---------- */
