@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.lotuslantern.app',
+  appId: 'com.lotus.lantern',
   appName: '연등',
 
   // ✅ iOS 딥링크용 커스텀 스킴 지정

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { FcGoogle } from 'react-icons/fc';
 import { SiKakaotalk } from 'react-icons/si';
+import { SiApple } from 'react-icons/si';
 import Image from 'next/image';
 import ScrollHeader from '../../../components/ScrollHeader';
 import { Browser } from '@capacitor/browser';
@@ -31,33 +32,31 @@ export default function LoginPage() {
     : isLocal
       ? 'http://localhost:3000/auth/deeplink'  // ✅ 로컬일 때
       : 'https://buddha-dusky.vercel.app/auth/deeplink'; // ✅ 배포일 때
-  
-  // ✅ 구글 로그인 함수
+
+  // ✅ 구글 로그인
   const handleGoogleLogin = async () => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo,
-        skipBrowserRedirect: true, // <= 인앱브라우저 직접 열 때 필수
-        // @ts-expect-error PKCE flow type is required for mobile
-        flowType: 'pkce',          // ✅ 반드시 추가
+        skipBrowserRedirect: true,
+        // @ts-expect-error - Supabase OAuth options type doesn't include flowType
+        flowType: 'pkce',
         queryParams: {
-          prompt: 'select_account', // ✅ 매번 계정 선택창 강제
+          prompt: 'select_account',
         },
       },
     });
-    
     if (error) {
-      alert('로그인 실패');
+      alert('구글 로그인 실패');
       return;
     }
-
     if (data?.url) {
       await Browser.open({ url: data.url });
     }
   };
 
-  // ✅ 카카오 로그인 함수
+  // ✅ 카카오 로그인
   const handleKakaoLogin = async () => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'kakao',
@@ -65,12 +64,30 @@ export default function LoginPage() {
         redirectTo,
       },
     });
-
     if (error) {
       alert('카카오 로그인 실패');
       return;
     }
+    if (data?.url) {
+      await Browser.open({ url: data.url });
+    }
+  };
 
+  // ✅ 애플 로그인
+  const handleAppleLogin = async () => {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'apple',
+      options: {
+        redirectTo,
+        skipBrowserRedirect: true,
+        // @ts-expect-error - Supabase OAuth options type doesn't include flowType
+        flowType: 'pkce',
+      },
+    });
+    if (error) {
+      alert('Apple 로그인 실패');
+      return;
+    }
     if (data?.url) {
       await Browser.open({ url: data.url });
     }
@@ -111,6 +128,15 @@ export default function LoginPage() {
           >
             <SiKakaotalk size={20} color="#381E1F" />
             <span className="font-medium text-black">카카오톡으로 로그인</span>
+          </button>
+
+          {/* 애플 로그인 */}
+          <button
+            onClick={handleAppleLogin}
+            className="w-full flex items-center justify-center gap-2 border bg-black border-black rounded-lg py-2 hover:bg-gray-800 transition"
+          >
+            <SiApple size={20} color="#fff" />
+            <span className="font-medium text-white">Apple로 로그인</span>
           </button>
         </div>
       </div>
