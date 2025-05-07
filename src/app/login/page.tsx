@@ -1,17 +1,25 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { FcGoogle } from 'react-icons/fc';
-import { SiKakaotalk } from 'react-icons/si';
-import { SiApple } from 'react-icons/si';
+import { SiKakaotalk, SiApple } from 'react-icons/si';
 import Image from 'next/image';
 import ScrollHeader from '../../../components/ScrollHeader';
 import { Browser } from '@capacitor/browser';
 
+declare global {
+  interface Window {
+    Capacitor?: {
+      getPlatform: () => 'ios' | 'android' | 'web';
+    };
+  }
+}
+
 export default function LoginPage() {
   const router = useRouter();
+  const [platform, setPlatform] = useState<'ios' | 'android' | 'web'>('web');
 
   // ✅ 로그인 상태일 경우 /me로 이동
   useEffect(() => {
@@ -22,6 +30,11 @@ export default function LoginPage() {
       }
     };
     checkLogin();
+
+    // ✅ 플랫폼 확인
+    if (typeof window !== 'undefined' && window.Capacitor?.getPlatform) {
+      setPlatform(window.Capacitor.getPlatform());
+    }
   }, [router]);
 
   // ✅ 환경별 redirectTo 결정
@@ -30,10 +43,9 @@ export default function LoginPage() {
   const redirectTo = isNativeApp()
     ? 'yeondeung://auth/callback'
     : isLocal
-      ? 'http://localhost:3000/auth/deeplink'  // ✅ 로컬일 때
-      : 'https://buddha-dusky.vercel.app/auth/deeplink'; // ✅ 배포일 때
+      ? 'http://localhost:3000/auth/deeplink'
+      : 'https://buddha-dusky.vercel.app/auth/deeplink';
 
-  // ✅ 구글 로그인
   const handleGoogleLogin = async () => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -42,38 +54,22 @@ export default function LoginPage() {
         skipBrowserRedirect: true,
         // @ts-expect-error - Supabase OAuth options type doesn't include flowType
         flowType: 'pkce',
-        queryParams: {
-          prompt: 'select_account',
-        },
+        queryParams: { prompt: 'select_account' },
       },
     });
-    if (error) {
-      alert('구글 로그인 실패');
-      return;
-    }
-    if (data?.url) {
-      await Browser.open({ url: data.url });
-    }
+    if (error) alert('구글 로그인 실패');
+    if (data?.url) await Browser.open({ url: data.url });
   };
 
-  // ✅ 카카오 로그인
   const handleKakaoLogin = async () => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'kakao',
-      options: {
-        redirectTo,
-      },
+      options: { redirectTo },
     });
-    if (error) {
-      alert('카카오 로그인 실패');
-      return;
-    }
-    if (data?.url) {
-      await Browser.open({ url: data.url });
-    }
+    if (error) alert('카카오 로그인 실패');
+    if (data?.url) await Browser.open({ url: data.url });
   };
 
-  // ✅ 애플 로그인
   const handleAppleLogin = async () => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'apple',
@@ -84,13 +80,8 @@ export default function LoginPage() {
         flowType: 'pkce',
       },
     });
-    if (error) {
-      alert('Apple 로그인 실패');
-      return;
-    }
-    if (data?.url) {
-      await Browser.open({ url: data.url });
-    }
+    if (error) alert('Apple 로그인 실패');
+    if (data?.url) await Browser.open({ url: data.url });
   };
 
   return (
@@ -130,14 +121,16 @@ export default function LoginPage() {
             <span className="font-medium text-black">카카오톡으로 로그인</span>
           </button>
 
-          {/* 애플 로그인 */}
-          <button
-            onClick={handleAppleLogin}
-            className="w-full flex items-center justify-center gap-2 border bg-black border-black rounded-lg py-2 hover:bg-gray-800 transition"
-          >
-            <SiApple size={20} color="#fff" />
-            <span className="font-medium text-white">Apple로 로그인</span>
-          </button>
+          {/* ✅ iOS 네이티브 앱에서만 Apple 로그인 표시 */}
+          {platform === 'ios' && (
+            <button
+              onClick={handleAppleLogin}
+              className="w-full flex items-center justify-center gap-2 border bg-black border-black rounded-lg py-2 hover:bg-gray-800 transition"
+            >
+              <SiApple size={20} color="#fff" />
+              <span className="font-medium text-white">Apple로 로그인</span>
+            </button>
+          )}
         </div>
       </div>
     </main>
