@@ -40,3 +40,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Private Keys
+AuthKey_KHMTXHYM32.p8
+*.p8
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.key
