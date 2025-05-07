@@ -8,14 +8,12 @@ import { supabase } from '@/lib/supabaseClient';
 import type { PluginListenerHandle } from '@capacitor/core';
 import { AuthError } from '@supabase/supabase-js';
 
-/* ---------- 로깅 ---------- */
+/* ---------- 상수 & 로깅 ---------- */
+const SCHEME_CB = 'yeondeung://auth/callback';        // 네이티브용 콜백
 const log = (
   tag: string,
   payload?: string | Record<string, unknown> | AuthError
 ) => console.log(`[DLINK][${tag}]`, payload ?? '');
-
-const HTTPS_CB = 'https://buddha-dusky.vercel.app/auth/deeplink';
-const SCHEME_CB = 'yeondeung://auth/callback'; // 필요 없으면 삭제해도 됨
 
 export default function DeepLinkHandler() {
   const router = useRouter();
@@ -27,11 +25,8 @@ export default function DeepLinkHandler() {
       sub = await App.addListener('appUrlOpen', async ({ url }) => {
         log('RAW', url);
 
-        /* ---------- 올바른 콜백 주소인지 확인 ---------- */
-        if (
-          !url?.startsWith(HTTPS_CB) &&
-          !url.startsWith(SCHEME_CB)      // 커스텀 스킴까지 허용
-        ) {
+        /* ---------- 내 앱 콜백인지 확인 ---------- */
+        if (!url?.startsWith(SCHEME_CB)) {
           log('SKIP', 'not our callback');
           return;
         }
