@@ -38,13 +38,11 @@ export default function LoginPage() {
 
   /* --- redirectTo (모든 환경 HTTPS 딥링크 통일) --- */
   const isLocal =
-    typeof window !== 'undefined' && window.location.hostname === 'localhost';
+  typeof window !== 'undefined' && window.location.hostname === 'localhost';
 
-  const redirectTo = IS_NATIVE
-    ? 'yeondeung://auth/callback'
-    : isLocal
-      ? 'http://localhost:3000/auth/deeplink'
-      : 'https://buddha-dusky.vercel.app/auth/deeplink';
+const redirectTo = isLocal
+  ? 'http://localhost:3000/auth/deeplink'          // 로컬 개발용
+  : 'https://buddha-dusky.vercel.app/auth/deeplink'; // 실서비스·네이티브 공통
 
   log('INIT', { IS_NATIVE, platform, redirectTo });
 

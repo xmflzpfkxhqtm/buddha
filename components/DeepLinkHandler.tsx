@@ -8,9 +8,14 @@ import { supabase } from '@/lib/supabaseClient';
 import type { PluginListenerHandle } from '@capacitor/core';
 import { AuthError } from '@supabase/supabase-js';
 
-/* 로깅 */
-const log = (tag: string, payload?: string | Record<string, unknown> | AuthError) =>
-  console.log(`[DLINK][${tag}]`, payload ?? '');
+/* ---------- 로깅 ---------- */
+const log = (
+  tag: string,
+  payload?: string | Record<string, unknown> | AuthError
+) => console.log(`[DLINK][${tag}]`, payload ?? '');
+
+const HTTPS_CB = 'https://buddha-dusky.vercel.app/auth/deeplink';
+const SCHEME_CB = 'yeondeung://auth/callback'; // 필요 없으면 삭제해도 됨
 
 export default function DeepLinkHandler() {
   const router = useRouter();
@@ -22,10 +27,16 @@ export default function DeepLinkHandler() {
       sub = await App.addListener('appUrlOpen', async ({ url }) => {
         log('RAW', url);
 
-        if (!url?.startsWith('https://buddha-dusky.vercel.app/auth/deeplink'))
-          return; // 커스텀 스킴 쓴다면 조건 변경
+        /* ---------- 올바른 콜백 주소인지 확인 ---------- */
+        if (
+          !url?.startsWith(HTTPS_CB) &&
+          !url.startsWith(SCHEME_CB)      // 커스텀 스킴까지 허용
+        ) {
+          log('SKIP', 'not our callback');
+          return;
+        }
 
-        /* ────────── PKCE : ?code= ────────── */
+        /* ---------- ① PKCE : ?code= ---------- */
         if (url.includes('?code=')) {
           log('PKCE', 'exchange start');
           const { error } = await supabase.auth.exchangeCodeForSession(url);
@@ -38,7 +49,7 @@ export default function DeepLinkHandler() {
           return;
         }
 
-        /* ────────── Implicit : #access_token= ────────── */
+        /* ---------- ② Implicit : #access_token= ---------- */
         if (url.includes('#access_token=')) {
           log('IMPLICIT', 'hash parse');
           const [, fragment] = url.split('#');
@@ -62,7 +73,9 @@ export default function DeepLinkHandler() {
       });
     })();
 
-    return () => { sub?.remove(); };
+    return () => {
+      sub?.remove();
+    };
   }, [router]);
 
   return null;

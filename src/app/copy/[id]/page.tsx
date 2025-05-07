@@ -9,7 +9,7 @@ import { saveStroke, getStroke, deleteStroke, clearSession } from '@/lib/copySto
 import { supabase } from '@/lib/supabaseClient';
 import { useSearchParams } from 'next/navigation';
 
-const WINDOW = 7;   // 한 줄 7칸
+const WINDOW = 7;   // 한 줄 7칸1
 const CURCOL = 3;   // 중앙(4번째) 칸
 
 export default function CopySession() {

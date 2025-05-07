@@ -15,7 +15,13 @@
 	<key>CFBundleName</key>
 	<string>$(PRODUCT_NAME)</string>
 	<key>CFBundlePackageType</key>
+	
 	<string>APPL</string>
+	<key>com.apple.developer.associated-domains</key>
+<array>
+    <string>applinks:buddha-dusky.vercel.app</string>
+</array>
+
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleURLTypes</key>
