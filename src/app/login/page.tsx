@@ -74,7 +74,7 @@ export default function LoginPage() {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'apple',
       options: {
-        redirectTo,
+        redirectTo: redirectTo, // ✅ 이거 반드시 필요!
         skipBrowserRedirect: true,
         // @ts-expect-error - Supabase OAuth options type doesn't include flowType
         flowType: 'pkce',
@@ -83,7 +83,7 @@ export default function LoginPage() {
     if (error) alert('Apple 로그인 실패');
     if (data?.url) await Browser.open({ url: data.url });
   };
-
+  
   return (
     <main className="relative min-h-screen flex flex-col items-center justify-start bg-red py-4 px-6">
       <Image

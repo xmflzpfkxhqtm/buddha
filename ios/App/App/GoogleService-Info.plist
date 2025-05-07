@@ -9,7 +9,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.lotuslantern.app</string>
+	<string>com.lotus.lantern</string>
 	<key>PROJECT_ID</key>
 	<string>buddha-e37dc</string>
 	<key>STORAGE_BUCKET</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:648371757234:ios:74592a518a035276d429ab</string>
+	<string>1:648371757234:ios:b9fb6c9e12748dc6d429ab</string>
 </dict>
 </plist>
