@@ -6,6 +6,14 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { Browser } from '@capacitor/browser'; // ✅ 추가
 
+declare global {
+  interface Window {
+    Capacitor?: {
+      getPlatform: () => 'ios' | 'android' | 'web';
+    };
+  }
+}
+
 export default function AuthDeepLinkPage() {
   const router = useRouter();
 
@@ -54,6 +62,5 @@ export default function AuthDeepLinkPage() {
 }
 
 function isNativeApp() {
-  // @ts-expect-error Capacitor global only in native build
   return typeof window !== 'undefined' && window.Capacitor && window.Capacitor.getPlatform() !== 'web';
 }
