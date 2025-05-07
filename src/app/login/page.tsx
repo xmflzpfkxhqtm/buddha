@@ -36,13 +36,15 @@ export default function LoginPage() {
     if (IS_NATIVE) setPlatform(window.Capacitor!.getPlatform());
   }, [router]);
 
-  /* --- redirectTo (모든 환경 HTTPS 딥링크 통일) --- */
+  /* --- redirectTo: 네이티브=커스텀 스킴, 웹=HTTPS --- */
   const isLocal =
-  typeof window !== 'undefined' && window.location.hostname === 'localhost';
+    typeof window !== 'undefined' && window.location.hostname === 'localhost';
 
-const redirectTo = isLocal
-  ? 'http://localhost:3000/auth/deeplink'          // 로컬 개발용
-  : 'https://buddha-dusky.vercel.app/auth/deeplink'; // 실서비스·네이티브 공통
+  const redirectTo = IS_NATIVE
+    ? 'yeondeung://auth/callback' // 앱으로 돌아올 때 Safari VC 자동 닫힘
+    : isLocal
+      ? 'http://localhost:3000/auth/deeplink'
+      : 'https://buddha-dusky.vercel.app/auth/deeplink';
 
   log('INIT', { IS_NATIVE, platform, redirectTo });
 
@@ -60,7 +62,7 @@ const redirectTo = isLocal
       provider,
       options: {
         redirectTo,
-        skipBrowserRedirect: IS_NATIVE, // 네이티브만 Custom Tab 사용
+        skipBrowserRedirect: IS_NATIVE, // 네이티브만 Safari/Chrome Custom Tab
         ...opts,
       },
     });
@@ -72,7 +74,13 @@ const redirectTo = isLocal
     if (data?.url) {
       if (IS_NATIVE) {
         log('BROWSER_OPEN', data.url);
-        await Browser.open({ url: data.url });
+        try {
+          await Browser.open({ url: data.url });
+          log('BROWSER_OPEN', 'success');
+        } catch (e) {
+          log('BROWSER_OPEN', 'error');
+          console.error(e);
+        }
       } else {
         log('WEB_REDIRECT', data.url);
         window.location.href = data.url;

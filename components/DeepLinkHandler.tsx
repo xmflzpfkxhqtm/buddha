@@ -31,42 +31,47 @@ export default function DeepLinkHandler() {
           return;
         }
 
-        /* ---------- ① PKCE : ?code= ---------- */
-        if (url.includes('?code=')) {
-          log('PKCE', 'exchange start');
-          const { error } = await supabase.auth.exchangeCodeForSession(url);
-          log('PKCE', error ?? 'success');
+        try {
+          /* ---------- ① PKCE : ?code= ---------- */
+          if (url.includes('?code=')) {
+            log('PKCE', 'exchange start');
+            const { error } = await supabase.auth.exchangeCodeForSession(url);
+            log('PKCE', error ?? 'success');
 
-          if (!error) {
-            log('BROWSER', 'closing Safari VC');
-            await Browser.close();
-            router.replace('/me');
-          }
-          return;
-        }
-
-        /* ---------- ② Implicit : #access_token= ---------- */
-        if (url.includes('#access_token=')) {
-          log('IMPLICIT', 'hash parse');
-          const [, fragment] = url.split('#');
-          const p = new URLSearchParams(fragment);
-
-          const access_token  = p.get('access_token');
-          const refresh_token = p.get('refresh_token');
-
-          if (!access_token || !refresh_token) {
-            log('IMPLICIT', 'parse fail');
+            if (!error) {
+              log('BROWSER', 'closing Safari VC');
+              await Browser.close();
+              router.replace('/me');
+            }
             return;
           }
 
-          await supabase.auth.setSession({ access_token, refresh_token });
-          log('BROWSER', 'closing Safari VC');
-          await Browser.close();
-          router.replace('/me');
-          return;
-        }
+          /* ---------- ② Implicit : #access_token= ---------- */
+          if (url.includes('#access_token=')) {
+            log('IMPLICIT', 'hash parse');
+            const [, fragment] = url.split('#');
+            const p = new URLSearchParams(fragment);
 
-        log('SKIP', 'unknown format');
+            const access_token  = p.get('access_token');
+            const refresh_token = p.get('refresh_token');
+
+            if (!access_token || !refresh_token) {
+              log('IMPLICIT', 'parse fail');
+              return;
+            }
+
+            await supabase.auth.setSession({ access_token, refresh_token });
+            log('BROWSER', 'closing Safari VC');
+            await Browser.close();
+            router.replace('/me');
+            return;
+          }
+
+          log('SKIP', 'unknown format');
+        } catch (e) {
+          log('ERROR', e instanceof Error ? e.message : String(e));
+          console.error(e);
+        }
       });
     })();
 
