@@ -38,6 +38,7 @@ export default function DeepLinkHandler() {
           log('PKCE', error ?? 'success');
 
           if (!error) {
+            log('BROWSER', 'closing Safari VC');
             await Browser.close();
             router.replace('/me');
           }
@@ -59,6 +60,7 @@ export default function DeepLinkHandler() {
           }
 
           await supabase.auth.setSession({ access_token, refresh_token });
+          log('BROWSER', 'closing Safari VC');
           await Browser.close();
           router.replace('/me');
           return;
