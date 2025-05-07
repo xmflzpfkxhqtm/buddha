@@ -140,6 +140,5 @@ export default function LoginPage() {
 // ✅ Native 앱 판별 함수
 function isNativeApp() {
   if (typeof window === 'undefined') return false;
-  // @ts-expect-error Capacitor global only in native build
   return !!window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() !== 'web';
 }
