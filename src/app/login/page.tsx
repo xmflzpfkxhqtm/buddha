@@ -41,7 +41,7 @@ export default function LoginPage() {
     typeof window !== 'undefined' && window.location.hostname === 'localhost';
 
   const redirectTo = IS_NATIVE
-    ? 'https://buddha-dusky.vercel.app/auth/deeplink'
+    ? 'yeondeung://auth/callback'
     : isLocal
       ? 'http://localhost:3000/auth/deeplink'
       : 'https://buddha-dusky.vercel.app/auth/deeplink';
