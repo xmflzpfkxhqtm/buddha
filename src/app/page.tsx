@@ -82,7 +82,7 @@ export default function Home() {
         
       const end = Date.now();
       const elapsed = end - start;
-      const remaining = Math.max(3000 - elapsed, 0); // ✅ 첫 방문 때만 쓰일 최소 로딩 시간
+      const remaining = Math.max(1000 - elapsed, 0); // ✅ 첫 방문 때만 쓰일 최소 로딩 시간
   
       // ✅ 첫 방문이면 약간 기다렸다 로딩 해제
       if (isFirstVisit) {
