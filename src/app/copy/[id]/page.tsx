@@ -188,7 +188,7 @@ const everyDone   = strokesDone.length === chars.length &&
             <h2 className="text-2xl text-beige font-semibold">{textObj.title}</h2>
             <p className="px-4 text-sm text-beige">{idx+1}/{chars.length}</p>
           </div>
-          <span className="text-sm text-beige">엄청난 효험이 있습니다</span>
+          <p className="text-sm text-beige">고요히 마음을 비워보세요</p>
         </div>
       </div>
 
