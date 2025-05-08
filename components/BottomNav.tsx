@@ -33,7 +33,7 @@ export default function BottomNav() {
         setHide(true); // 하단바 숨김
         sessionStorage.setItem('isFirstVisit', 'true');
         // 3초 후 자동으로 다시 표시
-        setTimeout(() => setHide(false), 3000);
+        setTimeout(() => setHide(false), 1000);
       } else {
         setHide(false); // 이미 방문한 경우 항상 보이기
       }
