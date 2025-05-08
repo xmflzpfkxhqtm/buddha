@@ -21,8 +21,8 @@ export default function FeedbackPage() {
   };
 
   return (
-    <main className="min-h-screen max-w-[430px] mx-auto bg-[#F5F1E6] px-4 py-10">
-      <h1 className="text-xl font-bold text-blue-700 mb-4">💬 피드백 보내기</h1>
+    <main className="min-h-screen flex flex-col items-center max-w-[430px] mx-auto bg-[#F5F1E6] px-4 py-10">
+      <h1 className="text-xl text-left w-full font-bold text-red mb-4">💬 피드백 보내기</h1>
       {submitted ? (
         <p className="text-green-600">소중한 피드백 감사합니다!</p>
       ) : (
@@ -36,7 +36,7 @@ export default function FeedbackPage() {
           />
           <button
             onClick={handleSubmit}
-            className="mt-4 px-4 py-2 bg-blue-700 text-white text-sm rounded hover:bg-blue-800"
+            className="mt-4 px-4 py-2 bg-red-light text-white text-base rounded hover:bg-red"
           >
             제출하기
           </button>
