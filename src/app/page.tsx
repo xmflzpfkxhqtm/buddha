@@ -133,7 +133,7 @@ export default function Home() {
   return (
     <>
       <MarbleOverlay />
-      <div className="absolute bg-gradient-to-b w-full from-red to-redbrown">
+      <div className="absolute w-full bg-[#711500]">
         <main className="min-h-screen w-full max-w-[460px] flex flex-col justify-start items-center mx-auto px-6 pt">
           <ScrollHeader />
 
