@@ -21,7 +21,7 @@ export interface DocumentMetadata {
 
 // 검색 결과 인터페이스
 export interface DocumentResult {
-  id: string | number;
+  id: number | string;  // bigint 타입 지원을 위해 변경
   content: string;
   metadata: DocumentMetadata;
   similarity: number;
@@ -138,5 +138,27 @@ export async function searchSimilarDocuments(embedding: number[], limit: number 
   } catch (error) {
     console.error('문서 검색 오류 상세:', error);
     throw new Error('문서 검색 중 오류가 발생했습니다.');
+  }
+}
+
+/**
+ * halfvec 인덱스를 사용하여 유사한 문서 검색 (최적화 버전)
+ */
+export async function searchSimilarDocumentsOptimized(embedding: number[], limit: number = 5): Promise<DocumentResult[]> {
+  try {
+    // 벡터를 halfvec으로 변환하기 위해 직접 SQL 쿼리 실행
+    const { data, error } = await supabase.rpc('match_documents_optimized', {
+      query_embedding: embedding,
+      match_count: limit
+    });
+
+    if (error) {
+      console.error('최적화 문서 검색 오류 상세:', error);
+      throw error;
+    }
+    return data || [];
+  } catch (error) {
+    console.error('최적화 문서 검색 오류 상세:', error);
+    throw new Error('최적화 문서 검색 중 오류가 발생했습니다.');
   }
 } 

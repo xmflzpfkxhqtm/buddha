@@ -88,8 +88,16 @@ export default function ConfirmPage() {
   };
 
   useEffect(() => {
-    // 페이지 로드 즉시 API 웜업 시작
-    warmupApi();
+    // ✅ 웜업 API 중복 호출 방지를 위해 sessionStorage에 상태 저장
+    const hasWarmedUp = sessionStorage.getItem('api_warmed_up') === 'true';
+    
+    if (!hasWarmedUp) {
+      // 페이지 로드 즉시 API 웜업 시작
+      warmupApi().then(() => {
+        // 웜업 완료 후 상태 저장
+        sessionStorage.setItem('api_warmed_up', 'true');
+      });
+    }
     
     // 기존 핑 요청도 유지 (재시도 로직 적용)
     fetchWithRetry('/api/ask/ping', {}, 3, 1000)

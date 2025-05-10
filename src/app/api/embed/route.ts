@@ -28,7 +28,7 @@ interface FileProcessResult {
 }
 
 /**
- * 배치를 처리하고 임베딩한 후 저장
+ * 배치를 처리하고 임베딩한 후 저장 (재시도 메커니즘 추가)
  */
 async function processBatch(batch: ProcessedChunk[]): Promise<number> {
   if (batch.length === 0) return 0;
@@ -67,15 +67,35 @@ async function processBatch(batch: ProcessedChunk[]): Promise<number> {
     };
   });
   
-  // 배치 저장
+  // 배치 저장 (재시도 메커니즘 추가)
   console.log(`Supabase에 ${documents.length}개의 문서 저장 중...`);
-  const saveStartTime = Date.now();
-  await saveDocumentBatch(documents);
-  const saveEndTime = Date.now();
-  console.log(`문서 저장 완료 (${saveEndTime - saveStartTime}ms 소요)`);
+  const maxRetries = 3; // 최대 재시도 횟수
+  let retryCount = 0;
+  let success = false;
   
-  
-  console.log(`[테스트 모드] 임베딩 및 저장 생략 - ${validChunks.length}개 청크 처리된 것으로 간주`);
+  while (retryCount < maxRetries && !success) {
+    try {
+      const saveStartTime = Date.now();
+      await saveDocumentBatch(documents);
+      const saveEndTime = Date.now();
+      
+      console.log(`문서 저장 완료 (${saveEndTime - saveStartTime}ms 소요)`);
+      success = true;
+    } catch (error) {
+      retryCount++;
+      
+      if (retryCount < maxRetries) {
+        const waitTime = retryCount * 2000; // 지수 백오프: 2초, 4초, 6초...
+        console.warn(`문서 저장 실패, ${retryCount}번째 재시도 (${waitTime}ms 후)...`, error);
+        
+        // 지정된 시간만큼 대기
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      } else {
+        console.error(`최대 재시도 횟수(${maxRetries})에 도달했습니다. 저장 실패:`, error);
+        throw error; // 최대 재시도 후에도 실패하면 예외 전파
+      }
+    }
+  }
   
   return validChunks.length;
 }
@@ -169,7 +189,10 @@ export async function GET() {
     
     // .txt 파일만 필터링
     const textFiles = files.filter(file => file.endsWith('.txt'));
+    // 파일 목록을 역순으로 정렬 (뒤에서부터 처리)
+    textFiles.reverse();
     console.log(`텍스트 파일 수: ${textFiles.length}개`);
+    console.log(`처리 순서: ${textFiles.slice(0, 5).join(', ')}...`); // 처음 5개 파일만 로그로 표시
     
     // 처리 상태 추적
     const processedFiles: FileProcessResult[] = [];

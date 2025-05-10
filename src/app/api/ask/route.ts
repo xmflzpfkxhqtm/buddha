@@ -2,7 +2,7 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { generateEmbeddingBatch } from '@/utils/upstage';
-import { searchSimilarDocuments } from '@/utils/supabase';
+import { searchSimilarDocuments, searchSimilarDocumentsOptimized } from '@/utils/supabase';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import Anthropic from "@anthropic-ai/sdk";
 import { supabase } from '@/lib/supabaseClient';
@@ -196,20 +196,32 @@ export async function POST(request: NextRequest) {
       console.log('✅ 임베딩 생성 완료');
       
       if (embeddings.length > 0) {
-        // 벡터 검색
+        // 최적화된 벡터 검색 사용 (HNSW 인덱스)
         const documents = await withRetry(
-          () => searchSimilarDocuments(embeddings[0], 10),
+          () => searchSimilarDocumentsOptimized(embeddings[0], 10),
           MAX_RETRIES,
           RETRY_DELAY,
-          '벡터 검색'
+          '최적화 벡터 검색'
         );
         
-        console.log('✅ 벡터 검색 완료, 결과 수:', documents.length);
+        console.log('✅ 최적화 벡터 검색 완료, 결과 수:', documents.length);
+        console.log('✅ 최적화 벡터 검색 완료:', documents);
         contextText = documents.map(doc => doc.content).join('\n\n');
       }
     } catch (error) {
-      console.error('❌ 벡터 검색 또는 임베딩 생성 실패:', error);
-      contextText = '벡터 검색 실패. 일반적인 지식으로 응답합니다.';
+      console.error('❌ 최적화 벡터 검색 실패, 일반 검색 시도:', error);
+      
+      try {
+        // 일반 벡터 검색으로 폴백
+        const embeddings = await generateEmbeddingBatch([question]);
+        const documents = await searchSimilarDocuments(embeddings[0], 10);
+        console.log('✅ 일반 벡터 검색 완료, 결과 수:', documents.length);
+        console.log('✅ 일반 벡터 검색 완료:', documents);
+        contextText = documents.map(doc => doc.content).join('\n\n');
+      } catch (fallbackError) {
+        console.error('❌ 모든 벡터 검색 실패:', fallbackError);
+        contextText = '벡터 검색 실패. 일반적인 지식으로 응답합니다.';
+      }
     }
 
     const messages: ChatMessage[] = [

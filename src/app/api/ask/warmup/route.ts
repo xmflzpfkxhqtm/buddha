@@ -2,7 +2,7 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { generateEmbeddingBatch } from '@/utils/upstage';
-import { searchSimilarDocuments } from '@/utils/supabase';
+import { searchSimilarDocuments, searchSimilarDocumentsOptimized } from '@/utils/supabase';
 
 // 재시도 설정
 const MAX_RETRIES = 3;
@@ -66,11 +66,24 @@ export async function POST(request: NextRequest) {
 
     // 벡터 검색 - 재시도 및 타임아웃 적용
     const documents = await withRetry(
-      async () => withTimeout(
-        searchSimilarDocuments(embedding, 5),
-        10000, // 10초 타임아웃
-        '벡터 검색'
-      ),
+      async () => {
+        try {
+          // 최적화된 벡터 검색 사용 시도
+          return await withTimeout(
+            searchSimilarDocumentsOptimized(embedding, 5),
+            30000,
+            '최적화 벡터 검색'
+          );
+        } catch (error) {
+          console.log('⚠️ 최적화 검색 실패, 일반 검색으로 폴백:', error);
+          // 실패 시 일반 검색으로 폴백
+          return await withTimeout(
+            searchSimilarDocuments(embedding, 5),
+            30000,
+            '일반 벡터 검색'
+          );
+        }
+      },
       MAX_RETRIES,
       RETRY_DELAY,
       '벡터 검색'
