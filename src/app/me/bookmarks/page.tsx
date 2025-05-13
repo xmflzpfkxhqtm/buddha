@@ -296,7 +296,7 @@ export default function BookmarkPage() {
             <h2 className="text-lg font-semibold text-gray-800 mb-3">메모하기</h2>
             <textarea
   rows={4}
-  className="w-full border border-gray-600 rounded p-2 text-sm text-gray-800 focus:outline-none focus:border-red-light focus:ring-1 focus:ring-red-light"
+  className="w-full border border-gray-600 rounded p-2 text-base text-gray-800 focus:outline-none focus:border-red-light focus:ring-1 focus:ring-red-light"
   value={memoInput}
   onChange={(e) => setMemoInput(e.target.value)}
 />
