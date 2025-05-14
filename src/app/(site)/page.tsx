@@ -75,7 +75,7 @@ export default function LandingPage() {
 
         <div className="flex gap-3 md:gap-4">
           <a
-            href="https://apps.apple.com/app/id..."
+            href="https://apps.apple.com/us/app/id6745544277"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 md:gap-3 bg-white text-black rounded-xl px-4 py-2 md:px-5 md:py-3 shadow-lg hover:scale-[1.03] transition"
