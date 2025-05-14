@@ -2,10 +2,33 @@
 
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
+import { Capacitor } from '@capacitor/core'          // 🆕 Capacitor 플랫폼 감지용
+import { useRouter } from 'next/navigation'          // 🆕 리다이렉트
 
 export default function LandingPage() {
+  const router = useRouter()                         // 🆕
   const [show, setShow] = useState(false)
 
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   * 1) 앱(WebView)에서 접속했는지 검사 → /dashboard
+   *    - UA 에 yeondeungapp 포함
+   *    - Capacitor.getPlatform() 이 'ios' | 'android'
+   * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  useEffect(() => {
+    const ua  = navigator.userAgent.toLowerCase()         // 🆕
+    const isAppUA = ua.includes('yeondeungapp')           // 🆕 UA 플래그
+    const isNative =
+      typeof Capacitor !== 'undefined' &&
+      Capacitor.getPlatform &&
+      Capacitor.getPlatform() !== 'web'                   // 🆕 iOS/Android
+
+    if (isAppUA || isNative) {                            // 🆕
+      router.replace('/dashboard')                        // 🆕 소프트 네비
+      return                                              // 🆕 애니메이션 생략
+    }
+  }, [router])                                            // 🆕 의존성
+
+  /* 기존 애니메이션용 딜레이 */
   useEffect(() => {
     const t = setTimeout(() => setShow(true), 100)
     return () => clearTimeout(t)
@@ -40,39 +63,37 @@ export default function LandingPage() {
         당신의 물음에 응답합니다
       </p>
 
-
-
       {/* 스토어 버튼 */}
       <div className='flex flex-col items-center justify-center'>
 
-      <p
-        className={`text-md md:text-lg text-center text-zinc-300 mb-2 md:mb-4 transition-all duration-1000 ease-out delay-300
-        ${show ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'}`}
-      >
-        지금 마음공부 시작하기
-      </p>
-
-      <div className="flex gap-3 md:gap-4">
-        <a
-          href="https://apps.apple.com/app/id..."
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 md:gap-3 bg-white text-black rounded-xl px-4 py-2 md:px-5 md:py-3 shadow-lg hover:scale-[1.03] transition"
+        <p
+          className={`text-md md:text-lg text-center text-zinc-300 mb-2 md:mb-4 transition-all duration-1000 ease-out delay-300
+          ${show ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'}`}
         >
-          <Image src="/appstore.svg" alt="App Store" width={20} height={20} />
-          <span className="text-sm md:text-base font-medium">App Store</span>
-        </a>
+          지금 마음공부 시작하기
+        </p>
 
-        {/* <a
-          href="https://play.google.com/store/apps/details?id=..."
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 md:gap-3 bg-white text-black rounded-xl px-4 py-2 md:px-5 md:py-3 shadow-lg hover:scale-[1.03] transition"
-        >
-          <Image src="/google-play.svg" alt="Google Play" width={20} height={20} />
-          <span className="text-sm md:text-base font-medium">Google Play</span>
-        </a> */}
-      </div>
+        <div className="flex gap-3 md:gap-4">
+          <a
+            href="https://apps.apple.com/app/id..."
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 md:gap-3 bg-white text-black rounded-xl px-4 py-2 md:px-5 md:py-3 shadow-lg hover:scale-[1.03] transition"
+          >
+            <Image src="/appstore.svg" alt="App Store" width={20} height={20} />
+            <span className="text-sm md:text-base font-medium">App Store</span>
+          </a>
+
+          {/* <a
+            href="https://play.google.com/store/apps/details?id=..."
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 md:gap-3 bg-white text-black rounded-xl px-4 py-2 md:px-5 md:py-3 shadow-lg hover:scale-[1.03] transition"
+          >
+            <Image src="/google-play.svg" alt="Google Play" width={20} height={20} />
+            <span className="text-sm md:text-base font-medium">Google Play</span>
+          </a> */}
+        </div>
       </div>
     </div>
   )

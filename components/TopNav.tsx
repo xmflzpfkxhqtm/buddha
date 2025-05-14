@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 /* 1. TopNav를 절대 표시하지 않을 경로 */
 const HIDDEN_PATHS: (string | RegExp)[] = [
   '/login',
-  '/',                    // 홈
+  '/dashboard',                    // 홈
   '/scripture',           // 경전 메인
   '/fullscreen',          // 전체화면 뷰
   '/ask/confirm',         // 질문 확인 페이지

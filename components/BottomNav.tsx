@@ -43,7 +43,7 @@ export default function BottomNav() {
   }, [pathname]);
 
   const navItems = [
-    { label: '홈', icon: Mountain, path: '/' },
+    { label: '홈', icon: Mountain, path: '/dashboard' },
     { label: '불경', icon: Book, path: '/scripture' },
     { label: '질문', icon: MessageCircle, path: '/ask' },
     { label: '사경', icon: Brush, path: '/copy' },
