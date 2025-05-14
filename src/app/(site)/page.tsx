@@ -113,8 +113,8 @@ fixed top-0 left-0 w-full z-50 px-4 py-4 md:px-8 lg:px-12
                <div key={i} className={`flex items-center gap-12 ${i % 2 ? 'flex-row-reverse' : ''}`}>
                  <PhoneShot src={c.img} alt={c.alt} />
                  <div className="flex-1 text-lg leading-relaxed">
-                   <h3 className="text-2xl font-semibold mb-3">{c.title}</h3>
-                   <p className="text-zinc-700">{c.desc}</p>
+                   <h3 className="text-2xl text-black font-semibold mb-3">{c.title}</h3>
+                   <p className="text-red-dark">{c.desc}</p>
                  </div>
                </div>
              ))}
@@ -132,8 +132,8 @@ fixed top-0 left-0 w-full z-50 px-4 py-4 md:px-8 lg:px-12
                    <div key={i} className="w-screen flex flex-col items-center gap-6 px-6">
                      <PhoneShot src={c.img} alt={c.alt} />
                      <div className="text-center max-w-xs mx-auto">
-                       <h3 className="text-xl font-semibold mb-2">{c.title}</h3>
-                       <p className="text-base text-zinc-700">{c.desc}</p>
+                       <h3 className="pt-4 text-xl text-black font-bold mb-2">{c.title}</h3>
+                       <p className="text-base text-red-dark">{c.desc}</p>
                      </div>
                    </div>
                  ))}
