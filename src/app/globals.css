@@ -88,6 +88,14 @@ html { font-family: "YujiMai", serif; }
 }
 
 @layer utilities {
+
+  .carousel-x {
+    scroll-snap-type: x mandatory;
+    scroll-snap-stop: always;       /* 한 장씩 확실히 멈춤 */
+    overscroll-behavior-x: contain; /* 가로 오버스크롤만 차단 */
+    overscroll-behavior-y: contain; /* 세로는 부모로 전파 */
+  }
+
   @keyframes fadeIn {
     from { opacity: 0 }
     to { opacity: 1 }
@@ -169,3 +177,18 @@ img, svg {
 
 canvas { touch-action: none; }
 
+
+
+html {
+  scroll-behavior: smooth;   /* <a href="#섹션"> 클릭 시 스르륵 내려가게 */
+}
+
+
+
+.snap-container { scroll-snap-type: y mandatory; height: 100vh; overflow-y: auto; }
+.snap-section  { scroll-snap-align: start; }
+
+/* 모바일 캐러셀용: 스크롤바 숨김 */
+.no-scrollbar::-webkit-scrollbar { display:none; }
+.no-scrollbar { -ms-overflow-style:none; scrollbar-width:none; }
+.overscroll-contain { overscroll-behavior-y: contain; }

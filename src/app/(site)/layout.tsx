@@ -1,5 +1,5 @@
 // src/app/(site)/layout.tsx
-import '../globals.css';                // ⭐️ Tailwind 전역
+import '../globals.css';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -11,7 +11,7 @@ export default function SiteLayout({
   children,
 }: { children: React.ReactNode }) {
   return (
-    <html lang="ko">
+    <html lang="ko" className="scroll-smooth">   {/* ← smooth 스크롤 */}
       <body className="bg-black text-white antialiased">
         {children}
       </body>
