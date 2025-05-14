@@ -58,7 +58,7 @@ export default function MePage() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push('/');
+    router.push('/dashboard');
   };
 
   return (

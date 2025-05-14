@@ -36,16 +36,14 @@ export default function ScrollHeader() {
 
       <div className="w-full h-full flex items-end justify-center">
         <Image
-          src="/logo.png"
+          src="/textlogo.png"
           alt="로고"
           width={80}
           height={80}
           className={`object-contain rounded-3xl z-10 ${shouldSway ? 'animate-sway' : ''}`}
         />
       </div>
-      <h1 className="absolute bottom-3 left-1/2 -translate-x-1/2 text-xl font-bold text-[#4B3B2A] drop-shadow">
-        연등
-      </h1>
+
     </header>
   )
 }
