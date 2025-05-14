@@ -4,16 +4,21 @@ const config: CapacitorConfig = {
   appId: 'com.lotus.lantern',
   appName: '연등',
 
-  // ✅ iOS 딥링크용 커스텀 스킴 지정
+  /* ───────── iOS 설정 ───────── */
   ios: {
-    scheme: 'yeondeung',        // Info.plist의 CFBundleURLSchemes 값과 동일
+    scheme: 'yeondeung',        // 딥링크용 커스텀 스킴
+    appendUserAgent: ' YeondeungApp',   // ← 추가될 문자열 (앞에 공백 하나 필수)
   },
 
-  // (Android에서 딥링크 스킴을 쓰려면 androidScheme 도 유사하게 추가)
+  /* ───────── Android 설정 ───────── */
+  android: {
+    appendUserAgent: ' YeondeungApp',   // Android WebView도 동일 문자열 추가
+  },
 
+  /* ───────── 배포 서버 주소 ───────── */
   server: {
-    url: 'https://buddha-dusky.vercel.app' // 배포 주소 또는 로컬 dev 서버 주소
-  }
+    url: 'https://buddha-dusky.vercel.app/dashboard',
+  },
 };
 
 export default config;

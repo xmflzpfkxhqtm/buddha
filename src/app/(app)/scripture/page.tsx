@@ -2,17 +2,17 @@
 
 'use client';
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useBookmarkStore } from '../../stores/useBookmarkStore';
+import { useBookmarkStore } from '../../../stores/useBookmarkStore';
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import ScriptureModal from '../../../components/ScriptureModal';
+import ScriptureModal from '../../../../components/ScriptureModal';
 // === 플레이어 동적 로드 수정 ===
 import dynamic from 'next/dynamic';
 // 기존 TTSPlayer import 제거
 // const TTSPlayer = dynamic(() => import('../../../components/TTSPlayer'), { ssr: false });
-const WebTTSPlayer = dynamic(() => import('../../../components/WebTTSPlayer'), { ssr: false }); // 경로 확인 필요
-const NativeTTSPlayer = dynamic(() => import('../../../components/NativeTTSPlayer'), { ssr: false }); // 경로 확인 필요
+const WebTTSPlayer = dynamic(() => import('../../../../components/WebTTSPlayer'), { ssr: false }); // 경로 확인 필요
+const NativeTTSPlayer = dynamic(() => import('../../../../components/NativeTTSPlayer'), { ssr: false }); // 경로 확인 필요
 // === ===
 import { Search } from 'lucide-react';
 import { Capacitor } from '@capacitor/core'; // Capacitor 추가

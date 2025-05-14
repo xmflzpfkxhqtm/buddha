@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { FcGoogle } from 'react-icons/fc';
 import { SiKakaotalk, SiApple } from 'react-icons/si';
 import Image from 'next/image';
-import ScrollHeader from '../../../components/ScrollHeader';
+import ScrollHeader from '../../../../components/ScrollHeader';
 import { Browser } from '@capacitor/browser';
 
 /* ---------- 플랫폼 헬퍼 & 로깅 ---------- */

@@ -2,8 +2,8 @@
 
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import ScrollHeader from '../../components/ScrollHeader';
-import MarbleOverlay from '../../components/Overlay';
+import ScrollHeader from '../../../../components/ScrollHeader';
+import MarbleOverlay from '../../../../components/Overlay';
 import { useEffect, useState } from 'react';
 import { useBookmarkStore } from '@/stores/useBookmarkStore';
 import { supabase } from '@/lib/supabaseClient';

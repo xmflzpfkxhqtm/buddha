@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { copyTexts } from '@/data/copyTexts';
-import TracingCanvas from '../../../../components/TracingCanvas';
+import TracingCanvas from '../../../../../components/TracingCanvas';
 import { saveStroke, getStroke, deleteStroke, clearSession } from '@/lib/copyStore';
 import { supabase } from '@/lib/supabaseClient';
 import { useSearchParams } from 'next/navigation';

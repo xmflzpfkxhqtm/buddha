@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
-import ScrollHeader from '../../../../../components/ScrollHeader';
+import ScrollHeader from '../../../../../../components/ScrollHeader';
 import Image from 'next/image';
 import type { User } from '@supabase/supabase-js';
 

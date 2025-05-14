@@ -1,10 +1,10 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useAskStore } from '../../../stores/askStore';
+import { useAskStore } from '../../../../stores/askStore';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import Loading from '../../../../components/Loading';
+import Loading from '../../../../../components/Loading';
 
 // 재시도 유틸리티 함수
 async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3, delay = 1500): Promise<Response> {

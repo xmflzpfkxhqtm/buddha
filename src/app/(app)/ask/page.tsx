@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { useAskStore } from '../../stores/askStore';
+import { useAskStore } from '../../../stores/askStore';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 
