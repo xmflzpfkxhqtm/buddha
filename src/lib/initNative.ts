@@ -10,10 +10,10 @@ export async function initNative() {
     await StatusBar.setOverlaysWebView({ overlay: false });
 
     /* 2) 상태바 배경을 투명으로 – 페이지가 흰색이면 그대로 흰색 */
-    await StatusBar.setBackgroundColor({ color: '#00000000' });
+    await StatusBar.setBackgroundColor({ color: '#F5F1E6' });
 
     /* 3) 밝은 배경용 아이콘 색(Dark) */
-    await StatusBar.setStyle({ style: Style.Dark });
+    await StatusBar.setStyle({ style: Style.Light });
   } catch (err) {
     console.warn('[initNative] StatusBar 설정 실패:', err);
   }
