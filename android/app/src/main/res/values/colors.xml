@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 기존 정의가 있다면 이 한 줄만 추가 -->
+    <color name="splash_background">#6e1517</color>
+</resources>

@@ -1,12 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Base application theme. -->
-    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
-        <!-- Customize your theme here. -->
+    <!-- 실제 앱 UI용 기본 테마 -->
+    <style name="Theme.Yeondeung" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <!-- 원하는 컬러·폰트 등 -->
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+    <!-- 👇 런처(스플래시)용 테마 -->
+    <style name="Theme.Yeondeung.Launch" parent="Theme.SplashScreen">
+        <!-- ① 배경색·로고 -->
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+
+        <!-- ② 컷아웃·젯처 바까지 같은 색 -->
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <item name="android:navigationBarColor">@color/splash_background</item>
+
+        <!-- ③ 스플래시 종료 후 본 테마 -->
+        <item name="postSplashScreenTheme">@style/Theme.Yeondeung</item>
     </style>
 
     <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
@@ -17,6 +30,5 @@
 
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="android:background">@drawable/splash</item>
     </style>
 </resources>
