@@ -12,7 +12,7 @@ export async function initNative() {
     await StatusBar.setBackgroundColor({ color: '#00000000' });
 
     // 3. 아이콘‧글자를 검은색(Dark)으로
-    await StatusBar.setStyle({ style: Style.Dark });
+    await StatusBar.setStyle({ style: Style.Light });
   } catch (err) {
     console.warn('[initNative] StatusBar 설정 실패', err);
   }
