@@ -60,10 +60,6 @@ html { font-family: "YujiMai", serif; }
   --font-main: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', sans-serif;
 }
 
-body {
-  padding-top: env(safe-area-inset-top);
-}
-
 /* 애니메이션 */
 @keyframes sway {
   0% { transform: rotate(0deg) translateX(0); }
@@ -163,6 +159,7 @@ html {
 body {
   background-color: var(--background);
   color: var(--foreground);
+  padding-top: env(safe-area-inset-top);
   font-family: var(--font-main);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
