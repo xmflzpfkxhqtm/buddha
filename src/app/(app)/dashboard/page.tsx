@@ -140,7 +140,7 @@ export default function Home() {
           {/* 상단 홍보 배너 */}
           <div
   onClick={() => router.push('/ask')}
-  className="w-full h-16  bg-redbrown border border-red-light rounded-xl flex flex-row items-center pl-1 mt-4 justify-start cursor-pointer"
+  className="w-full h-16  bg-[#4d0e00] border border-red-light rounded-xl flex flex-row items-center pl-1 mt-4 justify-start cursor-pointer"
 >
             <Image
               src="/lotusbeige.png"
@@ -177,7 +177,7 @@ export default function Home() {
       setBookmark(title, index);
       router.push('/scripture');
     }}
-              className="w-full rounded-xl bg-redbrown border border-red-light flex flex-row items-center pl-1 pr-4 py-2 mt-4 justify-start cursor-pointer"
+              className="w-full rounded-xl bg-[#4d0e00] border border-red-light flex flex-row items-center pl-1 pr-4 py-2 mt-4 justify-start cursor-pointer"
             >
               <Image
                 src="/lotusbeige.png"
