@@ -149,11 +149,21 @@ fixed top-0 left-0 w-full z-50 px-4 py-4 md:px-8 lg:px-12
                   className={`mb-8 transition-opacity duration-700 ${mount ? 'opacity-100' : 'opacity-0'}`}
                   priority />
            <p className="mb-4 text-lg">지금 마음공부 시작하기</p>
+           <div className="flex gap-4">
            <a href="https://apps.apple.com/us/app/id6745544277" target="_blank" rel="noopener"
               className="flex items-center gap-3 bg-white text-black rounded-xl px-5 py-3 shadow-lg">
              <Image src="/appstore.svg" alt="" width={20} height={20} />
              <span className="font-medium">App Store</span>
            </a>
+           <a
+          href="https://play.google.com/store/apps/details?id=com.lotuslantern.app"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 md:gap-3 bg-white text-black rounded-xl px-4 py-2 md:px-5 md:py-3 shadow-lg hover:scale-[1.03] transition"
+        >
+          <Image src="/google-play.svg" alt="Google Play" width={20} height={20} />
+          <span className="text-sm md:text-base font-medium">Google Play</span>
+        </a></div>
          </section>
    
          <Footer />
