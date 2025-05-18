@@ -185,6 +185,9 @@ canvas { touch-action: none; }
 html {
   scroll-behavior: smooth;   /* <a href="#섹션"> 클릭 시 스르륵 내려가게 */
   -webkit-text-size-adjust: none;
+  -moz-text-size-adjust: none;
+  -ms-text-size-adjust: none;
+  text-size-adjust: none;
 }
 
 
