@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { App } from '@capacitor/app';
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
 import { useRouter } from 'next/navigation';
 
 import '../globals.css';
@@ -16,31 +16,38 @@ import BottomNav        from '../../../components/BottomNav';
 import DeepLinkHandler  from '../../../components/DeepLinkHandler';
 import NativeInit       from '../../../components/NativeInit';
 import TopNav           from '../../../components/TopNav';
+import UpdateBlocker    from '../../../components/UpdateBlocker';   // ★ iOS 강제 업데이트
 
-const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
+const geistSans = Geist({ variable: '--font-geist-sans',  subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
+  /* ─────────────────────────────────────────
+   *  2 h 이상 백그라운드 → /dashboard 리다이렉트
+   * ───────────────────────────────────────── */
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
 
-    let lastBackgroundTime: number | null = null;
+    let lastBackground: number | null = null;
+    let listener: PluginListenerHandle | undefined;
 
-    App.addListener('appStateChange', ({ isActive }) => {
-      const now = Date.now();
+    (async () => {
+      listener = await App.addListener('appStateChange', ({ isActive }) => {
+        const now = Date.now();
 
-      if (!isActive) {
-        // 앱이 백그라운드로 갈 때
-        lastBackgroundTime = now;
-      } else {
-        // 앱이 포그라운드로 돌아왔을 때
-        if (lastBackgroundTime && now - lastBackgroundTime > 7) {
-          router.replace('/dashboard'); // reload 대신 내부 라우팅
+        if (!isActive) {
+          lastBackground = now;
+        } else if (lastBackground && now - lastBackground > 7.2e6) {
+          router.replace('/dashboard');
         }
-      }
-    });
+      });
+    })();
+
+    return () => {
+      listener?.remove();
+    };
   }, [router]);
 
   return (
@@ -74,6 +81,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <DeepLinkHandler />
         <BottomNav />
         <MarbleOverlay />
+
+        {/* iOS 필수 업데이트 오버레이 */}
+        <UpdateBlocker />
       </body>
     </html>
   );
