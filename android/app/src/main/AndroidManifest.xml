@@ -1,63 +1,63 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
-
-    <!-- ▼ ① “알림” + “포그라운드 서비스” 권한 추가 -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
-    <!-- (기존) -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
-
-    <application
-        android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.Yeondeung">      <!-- AppTheme → Theme.Yeondeung -->
-
-        <activity
-            android:name="com.getcapacitor.BridgeActivity"
-            android:exported="true"
-            android:label="@string/app_name"
-            android:configChanges="fontScale|keyboard|keyboardHidden|orientation|screenSize"
-            android:launchMode="singleTask"
-            android:theme="@style/Theme.Yeondeung.Launch">   <!-- ★ 여기만 변경 -->
-
-            <!-- 앱 실행용 -->
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-
-            <!-- 로그인 복귀용 -->
-            <intent-filter android:label="auth">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:scheme="yeondeung"
-                    android:host="auth"
-                    android:pathPrefix="/callback" />
-            </intent-filter>
-        </activity>
+<manifest
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.lotuslantern.app">
 
 
-        <service
-            android:name="com.johnpryan.musiccontrols.MusicControlsNotification"
-            android:exported="false"
-            android:foregroundServiceType="mediaPlayback" />
 
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.fileprovider"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths" />
-        </provider>
-    </application>
+<!-- ✅ 루트 <manifest> 아래, <application> 밖 -->
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+<uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+<uses-permission android:name="android.permission.INTERNET" />
+<uses-permission android:name="android.permission.WAKE_LOCK" />
 
+<application
+android:allowBackup="true"
+android:icon="@mipmap/ic_launcher"
+android:label="@string/app_name"
+android:roundIcon="@mipmap/ic_launcher_round"
+android:supportsRtl="true"
+android:theme="@style/Theme.Yeondeung">
+
+<activity
+    android:name="com.lotuslantern.app.MainActivity"
+    android:exported="true"
+    android:label="@string/app_name"
+    android:configChanges="keyboard|keyboardHidden|orientation|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+    android:launchMode="singleTask"
+    android:theme="@style/Theme.Yeondeung.Launch">
+
+    <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+    </intent-filter>
+
+    <intent-filter android:label="auth">
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data
+            android:scheme="yeondeung"
+            android:host="auth"
+            android:pathPrefix="/callback" />
+    </intent-filter>
+</activity>
+
+<service
+    android:name="com.johnpryan.musiccontrols.MusicControlsNotification"
+    android:exported="false"
+    android:foregroundServiceType="mediaPlayback" />
+
+<provider
+    android:name="androidx.core.content.FileProvider"
+    android:authorities="${applicationId}.fileprovider"
+    android:exported="false"
+    android:grantUriPermissions="true">
+    <meta-data
+        android:name="android.support.FILE_PROVIDER_PATHS"
+        android:resource="@xml/file_paths" />
+</provider>
+
+</application>
 </manifest>
