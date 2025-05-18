@@ -36,8 +36,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         lastBackgroundTime = now;
       } else {
         // 앱이 포그라운드로 돌아왔을 때
-        if (lastBackgroundTime && now - lastBackgroundTime > 3000) {
-          router.replace('/'); // reload 대신 내부 라우팅
+        if (lastBackgroundTime && now - lastBackgroundTime > 7) {
+          router.replace('/dashboard'); // reload 대신 내부 라우팅
         }
       }
     });

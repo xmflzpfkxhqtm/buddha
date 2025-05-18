@@ -18,6 +18,8 @@ const config: CapacitorConfig = {
   /* ───────── 배포 서버 주소 ───────── */
   server: {
     url: 'https://buddha-dusky.vercel.app/dashboard',
+    allowNavigation: ['buddha-dusky.vercel.app'], // ⭐ 반드시 명시
+    cleartext: true
   },
 };
 
