@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect } from 'react';
-import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
@@ -19,12 +18,6 @@ import TopNav           from '../../../components/TopNav';
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
-
-export const metadata: Metadata = {
-  title: '연등',
-  description: '내 손안의 작은 법당',
-  icons: { icon: '/favicon.ico' },
-};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {

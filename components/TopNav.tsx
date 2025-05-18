@@ -14,17 +14,21 @@ const HIDDEN_PATHS: (string | RegExp)[] = [
   /^\/copy\/[^/]+\/complete$/, // copy/[id]/complete ← 정규식(동적 라우트)
 ];
 
-/* 2. “돌아가기” 예외 – 정확 매칭 */
+/* 2. "돌아가기" 예외 – 정확 매칭 */
 const CUSTOM_BACK: Record<string, string> = {
   '/answer': '/ask',                // 답변 보기 → 질문 작성
 };
 
-/* 3. “돌아가기” 예외 – 정규식 매칭 */
+/* 3. "돌아가기" 예외 – 정규식 매칭 */
 const CUSTOM_BACK_REGEX: { pattern: RegExp; to: string }[] = [
   { pattern: /^\/copy\/[^/]+\/complete$/, to: '/copy' }, // 사경 완료 → 사경 홈
 ];
 
-export default function TopNav() {
+interface TopNavProps {
+  className?: string;
+}
+
+export default function TopNav({ className }: TopNavProps) {
   const router   = useRouter();
   const pathname = usePathname();
 
@@ -59,8 +63,8 @@ export default function TopNav() {
     <>
       {/* ───── 고정 상단바 ───── */}
       <header
-        className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[460px] h-[48px]
-                   bg-white z-40 select-none flex items-center border-b border-grey/50"
+        className={`fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[460px] h-[48px]
+                   bg-white z-40 select-none flex items-center border-b border-grey/50 ${className ?? ''}`}
       >
         {showBack && (
           <button
