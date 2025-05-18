@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
+import { useRouter } from 'next/navigation';
 
 import '../globals.css';
 
@@ -20,15 +21,27 @@ const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+
   useEffect(() => {
-    if (Capacitor.isNativePlatform()) {
-      App.addListener('appStateChange', ({ isActive }) => {
-        if (isActive) {
-          window.location.reload();
+    if (!Capacitor.isNativePlatform()) return;
+
+    let lastBackgroundTime: number | null = null;
+
+    App.addListener('appStateChange', ({ isActive }) => {
+      const now = Date.now();
+
+      if (!isActive) {
+        // 앱이 백그라운드로 갈 때
+        lastBackgroundTime = now;
+      } else {
+        // 앱이 포그라운드로 돌아왔을 때
+        if (lastBackgroundTime && now - lastBackgroundTime > 3000000) {
+          router.replace('/'); // reload 대신 내부 라우팅
         }
-      });
-    }
-  }, []);
+      }
+    });
+  }, [router]);
 
   return (
     <html lang="ko">
@@ -52,7 +65,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         {/* ───────── PUSH ───────── */}
         <PushProvider>
-          <PushDebug />  
+          <PushDebug />
           <div className="relative min-h-screen w-full max-w-[460px] mx-auto pb-[64px]">
             <PageTransition>{children}</PageTransition>
           </div>
