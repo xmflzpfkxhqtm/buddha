@@ -55,7 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         suppressHydrationWarning
       >
         <NativeInit />
-        <TopNav />
+        <TopNav className="top-nav-safe" />
 
         {/* ───────── PUSH ───────── */}
         <PushProvider>
