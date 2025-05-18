@@ -1,15 +1,22 @@
+'use client';
+
+import { useEffect } from 'react';
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
+import { App } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
+
 import '../globals.css';
 
 import PushProvider     from '../../../components/PushProvider';
-import PushDebug        from '../../../components/PushDebug';     // 디버그용
+import PushDebug        from '../../../components/PushDebug';
 import PageTransition   from '../../../components/PageTransition';
 import MarbleOverlay    from '../../../components/Overlay';
 import BottomNav        from '../../../components/BottomNav';
 import DeepLinkHandler  from '../../../components/DeepLinkHandler';
 import NativeInit       from '../../../components/NativeInit';
 import TopNav           from '../../../components/TopNav';
+
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
 
@@ -20,6 +27,16 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      App.addListener('appStateChange', ({ isActive }) => {
+        if (isActive) {
+          window.location.reload();
+        }
+      });
+    }
+  }, []);
+
   return (
     <html lang="ko">
       <head>
