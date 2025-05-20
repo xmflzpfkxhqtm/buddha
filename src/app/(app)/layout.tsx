@@ -17,6 +17,7 @@ import DeepLinkHandler  from '../../../components/DeepLinkHandler';
 import NativeInit       from '../../../components/NativeInit';
 import TopNav           from '../../../components/TopNav';
 import UpdateBlocker    from '../../../components/UpdateBlocker';   // ★ iOS 강제 업데이트
+import ReviewPrompt     from '../../../components/ReviewPrompt';
 
 const geistSans = Geist({ variable: '--font-geist-sans',  subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
@@ -68,6 +69,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         suppressHydrationWarning
       >
         <NativeInit />
+        <ReviewPrompt /> 
         <TopNav className="top-nav-safe" />
 
         {/* ───────── PUSH ───────── */}

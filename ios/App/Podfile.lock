@@ -5,6 +5,8 @@ PODS:
     - Capacitor
   - CapacitorBrowser (7.0.1):
     - Capacitor
+  - CapacitorCommunityInAppReview (7.0.1):
+    - Capacitor
   - CapacitorCommunityKeepAwake (7.0.0):
     - Capacitor
   - CapacitorCommunityMedia (8.0.1):
@@ -13,6 +15,8 @@ PODS:
   - CapacitorCommunityTextToSpeech (6.0.0):
     - Capacitor
   - CapacitorCordova (7.2.0)
+  - CapacitorDevice (7.0.1):
+    - Capacitor
   - CapacitorFilesystem (7.0.1):
     - Capacitor
   - CapacitorHaptics (7.0.1):
@@ -33,10 +37,12 @@ DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorApp (from `../../node_modules/@capacitor/app`)"
   - "CapacitorBrowser (from `../../node_modules/@capacitor/browser`)"
+  - "CapacitorCommunityInAppReview (from `../../node_modules/@capacitor-community/in-app-review`)"
   - "CapacitorCommunityKeepAwake (from `../../node_modules/@capacitor-community/keep-awake`)"
   - "CapacitorCommunityMedia (from `../../node_modules/@capacitor-community/media`)"
   - "CapacitorCommunityTextToSpeech (from `../../node_modules/@capacitor-community/text-to-speech`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorDevice (from `../../node_modules/@capacitor/device`)"
   - "CapacitorFilesystem (from `../../node_modules/@capacitor/filesystem`)"
   - "CapacitorHaptics (from `../../node_modules/@capacitor/haptics`)"
   - CapacitorMusicControlsPlugin (from `../../node_modules/capacitor-music-controls-plugin`)
@@ -55,6 +61,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/app"
   CapacitorBrowser:
     :path: "../../node_modules/@capacitor/browser"
+  CapacitorCommunityInAppReview:
+    :path: "../../node_modules/@capacitor-community/in-app-review"
   CapacitorCommunityKeepAwake:
     :path: "../../node_modules/@capacitor-community/keep-awake"
   CapacitorCommunityMedia:
@@ -63,6 +71,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor-community/text-to-speech"
   CapacitorCordova:
     :path: "../../node_modules/@capacitor/ios"
+  CapacitorDevice:
+    :path: "../../node_modules/@capacitor/device"
   CapacitorFilesystem:
     :path: "../../node_modules/@capacitor/filesystem"
   CapacitorHaptics:
@@ -80,10 +90,12 @@ SPEC CHECKSUMS:
   Capacitor: 03bc7cbdde6a629a8b910a9d7d78c3cc7ed09ea7
   CapacitorApp: febecbb9582cb353aed037e18ec765141f880fe9
   CapacitorBrowser: 6299776d496e968505464884d565992faa20444a
+  CapacitorCommunityInAppReview: a8f26c4e48a8ccc9df0acf1c7bca39844c325572
   CapacitorCommunityKeepAwake: ae762ce29b53147d28cfcaae5273cd1db0c38fc4
   CapacitorCommunityMedia: d1538b56a3303298e7cf45a18b11e624fbcbdc8e
   CapacitorCommunityTextToSpeech: 4e82235c0e184d2edbd1b2d81ef22af531bda13e
   CapacitorCordova: 5967b9ba03915ef1d585469d6e31f31dc49be96f
+  CapacitorDevice: c6f6d587dd310527f8a48bf09c4e7b4a4cf14329
   CapacitorFilesystem: e6261c410436f54908c11f94336c5b58286b1db0
   CapacitorHaptics: 1f1e17041f435d8ead9ff2a34edd592c6aa6a8d6
   CapacitorMusicControlsPlugin: 32f1a75c5ced2cc3e7a42f6586758626342754d5
@@ -92,6 +104,6 @@ SPEC CHECKSUMS:
   CapacitorStatusBar: 6e7af040d8fc4dd655999819625cae9c2d74c36f
   SDWebImage: f84b0feeb08d2d11e6a9b843cb06d75ebf5b8868
 
-PODFILE CHECKSUM: 1f319decdfc9059353dd8a68ae971dbd5d5b8f17
+PODFILE CHECKSUM: 97da33b124196009b0dd2765cfc4463460f48bb3
 
 COCOAPODS: 1.16.2
