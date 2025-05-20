@@ -215,9 +215,19 @@ export default function AnswerClient() {
         <h2 className="text-2xl text-red font-semibold">
           부처님이라면 분명<br />이렇게 말씀하셨을 것입니다
         </h2>
+      {/* ----------- 질문 ----------- */}
+      <section className="mt-8">
+          <header className="rounded-xl flex items-center text-red font-semibold">
+            나의 질문은
+          </header>
+          <div className="py-2 break-words rounded-xl border-red whitespace-pre-wrap text-base text-black">
+            {question}
+          </div>
+        </section>
+
 
         {/* ----------- 답변 ----------- */}
-        <section className="mt-6">
+        <section className="mt-10">
           <header className="h-12 bg-red-light rounded-xl flex items-center pl-3 text-white font-semibold">
             🪷 이르시길
           </header>
@@ -226,16 +236,7 @@ export default function AnswerClient() {
           </div>
         </section>
 
-        {/* ----------- 질문 ----------- */}
-        <section className="mt-8">
-
-          <div className="p-4 mt-4 rounded-xl shadow-xl border break-words border-red whitespace-pre-wrap text-base text-black">
-            {question}
-          </div>
-          <header className="h-12 bg-red-light rounded-xl break-words flex items-center pl-3 text-white font-semibold">
-            🪷 나의 물음
-          </header>
-        </section>
+  
 
         {/* ----------- 인용 경전 ----------- */}
         {refs.length > 0 && (
