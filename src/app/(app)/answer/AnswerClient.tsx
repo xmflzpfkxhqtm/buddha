@@ -220,7 +220,7 @@ export default function AnswerClient() {
           <header className="rounded-xl flex items-center text-red font-semibold">
             나의 질문은
           </header>
-          <div className="py-2 break-words rounded-xl border-red whitespace-pre-wrap text-base text-black">
+          <div className="py-2 whitespace-pre-wrap break-words overflow-x-auto rounded-xl border-red whitespace-pre-wrap text-base text-black">
             {question}
           </div>
         </section>
