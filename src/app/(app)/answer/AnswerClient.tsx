@@ -231,7 +231,7 @@ export default function AnswerClient() {
           <header className="h-12 bg-red-light rounded-xl flex items-center pl-3 text-white font-semibold">
             🪷 이르시길
           </header>
-          <div className="p-4 mt-4 rounded-xl shadow-xl border font-maruburi border-red whitespace-pre-wrap break-words overflow-x-auto text-base text-black">
+          <div className="p-4 mt-4 rounded-xl shadow-xl border font-maruburi border-red whitespace-pre-wrap break-words text-base text-black">
           {formatted}
           </div>
         </section>
