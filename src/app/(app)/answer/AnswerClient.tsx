@@ -221,19 +221,20 @@ export default function AnswerClient() {
           <header className="h-12 bg-red-light rounded-xl flex items-center pl-3 text-white font-semibold">
             🪷 이르시길
           </header>
-          <div className="p-4 mt-4 rounded-xl shadow-xl border font-maruburi border-red whitespace-pre-wrap text-base text-black">
+          <div className="p-4 mt-4 break-words rounded-xl shadow-xl border font-maruburi border-red whitespace-pre-wrap text-base text-black">
             {formatted}
           </div>
         </section>
 
         {/* ----------- 질문 ----------- */}
         <section className="mt-8">
-          <header className="h-12 bg-red-light rounded-xl flex items-center pl-3 text-white font-semibold">
-            🪷 나의 물음
-          </header>
-          <div className="p-4 mt-4 rounded-xl shadow-xl border border-red whitespace-pre-wrap text-base text-black">
+
+          <div className="p-4 mt-4 rounded-xl shadow-xl border break-words border-red whitespace-pre-wrap text-base text-black">
             {question}
           </div>
+          <header className="h-12 bg-red-light rounded-xl break-words flex items-center pl-3 text-white font-semibold">
+            🪷 나의 물음
+          </header>
         </section>
 
         {/* ----------- 인용 경전 ----------- */}
