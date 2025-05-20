@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+'use client';
 
 import { useEffect } from 'react';
 import { Geist, Geist_Mono } from 'next/font/google';
