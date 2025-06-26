@@ -189,7 +189,17 @@ export default function AskPage() {
             className="w-full h-40 p-4 text-black rounded-xl border border-red-light bg-[#FFFDF8] text-base resize-none focus:outline-none focus:ring-2 focus:ring-red"
             rows={5}
             value={question}
-            onChange={(e) => setQuestion(e.target.value)}
+            onChange={(e) => {
+              e.preventDefault();
+              setQuestion(e.target.value);
+            }}
+            onBlur={(e) => {
+              // 포커스를 잃어도 현재 값을 유지
+              const currentValue = e.target.value;
+              if (currentValue !== question) {
+                setQuestion(currentValue);
+              }
+            }}
             placeholder="마음을 담아 부처님께 여쭈고 싶은 이야기를 적어보세요"
           />
           <button
@@ -416,7 +426,7 @@ export default function AskPage() {
               <li>🪷 마음속 고민이나 질문을 자유롭게 입력하세요.</li>
               <li>❓ 물음이 상세할수록 더 깊은 답변을 들으실 수 있습니다.</li>
               <li>📜 부처님의 말씀과 함께 인용된 경전도 함께 확인할 수 있습니다.</li>
-              <li>➕ ‘문답을 이어갑니다’로 후속 질문도 가능합니다.</li>
+              <li>➕ &apos;문답을 이어갑니다&apos;로 후속 질문도 가능합니다.</li>
               <li>🔒 다른 이용자에게 나의 질문은 절대 공개되지 않습니다.</li>
             </ul>
             <button
