@@ -5,6 +5,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import { App } from '@capacitor/app';
 import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
 import { useRouter } from 'next/navigation';
+import AppInstallOverlay from '../../../components/AppInstallOverlay'
 
 import '../globals.css';
 
@@ -83,6 +84,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <DeepLinkHandler />
         <BottomNav />
         <MarbleOverlay />
+        <AppInstallOverlay /> 
 
         {/* iOS 필수 업데이트 오버레이 */}
         <UpdateBlocker />
