@@ -1,16 +1,48 @@
 {
-    "name": "연등",
-    "short_name": "연등",
-    "start_url": "/",
-    "display": "standalone",
-    "background_color": "#F5F1E6",
-    "theme_color": "#D92C2C",
-    "icons": [
-      {
-        "src": "/icon.png",
-        "sizes": "512x512",
-        "type": "image/png"
-      }
-    ]
-  }
-  
+  "name": "연등 - AI 부처님과 마음공부",
+  "short_name": "연등",
+  "description": "팔만대장경 5천만 자 기반 AI 부처님이 당신의 물음에 응답합니다.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#8B1A1A",
+  "orientation": "portrait",
+  "lang": "ko",
+  "categories": ["lifestyle", "education", "spirituality"],
+  "icons": [
+    {
+      "src": "/favicon-16x16.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
