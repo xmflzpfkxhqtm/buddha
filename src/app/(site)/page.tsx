@@ -29,7 +29,7 @@ fixed top-0 left-0 w-full z-50 px-4 py-4 md:px-8 lg:px-12
    function Footer() {
      return (
        <footer className="w-full py-4 text-zinc-400 bg-[#000000] text-center text-xs">
-        문의 contact@yeondeung.com <br/>
+        문의 choe.junekyung@gmail.com <br/>
          © {new Date().getFullYear()} Yeondeung. All rights reserved.
        </footer>
      );
