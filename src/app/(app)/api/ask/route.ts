@@ -1,5 +1,5 @@
 export const runtime = 'nodejs';
-export const maxDuration = 120; // Vercel 함수 타임아웃 120초 (Pro 플랜 필요)
+export const maxDuration = 60; // Vercel 함수 타임아웃 60초 (Hobby 플랜 최대)
 
 import { NextRequest, NextResponse } from 'next/server';
 import { generateEmbeddingBatch } from '@/utils/upstage';
@@ -19,7 +19,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): 
   ]);
 }
 
-const LLM_TIMEOUT = 60000; // 60초
+const LLM_TIMEOUT = 40000; // 40초 (임베딩+검색+저장에 ~20초 할당)
 
 const modelMapping = {
   'gpt4.1': 'gpt-4.1',
@@ -291,8 +291,8 @@ export async function POST(request: NextRequest) {
     };
 
     try {
-      // LLM 호출은 재시도 1회로 제한 (타임아웃 방지)
-      data = await withRetry(callLLM, 2, RETRY_DELAY, 'LLM API 호출');
+      // LLM 호출은 재시도 없이 1회 (60초 Hobby 제한 내 수렴)
+      data = await callLLM();
     } catch (apiError) {
       console.warn('⚠️ API 모델 호출 실패, fallback 시도:', apiError);
       try {
