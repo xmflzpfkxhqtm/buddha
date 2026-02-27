@@ -1,4 +1,5 @@
 export const runtime = 'nodejs';
+export const maxDuration = 120; // Vercel 함수 타임아웃 120초 (Pro 플랜 필요)
 
 import { NextRequest, NextResponse } from 'next/server';
 import { generateEmbeddingBatch } from '@/utils/upstage';
@@ -7,6 +8,18 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import Anthropic from "@anthropic-ai/sdk";
 import { supabase } from '@/lib/supabaseClient';
 import type { TextBlock } from '@anthropic-ai/sdk/resources/messages';
+
+// 개별 LLM 호출 타임아웃 (60초)
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} 타임아웃 (${timeoutMs}ms 초과)`)), timeoutMs)
+    )
+  ]);
+}
+
+const LLM_TIMEOUT = 60000; // 60초
 
 const modelMapping = {
   'gpt4.1': 'gpt-4.1',
@@ -261,36 +274,32 @@ export async function POST(request: NextRequest) {
       }
     ];
 
-    // LLM API 호출
+    // LLM API 호출 (개별 타임아웃 적용)
     const apiModel = modelMapping[model as keyof typeof modelMapping] || 'gpt-4.1-mini';
     let data;
-    
+
+    const callLLM = async () => {
+      if (model.startsWith('claude')) {
+        return await withTimeout(callClaude(messages, apiModel, maxTokens), LLM_TIMEOUT, 'Claude API');
+      } else if (model.startsWith('gemini')) {
+        return await withTimeout(callGemini(messages, apiModel), LLM_TIMEOUT, 'Gemini API');
+      } else if (model === 'grok') {
+        return await withTimeout(callGrok(messages, apiModel, maxTokens), LLM_TIMEOUT, 'Grok API');
+      } else {
+        return await withTimeout(callOpenAI(messages, apiModel, maxTokens), LLM_TIMEOUT, 'OpenAI API');
+      }
+    };
+
     try {
-      // 각 모델별 API 호출
-      data = await withRetry(
-        async () => {
-          if (model.startsWith('claude')) {
-            return await callClaude(messages, apiModel, maxTokens);
-          } else if (model.startsWith('gemini')) {
-            return await callGemini(messages, apiModel);
-          } else if (model === 'grok') {
-            return await callGrok(messages, apiModel, maxTokens);
-          } else {
-            // 기본은 OpenAI
-            return await callOpenAI(messages, apiModel, maxTokens);
-          }
-        },
-        MAX_RETRIES,
-        RETRY_DELAY,
-        'LLM API 호출'
-      );
+      // LLM 호출은 재시도 1회로 제한 (타임아웃 방지)
+      data = await withRetry(callLLM, 2, RETRY_DELAY, 'LLM API 호출');
     } catch (apiError) {
       console.warn('⚠️ API 모델 호출 실패, fallback 시도:', apiError);
       try {
-        data = await callOpenAI(messages, 'gpt-4.1-mini', maxTokens);
+        data = await withTimeout(callOpenAI(messages, 'gpt-4.1-mini', maxTokens), LLM_TIMEOUT, 'Fallback OpenAI');
       } catch (fallbackError) {
         console.error('❌ Fallback API도 실패:', fallbackError);
-        data = { 
+        data = {
           choices: [{ message: { content: '부처님께서 지금은 깊은 명상 중이시어 응답할 수 없습니다. 잠시 후 다시 여쭤보세요.' } }],
           usage: { total_tokens: 0 }
         };
