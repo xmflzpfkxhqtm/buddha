@@ -1,0 +1,252 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1773873479462,
+  "projectRoot": "/Users/singyuseob/Dev/Buddha/buddha",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      },
+      {
+        "name": "TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "tsconfig.json"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "next",
+        "version": "15.3.9",
+        "category": "fullstack"
+      },
+      {
+        "name": "react",
+        "version": "19.0.0",
+        "category": "frontend"
+      },
+      {
+        "name": "react-dom",
+        "version": "19.0.0",
+        "category": "frontend"
+      }
+    ],
+    "packageManager": "npm",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": "npm run build",
+    "testCommand": null,
+    "lintCommand": "npm run lint",
+    "devCommand": "npm run dev",
+    "scripts": {
+      "dev": "next dev",
+      "build": "next build",
+      "start": "next start",
+      "lint": "next lint"
+    }
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "components",
+      "public",
+      "src"
+    ],
+    "gitBranches": {
+      "defaultBranch": "main",
+      "branchingStrategy": null
+    }
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "android": {
+      "path": "android",
+      "purpose": null,
+      "fileCount": 8,
+      "lastAccessed": 1773873479409,
+      "keyFiles": [
+        "build.gradle",
+        "capacitor.settings.gradle",
+        "gradle.properties",
+        "gradlew",
+        "gradlew.bat"
+      ]
+    },
+    "components": {
+      "path": "components",
+      "purpose": "UI components",
+      "fileCount": 20,
+      "lastAccessed": 1773873479411,
+      "keyFiles": [
+        "AppInstallOverlay.tsx",
+        "BottomNav.tsx",
+        "DeepLinkHandler.tsx",
+        "Loading.tsx",
+        "NativeInit.tsx"
+      ]
+    },
+    "data": {
+      "path": "data",
+      "purpose": "Data files",
+      "fileCount": 143,
+      "lastAccessed": 1773873479432,
+      "keyFiles": [
+        "금강반야론_1권_GPT4.1번역.txt",
+        "금강반야론_2권_GPT4.1번역.txt",
+        "금강반야바라밀경_1권_GPT4.1번역.txt",
+        "금강반야바라밀경론_1권_GPT4.1번역.txt",
+        "금강반야바라밀경론_2권_GPT4.1번역.txt"
+      ]
+    },
+    "ios": {
+      "path": "ios",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1773873479432,
+      "keyFiles": []
+    },
+    "public": {
+      "path": "public",
+      "purpose": "Public files",
+      "fileCount": 41,
+      "lastAccessed": 1773873479433,
+      "keyFiles": [
+        "aivip.png",
+        "android-chrome-192x192.png",
+        "android-chrome-512x512.png",
+        "apple-touch-icon.png",
+        "appstore.svg"
+      ]
+    },
+    "resources": {
+      "path": "resources",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1773873479438,
+      "keyFiles": [
+        "splash.jpg"
+      ]
+    },
+    "src": {
+      "path": "src",
+      "purpose": "Source code",
+      "fileCount": 0,
+      "lastAccessed": 1773873479440,
+      "keyFiles": []
+    },
+    "android/app": {
+      "path": "android/app",
+      "purpose": "Application code",
+      "fileCount": 5,
+      "lastAccessed": 1773873479442,
+      "keyFiles": [
+        "build.gradle",
+        "capacitor.build.gradle",
+        "google-services.json"
+      ]
+    },
+    "android/build": {
+      "path": "android/build",
+      "purpose": "Build output",
+      "fileCount": 0,
+      "lastAccessed": 1773873479442,
+      "keyFiles": []
+    },
+    "ios/App": {
+      "path": "ios/App",
+      "purpose": "Application code",
+      "fileCount": 2,
+      "lastAccessed": 1773873479444,
+      "keyFiles": [
+        "Podfile",
+        "Podfile.lock"
+      ]
+    },
+    "src/app": {
+      "path": "src/app",
+      "purpose": "Application code",
+      "fileCount": 2,
+      "lastAccessed": 1773873479449,
+      "keyFiles": [
+        "globals.css",
+        "sitemap.ts"
+      ]
+    },
+    "src/data": {
+      "path": "src/data",
+      "purpose": "Data files",
+      "fileCount": 1,
+      "lastAccessed": 1773873479449,
+      "keyFiles": [
+        "copyTexts.ts"
+      ]
+    },
+    "src/lib": {
+      "path": "src/lib",
+      "purpose": "Library code",
+      "fileCount": 7,
+      "lastAccessed": 1773873479450,
+      "keyFiles": [
+        "copyStore.ts",
+        "initNative.ts",
+        "isNative.ts"
+      ]
+    },
+    "src/types": {
+      "path": "src/types",
+      "purpose": "Type definitions",
+      "fileCount": 1,
+      "lastAccessed": 1773873479450,
+      "keyFiles": [
+        "supabase.d.ts"
+      ]
+    },
+    "src/utils": {
+      "path": "src/utils",
+      "purpose": "Utility functions",
+      "fileCount": 3,
+      "lastAccessed": 1773873479450,
+      "keyFiles": [
+        "chunking.ts",
+        "supabase.ts",
+        "upstage.ts"
+      ]
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "middleware.ts",
+      "accessCount": 2,
+      "lastAccessed": 1773873645537,
+      "type": "file"
+    },
+    {
+      "path": "components/AppInstallOverlay.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1773873967118,
+      "type": "file"
+    },
+    {
+      "path": "src/app/sitemap.ts",
+      "accessCount": 1,
+      "lastAccessed": 1773873537055,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}

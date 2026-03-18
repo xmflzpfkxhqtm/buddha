@@ -13,12 +13,13 @@ export function middleware(req: NextRequest) {
   const isApp = hdr || ua.includes(APP_UA_TAG)
 
   // 브라우저가 내부 경로 직접 호출 → 루트로
-  const APP_ONLY = ['/ask','/scripture','/me','/dashboard']
-  if (!isApp && APP_ONLY.some(p => pathname.startsWith(p))) {
-    const url = req.nextUrl.clone()
-    url.pathname = '/'
-    return NextResponse.redirect(url)
-  }
+  // TODO: 웹 접근 허용을 위해 일시적으로 비활성화
+  // const APP_ONLY = ['/ask','/scripture','/me','/dashboard']
+  // if (!isApp && APP_ONLY.some(p => pathname.startsWith(p))) {
+  //   const url = req.nextUrl.clone()
+  //   url.pathname = '/'
+  //   return NextResponse.redirect(url)
+  // }
 
   return NextResponse.next()
 }

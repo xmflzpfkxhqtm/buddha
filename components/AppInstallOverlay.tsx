@@ -44,14 +44,17 @@ export default function AppInstallOverlay() {
     localStorage.setItem('appOverlayDismissed', 'true')
   }
 
-  // 표시 조건
-  const shouldHide =
-    pathname === '/' ||
-    pathname.startsWith('/answer') ||
-    isNative ||
-    dismissed
+  // TODO: 웹 접근 허용을 위해 일시적으로 비활성화
+  return null
 
-  if (shouldHide) return null
+  // 표시 조건
+  // const shouldHide =
+  //   pathname === '/' ||
+  //   pathname.startsWith('/answer') ||
+  //   isNative ||
+  //   dismissed
+
+  // if (shouldHide) return null
 
   return (
     <div className="fixed inset-0 z-[9999] backdrop-blur-sm bg-black/30 flex items-center justify-center">
