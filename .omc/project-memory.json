@@ -230,15 +230,15 @@
   },
   "hotPaths": [
     {
-      "path": "middleware.ts",
-      "accessCount": 2,
-      "lastAccessed": 1773873645537,
+      "path": "components/AppInstallOverlay.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1773875210897,
       "type": "file"
     },
     {
-      "path": "components/AppInstallOverlay.tsx",
-      "accessCount": 2,
-      "lastAccessed": 1773873967118,
+      "path": "middleware.ts",
+      "accessCount": 3,
+      "lastAccessed": 1773874157997,
       "type": "file"
     },
     {
