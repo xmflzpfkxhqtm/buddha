@@ -21,6 +21,17 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): 
 
 const LLM_TIMEOUT = 40000; // 40초 (임베딩+검색+저장에 ~20초 할당)
 
+function normalizeRagContext(text: string): string {
+  return text
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/^>\s?/gm, '')
+    .replace(/^\s*---\s*$/gm, '')
+    .replace(/\[\[([^[\]|]+)\|([^[\]]+)\]\]/g, '$2')
+    .replace(/\[\[([^[\]]+)\]\]/g, '$1')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 const modelMapping = {
   'gpt4.1': 'gpt-4.1',
   'gpt4o': 'gpt-4o',
@@ -219,7 +230,7 @@ export async function POST(request: NextRequest) {
         
         console.log('✅ 최적화 벡터 검색 완료, 결과 수:', documents.length);
         console.log('✅ 최적화 벡터 검색 완료:', documents);
-        contextText = documents.map(doc => doc.content).join('\n\n');
+        contextText = normalizeRagContext(documents.map(doc => doc.content).join('\n\n'));
       }
     } catch (error) {
       console.error('❌ 최적화 벡터 검색 실패, 일반 검색 시도:', error);
@@ -230,7 +241,7 @@ export async function POST(request: NextRequest) {
         const documents = await searchSimilarDocuments(embeddings[0], 10);
         console.log('✅ 일반 벡터 검색 완료, 결과 수:', documents.length);
         console.log('✅ 일반 벡터 검색 완료:', documents);
-        contextText = documents.map(doc => doc.content).join('\n\n');
+        contextText = normalizeRagContext(documents.map(doc => doc.content).join('\n\n'));
       } catch (fallbackError) {
         console.error('❌ 모든 벡터 검색 실패:', fallbackError);
         contextText = '벡터 검색 실패. 일반적인 지식으로 응답합니다.';

@@ -15,6 +15,36 @@ interface Bookmark {
 }
 
 const ITEMS_PER_PAGE = 5;
+const splitSentences = (text: string): string[] =>
+  text
+    .split(/(?<=[.!?]["”'’]?)\s+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+
+const parseScriptureSentences = (content: string): string[] => {
+  const lines = content.split('\n');
+  const paragraphs: string[] = [];
+  let paragraphBuffer: string[] = [];
+
+  const flushParagraph = () => {
+    if (paragraphBuffer.length === 0) return;
+    const paragraphText = paragraphBuffer.join(' ').trim();
+    if (paragraphText) paragraphs.push(paragraphText);
+    paragraphBuffer = [];
+  };
+
+  lines.forEach((line) => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed === '---' || /^#{1,6}\s+/.test(trimmed) || /^>\s?/.test(trimmed)) {
+      flushParagraph();
+      return;
+    }
+    paragraphBuffer.push(trimmed);
+  });
+
+  flushParagraph();
+  return paragraphs.flatMap((paragraph) => splitSentences(paragraph));
+};
 
 export default function BookmarkPage() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
@@ -56,17 +86,9 @@ export default function BookmarkPage() {
           for (const title of titles) {
             const res = await fetch(`/api/scripture?title=${encodeURIComponent(title)}`);
             const json = await res.json();
-            const paragraphs = (json.content || '').split(/\n\s*\n/);
-            const sentences = paragraphs
-              .map((p: string) =>
-                p
-                  .split(/(?<=[.!?]["”'’]?)\s+/)
-                  .map((s) => s.trim())
-                  .filter((s) => s.length > 0)
-              )
-              .flat();
+            const sentences = parseScriptureSentences(json.content || '');
             map[title] = sentences;
-                      }
+          }
 
           setScriptureMap(map);
         }

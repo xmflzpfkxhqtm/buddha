@@ -20,11 +20,31 @@ export function cleanScriptureTitle(name: string): string {
   // 디버깅용 로그 출력
   console.log('정리 전 이름:', name);
   
-  // 단순하게 _GPT 이후의 모든 부분을 제거
-  const cleaned = name.replace(/_GPT.*$/, '');
+  // _GPT 접미사/확장자 제거 + 공백 정리
+  const cleaned = name
+    .replace(/_GPT.*$/, '')
+    .replace(/\.(txt|md)$/i, '')
+    .trim();
   
   console.log('정리 후 이름:', cleaned);
   return cleaned;
+}
+
+/**
+ * Markdown 표기 제거/정규화 (RAG 임베딩 품질 개선용)
+ */
+function normalizeMarkdownForEmbedding(text: string): string {
+  return text
+    .replace(/\r\n/g, '\n')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/^>\s?/gm, '')
+    .replace(/^\s*---\s*$/gm, '')
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\*(.*?)\*/g, '$1')
+    .replace(/\[\[([^[\]|]+)\|([^[\]]+)\]\]/g, '$2')
+    .replace(/\[\[([^[\]]+)\]\]/g, '$1')
+    .replace(/\[(.*?)\]\(.*?\)/g, '$1')
+    .replace(/\n{3,}/g, '\n\n');
 }
 
 /**
@@ -43,9 +63,11 @@ export function chunkText(
   overlap: number = 50,
   maxChunkSize: number = 1000
 ): { text: string, metadata: DocumentMetadata }[] {
-  // 경전 이름 추출 (파일명에서 _GPT4.1번역.txt와 같은 부분 제거)
-  const scriptureTitle = cleanScriptureTitle(path.basename(fileName, '.txt'));
+  // 경전 이름 추출 (확장자/txt/md 접미사 제거)
+  const scriptureTitle = cleanScriptureTitle(path.basename(fileName).replace(/\.(txt|md)$/i, ''));
   console.log(`경전 이름: ${scriptureTitle}`);
+
+  const normalizedText = normalizeMarkdownForEmbedding(text);
   
   // 문장 구분자로 텍스트 분할
   const sentenceSeparators = ['.', '!', '?', '。', '！', '？', '\n'];
@@ -57,14 +79,14 @@ export function chunkText(
   
   const combinedRegex = new RegExp(`[${sentenceSeparators.join('')}]`, 'g');
   
-  while ((match = combinedRegex.exec(text)) !== null) {
-    sentences.push(text.substring(lastIndex, match.index + 1).trim());
+  while ((match = combinedRegex.exec(normalizedText)) !== null) {
+    sentences.push(normalizedText.substring(lastIndex, match.index + 1).trim());
     lastIndex = match.index + 1;
   }
   
   // 마지막 문장이 남아있으면 추가
-  if (lastIndex < text.length) {
-    sentences.push(text.substring(lastIndex).trim());
+  if (lastIndex < normalizedText.length) {
+    sentences.push(normalizedText.substring(lastIndex).trim());
   }
   
   // 청크 생성

@@ -27,6 +27,10 @@ interface FileProcessResult {
   skippedChunks: number;
 }
 
+const isScriptureDataFile = (fileName: string) =>
+  (fileName.endsWith('.txt') || fileName.endsWith('.md')) &&
+  !fileName.includes('용어사전');
+
 /**
  * 배치를 처리하고 임베딩한 후 저장 (재시도 메커니즘 추가)
  */
@@ -105,7 +109,7 @@ async function processBatch(batch: ProcessedChunk[]): Promise<number> {
  */
 async function isFileAlreadyProcessed(fileName: string, prevNames: Set<string>): Promise<boolean> {
   // 파일명에서 확장자 제거 및 정리
-  const baseName = fileName.replace(/\.txt$/, '');
+  const baseName = fileName.replace(/\.(txt|md)$/i, '');
   const cleanedName = cleanScriptureTitle(baseName);
   
   console.log(`파일 중복 확인 중: ${fileName} (정리된 이름: ${cleanedName})`);
@@ -175,10 +179,11 @@ export async function GET() {
     const prevFiles = fs.existsSync(prevDataDir) ? fs.readdirSync(prevDataDir) : [];
     // 파일명에서 _GPT4.1번역 등을 제거한 파일명 세트 생성
     const prevFileNames = new Set(prevFiles
-      .filter(file => file.endsWith('.txt'))
+      .filter(file => file.endsWith('.txt') || file.endsWith('.md'))
+      .filter(file => !file.includes('용어사전'))
       .map(file => {
         // 접미사 제거 및 확장자 제외하고 기본 이름만 저장
-        const baseName = file.replace(/\.txt$/, '');
+        const baseName = file.replace(/\.(txt|md)$/i, '');
         return cleanScriptureTitle(baseName);
       }));
     console.log(`기존 처리된 파일 수: ${prevFileNames.size}개`);
@@ -187,8 +192,8 @@ export async function GET() {
     const files = fs.readdirSync(dataDir);
     console.log(`총 파일 수: ${files.length}개`);
     
-    // .txt 파일만 필터링
-    const textFiles = files.filter(file => file.endsWith('.txt'));
+    // scripture 원문 파일(.txt/.md)만 필터링
+    const textFiles = files.filter(isScriptureDataFile);
     // 파일 목록을 역순으로 정렬 (뒤에서부터 처리)
     textFiles.reverse();
     console.log(`텍스트 파일 수: ${textFiles.length}개`);

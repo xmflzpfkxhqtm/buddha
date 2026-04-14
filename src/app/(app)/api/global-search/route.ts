@@ -3,6 +3,39 @@ import { NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs/promises';
 
+const splitSentences = (text: string): string[] =>
+  text
+    .split(/(?<=[.!?]["”'’]?)\s+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+
+const parseScriptureSentences = (content: string): string[] => {
+  const lines = content.split('\n');
+  const paragraphs: string[] = [];
+  let paragraphBuffer: string[] = [];
+
+  const flushParagraph = () => {
+    if (paragraphBuffer.length === 0) return;
+    const paragraphText = paragraphBuffer.join(' ').trim();
+    if (paragraphText) paragraphs.push(paragraphText);
+    paragraphBuffer = [];
+  };
+
+  lines.forEach((line) => {
+    const trimmed = line.trim();
+
+    if (!trimmed || trimmed === '---' || /^#{1,6}\s+/.test(trimmed) || /^>\s?/.test(trimmed)) {
+      flushParagraph();
+      return;
+    }
+
+    paragraphBuffer.push(trimmed);
+  });
+
+  flushParagraph();
+  return paragraphs.flatMap((paragraph) => splitSentences(paragraph));
+};
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const query = searchParams.get('query')?.trim();
@@ -11,28 +44,38 @@ export async function GET(req: Request) {
     return NextResponse.json({ results: [] });
   }
 
-  const dataDir = path.join(process.cwd(), 'data/scripture');
-  const files = await fs.readdir(dataDir);
+  const roots = [path.join(process.cwd(), 'data'), path.join(process.cwd(), 'data', 'scripture')];
+  const pickedFiles = new Map<string, { filePath: string; priority: number }>();
 
   const results: { title: string; index: number; text: string }[] = [];
 
-  for (const file of files) {
-    if (!file.endsWith('.txt')) continue;
-    const title = file.replace('.txt', '');
+  for (const root of roots) {
+    let files: string[] = [];
+    try {
+      files = await fs.readdir(root);
+    } catch {
+      continue;
+    }
 
-    const filePath = path.join(dataDir, file);
+    for (const file of files) {
+      const isMd = file.endsWith('.md');
+      const isTxt = file.endsWith('.txt');
+      if (!isMd && !isTxt) continue;
+      if (file.includes('용어사전')) continue;
+
+      const title = file.replace(/\.(md|txt)$/i, '');
+      const filePath = path.join(root, file);
+      const priority = isMd ? 2 : 1;
+      const prev = pickedFiles.get(title);
+      if (!prev || priority > prev.priority) {
+        pickedFiles.set(title, { filePath, priority });
+      }
+    }
+  }
+
+  for (const [title, { filePath }] of pickedFiles) {
     const content = await fs.readFile(filePath, 'utf-8');
-
-    const paragraphs = content.split(/\n\s*\n/);
-
-    const sentences = paragraphs
-      .map((p) => 
-        p
-          .split(/(?<=[.!?]["”'’]?)\s+/) // ✅ 문장 단위 쪼개기
-          .map((s) => s.trim())
-          .filter((s) => s.length > 0)
-      )
-      .flat();
+    const sentences = parseScriptureSentences(content);
 
     sentences.forEach((sentence, index) => {
       if (sentence.includes(query)) {

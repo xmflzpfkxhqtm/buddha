@@ -13,10 +13,26 @@ export async function GET(req: NextRequest) {
 
   try {
     const safeTitle = path.basename(title); // 디렉터리 탈출 방지
-    const filePath = path.join(process.cwd(), 'data', 'scripture', `${safeTitle}.txt`);
-    const content = await readFile(filePath, 'utf-8');
+    const roots = [path.join(process.cwd(), 'data'), path.join(process.cwd(), 'data', 'scripture')];
+    const extensions = ['.md', '.txt'];
 
-    return NextResponse.json({ content });
+    for (const root of roots) {
+      for (const ext of extensions) {
+        const filePath = path.join(root, `${safeTitle}${ext}`);
+        try {
+          const content = await readFile(filePath, 'utf-8');
+          return NextResponse.json({
+            content,
+            format: ext === '.md' ? 'md' : 'txt',
+            sourceFile: path.basename(filePath),
+          });
+        } catch {
+          // 다음 후보 파일 검사
+        }
+      }
+    }
+
+    return NextResponse.json({ error: 'File not found' }, { status: 404 });
   } catch (error) {
     console.error('파일을 찾을 수 없습니다:', error);
     return NextResponse.json({ error: 'File not found' }, { status: 404 });

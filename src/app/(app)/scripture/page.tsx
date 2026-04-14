@@ -1,7 +1,7 @@
 // src/app/scripture/page.tsx
 
 'use client';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { ReactNode, useEffect, useRef, useState, useCallback } from 'react';
 import { useBookmarkStore } from '../../../stores/useBookmarkStore';
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
@@ -22,6 +22,88 @@ interface GlobalSearchResult {
   index: number;
   text: string;
 }
+
+type MarkdownBlock =
+  | { type: 'heading'; level: number; text: string }
+  | { type: 'hr' }
+  | { type: 'blockquote'; lines: string[] }
+  | { type: 'paragraph'; sentences: string[] };
+
+const splitSentences = (text: string): string[] =>
+  text
+    .split(/(?<=[.!?]["”'’]?)\s+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+
+const parseMarkdownToBlocks = (content: string): { blocks: MarkdownBlock[]; flatSentences: string[] } => {
+  const lines = content.split('\n');
+  const blocks: MarkdownBlock[] = [];
+  const flatSentences: string[] = [];
+  let paragraphBuffer: string[] = [];
+  let quoteBuffer: string[] = [];
+
+  const flushParagraph = () => {
+    if (paragraphBuffer.length === 0) return;
+    const paragraphText = paragraphBuffer.join(' ').trim();
+    paragraphBuffer = [];
+    if (!paragraphText) return;
+    const sentences = splitSentences(paragraphText);
+    if (sentences.length === 0) return;
+    blocks.push({ type: 'paragraph', sentences });
+    flatSentences.push(...sentences);
+  };
+
+  const flushQuote = () => {
+    if (quoteBuffer.length === 0) return;
+    blocks.push({ type: 'blockquote', lines: quoteBuffer });
+    quoteBuffer = [];
+  };
+
+  lines.forEach((rawLine) => {
+    const line = rawLine.trimEnd();
+    const trimmed = line.trim();
+
+    if (trimmed === '') {
+      flushParagraph();
+      flushQuote();
+      return;
+    }
+
+    const headingMatch = trimmed.match(/^(#{1,6})\s+(.+)$/);
+    if (headingMatch) {
+      flushParagraph();
+      flushQuote();
+      blocks.push({
+        type: 'heading',
+        level: headingMatch[1].length,
+        text: headingMatch[2].trim(),
+      });
+      return;
+    }
+
+    if (trimmed === '---') {
+      flushParagraph();
+      flushQuote();
+      blocks.push({ type: 'hr' });
+      return;
+    }
+
+    const quoteMatch = trimmed.match(/^>\s?(.*)$/);
+    if (quoteMatch) {
+      flushParagraph();
+      quoteBuffer.push(quoteMatch[1]);
+      return;
+    }
+
+    flushQuote();
+    paragraphBuffer.push(trimmed);
+  });
+
+  flushParagraph();
+  flushQuote();
+
+  return { blocks, flatSentences };
+};
 
 // 유틸리티 함수들 (변경 없음)
 const getChosung = (char: string): string => {
@@ -54,7 +136,7 @@ function formatDisplayTitle(rawTitle: string): string {
 export default function ScripturePage() {
   // 상태 변수들 (TTS 관련 상태는 isTTSSpeaking만 유지)
   const [isTTSSpeaking, setIsTTSSpeaking] = useState(false);
-  const [displayParagraphs, setDisplayParagraphs] = useState<string[][]>([]);
+  const [contentBlocks, setContentBlocks] = useState<MarkdownBlock[]>([]);
   const router = useRouter();
   const [list, setList] = useState<string[]>([]);
   const [selected, setSelected] = useState('');
@@ -78,6 +160,8 @@ export default function ScripturePage() {
   const [isSearching, setIsSearching] = useState(false);
   const [groupedTitles, setGroupedTitles] = useState<Record<string, string[]>>({});
   const [expandedBase, setExpandedBase] = useState<string | null>(null);
+  const [glossaryMap, setGlossaryMap] = useState<Record<string, string>>({});
+  const [termPopup, setTermPopup] = useState<{ term: string; description: string } | null>(null);
 
   // === 플랫폼 감지 상태 추가 ===
   const [platformInfo, setPlatformInfo] = useState<{ platform: string | null; isNative: boolean }>({ platform: null, isNative: false });
@@ -115,6 +199,22 @@ export default function ScripturePage() {
     supabase.auth.getUser().then(({ data }) => {
       if (data.user?.id) setUserId(data.user.id);
     });
+  }, []);
+
+  useEffect(() => {
+    const loadGlossary = async () => {
+      try {
+        const res = await fetch('/api/glossary');
+        const data = await res.json();
+        if (data?.glossary) {
+          setGlossaryMap(data.glossary);
+        }
+      } catch (error) {
+        console.warn('용어사전 로딩 실패', error);
+      }
+    };
+
+    loadGlossary();
   }, []);
 
   // 제목 그룹핑 관련 함수 (원본 유지)
@@ -191,7 +291,7 @@ export default function ScripturePage() {
         console.warn('❌ 해당 경전을 찾을 수 없습니다:', selected);
         setDisplaySentences(['해당 경전을 불러올 수 없습니다.']);
         setTtsSentences([]);
-        setDisplayParagraphs([]);
+        setContentBlocks([]);
         return;
       }
 
@@ -200,12 +300,8 @@ export default function ScripturePage() {
 
       if (data?.content) {
         const full = data.content;
-        const paragraphs = full.split(/\n\s*\n/);
-        const paragraphSentences = paragraphs.map((p: string) =>
-          p.split(/(?<=[.!?]["”'’]?)\s+/).map(s => s.trim()).filter(s => s.length > 0)
-        );
-        setDisplayParagraphs(paragraphSentences);
-        const flatSentences = paragraphSentences.flat();
+        const { blocks, flatSentences } = parseMarkdownToBlocks(full);
+        setContentBlocks(blocks);
         setDisplaySentences(flatSentences);
         // 원본 ttsSentences 생성 로직 유지
         const tts = flatSentences.map((s: string) => s.replace(/\([^\)]*\)/g, ''));
@@ -214,7 +310,7 @@ export default function ScripturePage() {
       } else {
         setDisplaySentences(['해당 경전을 불러올 수 없습니다.']);
         setTtsSentences([]);
-        setDisplayParagraphs([]);
+        setContentBlocks([]);
       }
        // 북마크 펜딩 처리 로직 (경전 로딩 완료 후 실행되도록 이 위치 유지)
       if (bookmarkPending && actual === bookmarkPending.title) {
@@ -361,6 +457,48 @@ export default function ScripturePage() {
     }
   }, [displaySentences.length, ttsSentences.length]);
 
+  const renderInlineTerms = (text: string): ReactNode[] => {
+    const nodes: ReactNode[] = [];
+    const pattern = /\[\[([^[\]]+?)\]\]/g;
+    let cursor = 0;
+    let match: RegExpExecArray | null = null;
+
+    while ((match = pattern.exec(text)) !== null) {
+      if (match.index > cursor) {
+        nodes.push(text.slice(cursor, match.index));
+      }
+
+      const inner = match[1].trim();
+      const [lookupTermRaw, displayRaw] = inner.split('|');
+      const lookupTerm = lookupTermRaw?.trim() || inner;
+      const displayText = displayRaw?.trim() || lookupTerm;
+
+      nodes.push(
+        <button
+          key={`term-${match.index}-${lookupTerm}`}
+          type="button"
+          className="font-bold text-[#9A4345] underline decoration-[#9A4345] decoration-2 underline-offset-2 hover:opacity-85 active:opacity-70 transition-opacity cursor-pointer whitespace-nowrap"
+          onClick={() =>
+            setTermPopup({
+              term: lookupTerm,
+              description: glossaryMap[lookupTerm] || '사전에 등록된 뜻/설명이 아직 없습니다.',
+            })
+          }
+        >
+          {displayText}
+        </button>
+      );
+
+      cursor = match.index + match[0].length;
+    }
+
+    if (cursor < text.length) {
+      nodes.push(text.slice(cursor));
+    }
+
+    return nodes;
+  };
+
   return (
     // JSX 구조 및 클래스명 원본 유지
     <main className="p-4 pb-[120px] max-w-[460px] mx-auto relative">
@@ -386,7 +524,7 @@ export default function ScripturePage() {
       </div>
 
       {/* 본문 (원본 유지) */}
-      <div className={`whitespace-pre-wrap font-maruburi bg-white rounded-xl ${fontSizeClass} leading-relaxed`}>
+      <div className={`whitespace-pre-wrap break-keep font-maruburi bg-white rounded-xl ${fontSizeClass} leading-relaxed`}>
         {/* 안내 문구 (원본 유지) */}
            <div style={{ minHeight: '40vh' }} className="flex flex-col justify-center gap-3 text-red-dark pt-4 pb-8">
             <p className="text-lg font-bold">{formatDisplayTitle(selected)}</p>
@@ -402,27 +540,60 @@ export default function ScripturePage() {
             </ul>
           </div>
 
-        {/* 문단/문장 렌더링 (원본 유지) */}
-        {displayParagraphs.map((paragraphSentences, pIdx) => ( // 변수명 수정: sentences -> paragraphSentences
-          <div key={pIdx} className="mb-6">
-            {paragraphSentences.map((s, i) => { // 변수명 수정: sentences -> paragraphSentences
-              // globalIndex 계산 로직 원본 유지
-              const globalIndex = displayParagraphs.slice(0, pIdx).flat().length + i;
+        {/* 문단/문장 렌더링 (Markdown 지원) */}
+        {(() => {
+          let sentenceCursor = 0;
+          return contentBlocks.map((block, blockIdx) => {
+            if (block.type === 'hr') {
+              return <hr key={`hr-${blockIdx}`} className="my-5 border-t border-gray-300" />;
+            }
+
+            if (block.type === 'heading') {
+              const headingClass =
+                block.level === 1
+                  ? 'text-2xl font-bold mt-7 mb-3'
+                  : block.level === 2
+                    ? 'text-xl font-bold mt-6 mb-3'
+                    : 'text-lg font-semibold mt-5 mb-2';
               return (
-                <span
-                  key={globalIndex}
-                  data-index={globalIndex}
-                  ref={(el) => { sentenceRefs.current[globalIndex] = el }}
-                  className={`block px-1 rounded-lg transition-colors duration-150 ${globalIndex === currentIndex ? 'bg-amber-200' : ''} 
-                  ${bookmarkedIndexes.includes(globalIndex) 
-                    ? 'underline decoration-red decoration-2 underline-offset-4' : ''}`}
-                >
-                  {s}
-                </span>
+                <h2 key={`heading-${blockIdx}`} className={`${headingClass} text-red-dark`}>
+                  {renderInlineTerms(block.text)}
+                </h2>
               );
-            })}
-          </div>
-        ))}
+            }
+
+            if (block.type === 'blockquote') {
+              return (
+                <blockquote key={`quote-${blockIdx}`} className="border-l-4 border-red-light pl-3 my-4 text-gray-700">
+                  {block.lines.map((line, lineIdx) => (
+                    <p key={`quote-line-${lineIdx}`} className="mb-1 last:mb-0">
+                      {renderInlineTerms(line)}
+                    </p>
+                  ))}
+                </blockquote>
+              );
+            }
+
+            return (
+              <div key={`paragraph-${blockIdx}`} className="mb-6">
+                {block.sentences.map((sentence) => {
+                  const globalIndex = sentenceCursor;
+                  sentenceCursor += 1;
+                  return (
+                    <span
+                      key={`sentence-${globalIndex}`}
+                      data-index={globalIndex}
+                      ref={(el) => { sentenceRefs.current[globalIndex] = el; }}
+                      className={`block px-1 rounded-lg transition-colors duration-150 ${globalIndex === currentIndex ? 'bg-amber-200' : ''} ${bookmarkedIndexes.includes(globalIndex) ? 'underline decoration-red decoration-2 underline-offset-4' : ''}`}
+                    >
+                      {renderInlineTerms(sentence)}
+                    </span>
+                  );
+                })}
+              </div>
+            );
+          });
+        })()}
       </div>
 
       {/* === 플레이어 렌더링 호출 수정 === */}
@@ -464,6 +635,28 @@ export default function ScripturePage() {
             <button onClick={() => { setShowMessage(false); if (message === '로그인 정보를 불러올 수 없습니다.') { router.push('/login'); } }}
               className="mt-4 px-4 py-1 bg-red-light text-white rounded-xl text-sm">
               확인
+            </button>
+          </div>
+        </div>
+      )}
+
+      {termPopup && (
+        <div
+          onClick={() => setTermPopup(null)}
+          className="fixed inset-0 z-[190] bg-black/20 backdrop-blur-sm flex items-center justify-center p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-[80%] max-w-[368px] max-h-[75vh] overflow-y-auto bg-white rounded-2xl shadow-xl border border-red-100 p-4 font-maruburi"
+          >
+            <p className="font-bold text-[#9A4345] text-lg">{termPopup.term}</p>
+            <p className="mt-2 text-black leading-relaxed">{termPopup.description}</p>
+            <button
+              type="button"
+              onClick={() => setTermPopup(null)}
+              className="mt-4 w-full py-2.5 rounded-xl bg-red-light text-white font-semibold"
+            >
+              닫기
             </button>
           </div>
         </div>

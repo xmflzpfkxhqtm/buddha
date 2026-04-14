@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 /* ----------------------------- 외부 라이브러리 ----------------------------- */
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Capacitor } from '@capacitor/core';
 import { Share }     from '@capacitor/share';
@@ -36,6 +36,97 @@ function levenshtein(a: string, b: string) {
 }
 
 type ScriptureMatch = { title: string; volume?: number };
+
+const splitSentences = (text: string): string[] =>
+  text
+    .split(/(?<=[.!?]["”'’]?)\s+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+
+const parseScriptureSentences = (content: string): string[] => {
+  const lines = content.split('\n');
+  const paragraphs: string[] = [];
+  let paragraphBuffer: string[] = [];
+
+  const flushParagraph = () => {
+    if (paragraphBuffer.length === 0) return;
+    const paragraphText = paragraphBuffer.join(' ').trim();
+    if (paragraphText) paragraphs.push(paragraphText);
+    paragraphBuffer = [];
+  };
+
+  lines.forEach((line) => {
+    const trimmed = line.trim();
+
+    if (!trimmed || trimmed === '---' || /^#{1,6}\s+/.test(trimmed) || /^>\s?/.test(trimmed)) {
+      flushParagraph();
+      return;
+    }
+
+    paragraphBuffer.push(trimmed);
+  });
+
+  flushParagraph();
+
+  return paragraphs.flatMap((paragraph) => splitSentences(paragraph));
+};
+
+const normalizeForMatch = (text: string): string =>
+  text
+    .replace(/\[\[([^[\]|]+)\|([^[\]]+)\]\]/g, '$2')
+    .replace(/\[\[([^[\]]+)\]\]/g, '$1')
+    .replace(/『[^』]+』/g, '')
+    .replace(/[^0-9A-Za-z가-힣一-龥]/g, '')
+    .toLowerCase();
+
+const extractAnswerCandidates = (answer: string): string[] => {
+  const candidateSentences = answer
+    .split('\n')
+    .flatMap((line) => splitSentences(line))
+    .map((line) => line.replace(/『[^』]+』/g, '').trim())
+    .filter((line) => line.length >= 12);
+
+  return Array.from(new Set(candidateSentences));
+};
+
+async function findCitationIndex(title: string, answer: string): Promise<number> {
+  try {
+    const res = await fetch(`/api/scripture?title=${encodeURIComponent(title)}`);
+    const data = await res.json();
+    if (!data?.content) return 0;
+
+    const scriptureSentences = parseScriptureSentences(data.content);
+    if (scriptureSentences.length === 0) return 0;
+
+    const answerCandidates = extractAnswerCandidates(answer)
+      .map((candidate) => ({ raw: candidate, norm: normalizeForMatch(candidate) }))
+      .filter((candidate) => candidate.norm.length >= 8)
+      .sort((a, b) => b.norm.length - a.norm.length);
+
+    if (answerCandidates.length === 0) return 0;
+
+    for (let i = 0; i < scriptureSentences.length; i += 1) {
+      const scriptureNorm = normalizeForMatch(scriptureSentences[i]);
+      if (scriptureNorm.length < 8) continue;
+
+      const hasMatch = answerCandidates.some(({ norm }) => scriptureNorm.includes(norm) || norm.includes(scriptureNorm));
+      if (hasMatch) {
+        return i;
+      }
+    }
+
+    return 0;
+  } catch {
+    return 0;
+  }
+}
+
+const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number, fallback: T): Promise<T> => {
+  return Promise.race([
+    promise,
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), timeoutMs)),
+  ]);
+};
 
 function filterKnownScriptures(answer: string, known: string[]) {
   const norm = known.map(t => ({
@@ -120,6 +211,9 @@ export default function AnswerClient() {
   const [user            , setUser]           = useState<User | null>(null);
   const [saved           , setSaved]          = useState(false);
   const [showCopied      , setShowCopied]     = useState(false);
+  const [openingKey      , setOpeningKey]     = useState<string | null>(null);
+  const [citationIndexMap, setCitationIndexMap] = useState<Record<string, number>>({});
+  const citationIndexMapRef = useRef<Record<string, number>>({});
 
   /* ----------------------- Supabase & 데이터 로딩 ----------------------- */
   useEffect(() => {
@@ -206,7 +300,60 @@ export default function AnswerClient() {
   });
 
   const refs  = filterKnownScriptures(fullAnswer, scriptureTitles);
-  const dedup = new Set<string>();
+  const dedupedRefs = useMemo(() => {
+    const seen = new Set<string>();
+    return refs.filter(({ title, volume }) => {
+      const key = `${title}_${volume ?? 'no'}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [refs]);
+
+  useEffect(() => {
+    citationIndexMapRef.current = citationIndexMap;
+  }, [citationIndexMap]);
+
+  useEffect(() => {
+    router.prefetch('/scripture');
+  }, [router]);
+
+  useEffect(() => {
+    if (!fullAnswer || dedupedRefs.length === 0) return;
+    let cancelled = false;
+
+    const primeCitationIndexes = async () => {
+      for (const { title, volume } of dedupedRefs) {
+        const match =
+          volume
+            ? scriptureTitles.find(t => new RegExp(`^${title}[_ ]?${volume}권`).test(t))
+            : scriptureTitles.find(t => t === title) ||
+              scriptureTitles
+                .filter(t => t.startsWith(title))
+                .sort((a, b) => {
+                  const va = parseInt(a.match(/(\d+)권/)?.[1] ?? '0', 10);
+                  const vb = parseInt(b.match(/(\d+)권/)?.[1] ?? '0', 10);
+                  return va - vb;
+                })[0];
+
+        if (!match || citationIndexMapRef.current[match] !== undefined) continue;
+        const idx = await withTimeout(findCitationIndex(match, fullAnswer), 4000, 0);
+        if (cancelled) return;
+        setCitationIndexMap((prev) => ({ ...prev, [match]: idx }));
+      }
+    };
+
+    primeCitationIndexes();
+    return () => { cancelled = true; };
+  }, [dedupedRefs, fullAnswer, scriptureTitles]);
+
+  const openScriptureAtCitation = async (scriptureTitle: string, key: string) => {
+    setOpeningKey(key);
+    const cached = citationIndexMapRef.current[scriptureTitle];
+    const targetIndex = cached !== undefined ? cached : await findCitationIndex(scriptureTitle, fullAnswer);
+    setBookmark(scriptureTitle, targetIndex);
+    router.push('/scripture');
+  };
 
   return (
     <main className="relative min-h-screen w-full max-w-[460px] flex flex-col items-center mx-auto bg-white px-6 py-6">
@@ -244,11 +391,8 @@ export default function AnswerClient() {
           <section className="my-12">
             <p className="text-sm text-red-dark font-semibold mb-2">📖 인용된 경전</p>
             <ul className="space-y-2">
-              {refs.map(({ title, volume }, i) => {
+              {dedupedRefs.map(({ title, volume }, i) => {
                 const key = `${title}_${volume ?? 'no'}`;
-                if (dedup.has(key)) return null;
-                dedup.add(key);
-
                 const match =
                   volume
                     ? scriptureTitles.find(t => new RegExp(`^${title}[_ ]?${volume}권`).test(t))
@@ -267,13 +411,10 @@ export default function AnswerClient() {
                 return (
                   <li
                     key={i}
-                    onClick={() => {
-                      setBookmark(match, 0);
-                      router.push('/scripture');
-                    }}
+                    onClick={() => openScriptureAtCitation(match, key)}
                     className="cursor-pointer text-red-dark hover:underline text-sm"
                   >
-                    {fmtTitle(match, volume)} 열람 →
+                    {fmtTitle(match, volume)} {openingKey === key ? '위치 찾는 중…' : '열람 →'}
                   </li>
                 );
               })}
