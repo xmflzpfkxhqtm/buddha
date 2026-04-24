@@ -1,7 +1,6 @@
 // app/api/global-search/route.ts
 import { NextResponse } from 'next/server';
-import path from 'path';
-import fs from 'fs/promises';
+import { supabase } from '@/utils/supabase';
 
 const splitSentences = (text: string): string[] =>
   text
@@ -44,39 +43,28 @@ export async function GET(req: Request) {
     return NextResponse.json({ results: [] });
   }
 
-  const roots = [path.join(process.cwd(), 'data'), path.join(process.cwd(), 'data', 'scripture')];
-  const pickedFiles = new Map<string, { filePath: string; priority: number }>();
+  // pg_trgm GIN index가 ILIKE '%query%'를 자동 활용
+  const escaped = query.replace(/[%_\\]/g, (c) => `\\${c}`);
 
-  const results: { title: string; index: number; text: string }[] = [];
+  const { data, error } = await supabase
+    .from('scriptures')
+    .select('title, content')
+    .not('title', 'ilike', '%용어사전%')
+    .ilike('content', `%${escaped}%`);
 
-  for (const root of roots) {
-    let files: string[] = [];
-    try {
-      files = await fs.readdir(root);
-    } catch {
-      continue;
-    }
-
-    for (const file of files) {
-      const isMd = file.endsWith('.md');
-      const isTxt = file.endsWith('.txt');
-      if (!isMd && !isTxt) continue;
-      if (file.includes('용어사전')) continue;
-
-      const title = file.replace(/\.(md|txt)$/i, '');
-      const filePath = path.join(root, file);
-      const priority = isMd ? 2 : 1;
-      const prev = pickedFiles.get(title);
-      if (!prev || priority > prev.priority) {
-        pickedFiles.set(title, { filePath, priority });
-      }
-    }
+  if (error) {
+    console.error('global-search 오류:', error);
+    return NextResponse.json({ error: 'DB error', results: [] }, { status: 500 });
   }
 
-  for (const [title, { filePath }] of pickedFiles) {
-    const content = await fs.readFile(filePath, 'utf-8');
-    const sentences = parseScriptureSentences(content);
-
+  const results: { title: string; index: number; text: string }[] = [];
+  for (const row of data ?? []) {
+    const title = (row.title as string)
+      .trim()
+      .replace(/﻿/g, '')
+      .replace(/\s/g, '')
+      .normalize('NFC');
+    const sentences = parseScriptureSentences(row.content as string);
     sentences.forEach((sentence, index) => {
       if (sentence.includes(query)) {
         results.push({ title, index, text: sentence });

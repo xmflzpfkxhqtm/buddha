@@ -26,12 +26,22 @@ export default function Home() {
   }
   
   useEffect(() => {
-    // 폰트 로딩 감지
-    if (document.fonts) {
-      document.fonts.ready.then(() => setFontReady(true));
-    } else {
+    // 폰트 로딩 감지 (iOS WKWebView 등에서 resolve가 지연/누락되는 경우 대비 fallback)
+    let done = false;
+    const markReady = () => {
+      if (done) return;
+      done = true;
       setFontReady(true);
+    };
+
+    if (document.fonts) {
+      document.fonts.ready.then(markReady).catch(markReady);
+    } else {
+      markReady();
     }
+
+    const fallback = setTimeout(markReady, 1500);
+    return () => clearTimeout(fallback);
   }, []);
 
   useEffect(() => {
@@ -50,46 +60,48 @@ export default function Home() {
   
     const fetchAll = async () => {
       const start = Date.now();
-  
+
       console.log('✅ fetchAll 실행됨');
 
-      const [teachingRes, userRes] = await Promise.all([
-        fetch('/api/today-teaching').then((res) => res.json()),
-        supabase.auth.getUser(),
-      ]);
-      
-      console.log('✅ API 응답:', teachingRes);
-      
-  
-      setTitle(teachingRes.title);
-      setIndex(teachingRes.index);
-      setSentence(teachingRes.sentence);
-      console.log('✅ title:', teachingRes.title);
-      console.log('✅ index:', teachingRes.index);
-      console.log('✅ sentence:', teachingRes.sentence);
-      
-      const user = userRes.data.user;
+      try {
+        const [teachingRes, userRes] = await Promise.all([
+          fetch('/api/today-teaching').then((res) => res.json()),
+          supabase.auth.getUser(),
+        ]);
 
-      if (user) {
-        const { data: profile } = await supabase
-          .from('users')
-          .select('username')
-          .eq('id', user.id)
-          .single();
-      
-        setUserName(profile?.username ?? user.user_metadata?.full_name ?? null);
-      }
-        
-      const end = Date.now();
-      const elapsed = end - start;
-      const remaining = Math.max(1000 - elapsed, 0); // ✅ 첫 방문 때만 쓰일 최소 로딩 시간
-  
-      // ✅ 첫 방문이면 약간 기다렸다 로딩 해제
-      if (isFirstVisit) {
-        setTimeout(() => {
-          setIsLoading(false);
-          sessionStorage.setItem('hideBottomNav', 'false');
-        }, remaining);
+        console.log('✅ API 응답:', teachingRes);
+
+        setTitle(teachingRes.title);
+        setIndex(teachingRes.index);
+        setSentence(teachingRes.sentence);
+        console.log('✅ title:', teachingRes.title);
+        console.log('✅ index:', teachingRes.index);
+        console.log('✅ sentence:', teachingRes.sentence);
+
+        const user = userRes.data.user;
+
+        if (user) {
+          const { data: profile } = await supabase
+            .from('users')
+            .select('username')
+            .eq('id', user.id)
+            .single();
+
+          setUserName(profile?.username ?? user.user_metadata?.full_name ?? null);
+        }
+      } catch (err) {
+        console.warn('[dashboard] fetchAll 실패:', err);
+      } finally {
+        const elapsed = Date.now() - start;
+        const remaining = Math.max(1000 - elapsed, 0); // ✅ 첫 방문 때만 쓰일 최소 로딩 시간
+
+        // ✅ 첫 방문이면 약간 기다렸다 로딩 해제 (실패해도 보장)
+        if (isFirstVisit) {
+          setTimeout(() => {
+            setIsLoading(false);
+            sessionStorage.setItem('hideBottomNav', 'false');
+          }, remaining);
+        }
       }
     };
   

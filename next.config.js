@@ -2,6 +2,9 @@
 const path = require('path');
 
 const nextConfig = {
+  outputFileTracingExcludes: {
+    '*': ['./data/**/*'],
+  },
   images: {
     remotePatterns: [
       {

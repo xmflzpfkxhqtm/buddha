@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"du -sh .next/server 2>/dev/null; echo \\\"---\\\"; du -sh .next/server/app 2>/dev/null; echo \\\"---\\\"; find .next/server -name \\\"*.txt\\\" -o -name \\\"*.md\\\" 2>/dev/null | head -10; echo \\\"---stan...",
+  "error": "Exit code 1\n3.8M\t.next/server\n---\n2.1M\t.next/server/app\n---\n---standalone---",
+  "timestamp": "2026-04-24T14:01:03.115Z",
+  "retry_count": 1
+}

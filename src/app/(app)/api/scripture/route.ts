@@ -1,7 +1,6 @@
-// app/api/read/route.ts
+// app/api/scripture/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { readFile } from 'fs/promises';
-import path from 'path';
+import { supabase } from '@/utils/supabase';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -12,29 +11,34 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const safeTitle = path.basename(title); // 디렉터리 탈출 방지
-    const roots = [path.join(process.cwd(), 'data'), path.join(process.cwd(), 'data', 'scripture')];
-    const extensions = ['.md', '.txt'];
+    const normalized = title
+      .trim()
+      .replace(/﻿/g, '')
+      .replace(/\s/g, '')
+      .normalize('NFC');
 
-    for (const root of roots) {
-      for (const ext of extensions) {
-        const filePath = path.join(root, `${safeTitle}${ext}`);
-        try {
-          const content = await readFile(filePath, 'utf-8');
-          return NextResponse.json({
-            content,
-            format: ext === '.md' ? 'md' : 'txt',
-            sourceFile: path.basename(filePath),
-          });
-        } catch {
-          // 다음 후보 파일 검사
-        }
-      }
+    const { data, error } = await supabase
+      .from('scriptures')
+      .select('content, format, filename')
+      .eq('title', normalized)
+      .maybeSingle();
+
+    if (error) {
+      console.error('scripture 조회 오류:', error);
+      return NextResponse.json({ error: 'DB error' }, { status: 500 });
     }
 
-    return NextResponse.json({ error: 'File not found' }, { status: 404 });
+    if (!data) {
+      return NextResponse.json({ error: 'File not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      content: data.content,
+      format: data.format,
+      sourceFile: data.filename,
+    });
   } catch (error) {
-    console.error('파일을 찾을 수 없습니다:', error);
+    console.error('scripture 조회 오류:', error);
     return NextResponse.json({ error: 'File not found' }, { status: 404 });
   }
 }
