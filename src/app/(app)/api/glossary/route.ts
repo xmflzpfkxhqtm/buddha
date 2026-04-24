@@ -1,81 +1,78 @@
 import { NextResponse } from 'next/server';
-import { readFile, readdir } from 'fs/promises';
+import { readFile } from 'fs/promises';
 import path from 'path';
 
 type GlossaryMap = Record<string, string>;
 
-const stripMd = (value: string) =>
-  value
-    .replace(/\*\*/g, '')
-    .replace(/`/g, '')
-    .replace(/\[(.*?)\]\(.*?\)/g, '$1')
-    .trim();
+function parseCsvLine(line: string): string[] {
+  const cells: string[] = [];
+  let current = '';
+  let inQuotes = false;
 
-const splitRow = (line: string): string[] =>
-  line
-    .trim()
-    .replace(/^\|/, '')
-    .replace(/\|$/, '')
-    .split('|')
-    .map((cell) => stripMd(cell.trim()));
+  for (let i = 0; i < line.length; i += 1) {
+    const ch = line[i];
 
-const isSeparatorRow = (line: string): boolean =>
-  /^\|[\s:\-|]+\|?$/.test(line.trim());
-
-const parseGlossary = (md: string): GlossaryMap => {
-  const lines = md.split('\n');
-  const map: GlossaryMap = {};
-
-  for (let i = 0; i < lines.length - 2; i += 1) {
-    const headerLine = lines[i];
-    const separatorLine = lines[i + 1];
-    if (!headerLine.trim().startsWith('|') || !isSeparatorRow(separatorLine)) {
-      continue;
-    }
-
-    const headers = splitRow(headerLine);
-    const adoptedIdx = headers.findIndex((h) => h.includes('채택 표기'));
-    const descIdx = headers.findIndex((h) => h.includes('뜻/설명') || h === '설명');
-
-    if (adoptedIdx < 0 || descIdx < 0) {
-      continue;
-    }
-
-    let rowIdx = i + 2;
-    while (rowIdx < lines.length && lines[rowIdx].trim().startsWith('|')) {
-      const cells = splitRow(lines[rowIdx]);
-      const adopted = cells[adoptedIdx];
-      const description = cells[descIdx];
-      if (adopted && description) {
-        map[adopted] = description;
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i += 1;
+      } else {
+        inQuotes = !inQuotes;
       }
-      rowIdx += 1;
+      continue;
     }
 
-    i = rowIdx - 1;
+    if (ch === ',' && !inQuotes) {
+      cells.push(current.trim());
+      current = '';
+      continue;
+    }
+
+    current += ch;
   }
 
+  cells.push(current.trim());
+  return cells;
+}
+
+function parseGlossaryCsv(csv: string): GlossaryMap {
+  const lines = csv.split(/\r?\n/u).filter((line) => line.trim().length > 0);
+  if (lines.length === 0) return {};
+
+  const header = parseCsvLine(lines[0]);
+  const adoptedIdx = header.findIndex((h) => h === 'adopted');
+  const meaningIdx = header.findIndex((h) => h === 'meaning');
+  if (adoptedIdx < 0 || meaningIdx < 0) {
+    throw new Error('CSV header must include adopted and meaning columns.');
+  }
+
+  const map: GlossaryMap = {};
+  for (let i = 1; i < lines.length; i += 1) {
+    const cells = parseCsvLine(lines[i]);
+    const adopted = cells[adoptedIdx]?.trim();
+    const meaning = cells[meaningIdx]?.trim();
+    if (adopted && meaning) {
+      map[adopted] = meaning;
+    }
+  }
   return map;
-};
+}
 
 export async function GET() {
   try {
-    const dataDir = path.join(process.cwd(), 'data');
-    const files = await readdir(dataDir);
-    const glossaryFile =
-      files.find((file) => file.endsWith('.md') && file.includes('용어사전')) ||
-      files.find((file) => file.endsWith('.md') && file.toLowerCase().includes('v0.8'));
-
-    if (!glossaryFile) {
-      return NextResponse.json({ error: '용어사전 파일이 없습니다.' }, { status: 404 });
-    }
-
-    const glossaryPath = path.join(dataDir, glossaryFile);
+    const glossaryPath = path.join(
+      process.cwd(),
+      'dictionary',
+      'glossary-v0.8.csv',
+    );
     const content = await readFile(glossaryPath, 'utf-8');
-    const glossary = parseGlossary(content);
+    const glossary = parseGlossaryCsv(content);
     return NextResponse.json({ glossary });
   } catch (error) {
-    console.error('용어사전 로딩 실패:', error);
-    return NextResponse.json({ error: '용어사전을 불러오지 못했습니다.' }, { status: 500 });
+    console.error('용어사전 CSV 로딩 실패:', error);
+    return NextResponse.json(
+      { error: '용어사전 CSV를 불러오지 못했습니다.' },
+      { status: 500 },
+    );
   }
 }

@@ -68,37 +68,80 @@ export function chunkText(
   console.log(`경전 이름: ${scriptureTitle}`);
 
   const normalizedText = normalizeMarkdownForEmbedding(text);
-  
-  // 문장 구분자로 텍스트 분할
-  const sentenceSeparators = ['.', '!', '?', '。', '！', '？', '\n'];
-  
-  // 문장 단위로 분할
-  const sentences: string[] = [];
-  let lastIndex = 0;
-  let match;
-  
-  const combinedRegex = new RegExp(`[${sentenceSeparators.join('')}]`, 'g');
-  
-  while ((match = combinedRegex.exec(normalizedText)) !== null) {
-    sentences.push(normalizedText.substring(lastIndex, match.index + 1).trim());
-    lastIndex = match.index + 1;
-  }
-  
-  // 마지막 문장이 남아있으면 추가
-  if (lastIndex < normalizedText.length) {
-    sentences.push(normalizedText.substring(lastIndex).trim());
-  }
+  const normalizedLines = normalizedText.split('\n');
+  const sentenceRegex = /[^.!?。！？]+[.!?。！？]?/g;
+
+  type SentenceUnit = {
+    text: string;
+    line: number;
+    sentenceIndex: number;
+  };
+  const sentenceUnits: SentenceUnit[] = [];
+  let sentenceIndex = 0;
+
+  normalizedLines.forEach((line, lineIdx) => {
+    const trimmedLine = line.trim();
+    if (!trimmedLine) return;
+    const matches = trimmedLine.match(sentenceRegex) ?? [];
+    for (const m of matches) {
+      const textPart = m.trim();
+      if (!textPart) continue;
+      sentenceUnits.push({
+        text: textPart,
+        line: lineIdx,
+        sentenceIndex,
+      });
+      sentenceIndex += 1;
+    }
+  });
+
+  const volumeMatch = scriptureTitle.match(/_(\d+)권$/);
+  const volume = volumeMatch ? Number.parseInt(volumeMatch[1], 10) : undefined;
   
   // 청크 생성
   const chunks: { text: string, metadata: DocumentMetadata }[] = [];
   let currentChunk = '';
   let lastSentencesBuffer = '';
+  let chunkLineStart = -1;
+  let chunkLineEnd = -1;
+  let chunkSentenceStart = -1;
+  let chunkSentenceEnd = -1;
+
+  const pushChunk = (chunkBody: string) => {
+    chunks.push({
+      text: chunkBody,
+      metadata: {
+        fileName,
+        source: scriptureTitle,
+        source_title: scriptureTitle,
+        volume,
+        line_start: chunkLineStart >= 0 ? chunkLineStart : undefined,
+        line_end: chunkLineEnd >= 0 ? chunkLineEnd : undefined,
+        sentence_start: chunkSentenceStart >= 0 ? chunkSentenceStart : undefined,
+        sentence_end: chunkSentenceEnd >= 0 ? chunkSentenceEnd : undefined,
+        hash: generateContentHash(chunkBody),
+      },
+    });
+  };
+
+  const resetChunkTracking = () => {
+    chunkLineStart = -1;
+    chunkLineEnd = -1;
+    chunkSentenceStart = -1;
+    chunkSentenceEnd = -1;
+  };
   
-  for (const sentence of sentences) {
+  for (const sentenceUnit of sentenceUnits) {
+    const sentence = sentenceUnit.text;
     // 현재 청크가 비어있으면 헤더 추가
     if (currentChunk === '') {
       currentChunk = `경전이름 : ${scriptureTitle}\n\n`;
+      resetChunkTracking();
     }
+    if (chunkLineStart < 0) chunkLineStart = sentenceUnit.line;
+    if (chunkSentenceStart < 0) chunkSentenceStart = sentenceUnit.sentenceIndex;
+    chunkLineEnd = sentenceUnit.line;
+    chunkSentenceEnd = sentenceUnit.sentenceIndex;
     
     // 문장이 최대 청크 크기보다 크면 강제로 자름
     if (sentence.length > maxChunkSize - currentChunk.length) {
@@ -108,15 +151,9 @@ export function chunkText(
         const availableSpace = maxChunkSize - currentChunk.length;
         if (availableSpace <= 0) {
           // 현재 청크가 꽉 찼으면 저장
-          chunks.push({
-            text: currentChunk,
-            metadata: {
-              fileName,
-              source: scriptureTitle,
-              hash: generateContentHash(currentChunk)
-            }
-          });
+          pushChunk(currentChunk);
           currentChunk = `경전이름 : ${scriptureTitle}\n\n`;
+          resetChunkTracking();
           continue;
         }
         
@@ -128,29 +165,16 @@ export function chunkText(
         
         // 현재 청크가 최대 크기에 도달했으면 저장
         if (currentChunk.length >= maxChunkSize) {
-          chunks.push({
-            text: currentChunk,
-            metadata: {
-              fileName,
-              source: scriptureTitle,
-              hash: generateContentHash(currentChunk)
-            }
-          });
+          pushChunk(currentChunk);
           currentChunk = `경전이름 : ${scriptureTitle}\n\n`;
+          resetChunkTracking();
         }
       }
     } 
     // 청크 크기가 제한을 초과하면 새 청크 시작
     else if (currentChunk.length + sentence.length > chunkSize && currentChunk.length > 0) {
       const chunkText = currentChunk;
-      chunks.push({
-        text: chunkText,
-        metadata: {
-          fileName,
-          source: scriptureTitle,
-          hash: generateContentHash(chunkText)
-        }
-      });
+      pushChunk(chunkText);
       
       // 오버랩을 위해 마지막 부분 저장
       if (overlap > 0) {
@@ -171,6 +195,10 @@ export function chunkText(
       } else {
         currentChunk = `경전이름 : ${scriptureTitle}\n\n`;
       }
+      chunkLineStart = sentenceUnit.line;
+      chunkLineEnd = sentenceUnit.line;
+      chunkSentenceStart = sentenceUnit.sentenceIndex;
+      chunkSentenceEnd = sentenceUnit.sentenceIndex;
     } else {
       // 일반적인 경우 문장 추가
       currentChunk += sentence + ' ';
@@ -178,28 +206,15 @@ export function chunkText(
     
     // 청크가 최대 크기에 도달하면 저장
     if (currentChunk.length >= maxChunkSize) {
-      chunks.push({
-        text: currentChunk,
-        metadata: {
-          fileName,
-          source: scriptureTitle,
-          hash: generateContentHash(currentChunk)
-        }
-      });
+      pushChunk(currentChunk);
       currentChunk = `경전이름 : ${scriptureTitle}\n\n`;
+      resetChunkTracking();
     }
   }
   
   // 마지막 청크가 남아있으면 추가
   if (currentChunk.length > 0 && currentChunk !== `경전이름 : ${scriptureTitle}\n\n`) {
-    chunks.push({
-      text: currentChunk,
-      metadata: {
-        fileName,
-        source: scriptureTitle,
-        hash: generateContentHash(currentChunk)
-      }
-    });
+    pushChunk(currentChunk);
   }
   
   return chunks;

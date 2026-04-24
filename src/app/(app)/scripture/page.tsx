@@ -29,16 +29,24 @@ type MarkdownBlock =
   | { type: 'blockquote'; lines: string[] }
   | { type: 'paragraph'; sentences: string[] };
 
+type ReadUnit = {
+  text: string;
+  kind: 'heading' | 'quote' | 'paragraph';
+};
+
 const splitSentences = (text: string): string[] =>
   text
     .split(/(?<=[.!?]["”'’]?)\s+/)
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
 
-const parseMarkdownToBlocks = (content: string): { blocks: MarkdownBlock[]; flatSentences: string[] } => {
+const parseMarkdownToBlocks = (
+  content: string,
+): { blocks: MarkdownBlock[]; flatSentences: string[]; flatReadUnits: ReadUnit[] } => {
   const lines = content.split('\n');
   const blocks: MarkdownBlock[] = [];
   const flatSentences: string[] = [];
+  const flatReadUnits: ReadUnit[] = [];
   let paragraphBuffer: string[] = [];
   let quoteBuffer: string[] = [];
 
@@ -51,11 +59,21 @@ const parseMarkdownToBlocks = (content: string): { blocks: MarkdownBlock[]; flat
     if (sentences.length === 0) return;
     blocks.push({ type: 'paragraph', sentences });
     flatSentences.push(...sentences);
+    flatReadUnits.push(
+      ...sentences.map((text) => ({ text, kind: 'paragraph' as const })),
+    );
   };
 
   const flushQuote = () => {
     if (quoteBuffer.length === 0) return;
-    blocks.push({ type: 'blockquote', lines: quoteBuffer });
+    const lines = [...quoteBuffer];
+    blocks.push({ type: 'blockquote', lines });
+    flatReadUnits.push(
+      ...lines
+        .map((text) => text.trim())
+        .filter((text) => text.length > 0)
+        .map((text) => ({ text, kind: 'quote' as const })),
+    );
     quoteBuffer = [];
   };
 
@@ -78,6 +96,7 @@ const parseMarkdownToBlocks = (content: string): { blocks: MarkdownBlock[]; flat
         level: headingMatch[1].length,
         text: headingMatch[2].trim(),
       });
+      flatReadUnits.push({ text: headingMatch[2].trim(), kind: 'heading' });
       return;
     }
 
@@ -102,7 +121,7 @@ const parseMarkdownToBlocks = (content: string): { blocks: MarkdownBlock[]; flat
   flushParagraph();
   flushQuote();
 
-  return { blocks, flatSentences };
+  return { blocks, flatSentences, flatReadUnits };
 };
 
 // 유틸리티 함수들 (변경 없음)
@@ -131,6 +150,15 @@ function formatDisplayTitle(rawTitle: string): string {
     return rawTitle
       .replace(/_GPT\d+(\.\d+)?번역/, '')
       .replace(/_/g, ' ');
+}
+
+/** `_K` + 네 자리 숫자까지를 그룹 키에 포함. 없으면 첫 `_` 앞까지. */
+function getScriptureGroupBase(title: string): string {
+  const m = title.match(/_K\d{4}(?:_|$)/u);
+  if (m && m.index !== undefined) {
+    return title.slice(0, m.index + 6);
+  }
+  return title.split('_')[0];
 }
 
 export default function ScripturePage() {
@@ -167,6 +195,10 @@ export default function ScripturePage() {
   const [platformInfo, setPlatformInfo] = useState<{ platform: string | null; isNative: boolean }>({ platform: null, isNative: false });
 
   const { title, index, clearBookmark } = useBookmarkStore(); // 원본 변수명 사용
+  const clampIndex = useCallback((idx: number) => {
+    if (ttsSentences.length === 0) return 0;
+    return Math.min(Math.max(idx, 0), ttsSentences.length - 1);
+  }, [ttsSentences.length]);
 
   // 스크롤 함수 (원본 유지)
   const smoothCenter = useCallback((idx: number, instant = false) => {
@@ -221,7 +253,7 @@ export default function ScripturePage() {
   const groupTitlesByBaseName = (titles: string[]) => { /* 원본 로직 */
     const map: Record<string, string[]> = {};
     titles.forEach((title) => {
-      const base = title.split('_')[0];
+      const base = getScriptureGroupBase(title);
       if (!map[base]) map[base] = [];
       map[base].push(title);
     });
@@ -300,13 +332,13 @@ export default function ScripturePage() {
 
       if (data?.content) {
         const full = data.content;
-        const { blocks, flatSentences } = parseMarkdownToBlocks(full);
+        const { blocks, flatSentences, flatReadUnits } = parseMarkdownToBlocks(full);
         setContentBlocks(blocks);
         setDisplaySentences(flatSentences);
         // 원본 ttsSentences 생성 로직 유지
-        const tts = flatSentences.map((s: string) => s.replace(/\([^\)]*\)/g, ''));
+        const tts = flatReadUnits.map((u) => u.text.replace(/\([^\)]*\)/g, ''));
         setTtsSentences(tts);
-        sentenceRefs.current = Array(flatSentences.length).fill(null);
+        sentenceRefs.current = Array(flatReadUnits.length).fill(null);
       } else {
         setDisplaySentences(['해당 경전을 불러올 수 없습니다.']);
         setTtsSentences([]);
@@ -317,9 +349,10 @@ export default function ScripturePage() {
         console.log('✅ Bookmark Pending 처리 (Scripture Load 후):', bookmarkPending);
         setTimeout(() => {
           const targetIndex = bookmarkPending.index;
-          if (targetIndex >= 0 && targetIndex < (displaySentences.length || ttsSentences.length) ) { // displaySentences 기준으로 체크
-            setCurrentIndex(targetIndex);
-            smoothCenter(targetIndex, true);
+          if (ttsSentences.length > 0) {
+            const clamped = clampIndex(targetIndex);
+            setCurrentIndex(clamped);
+            smoothCenter(clamped, true);
           } else {
              console.warn(`Bookmark index ${targetIndex} is out of bounds.`);
              smoothCenter(0, true);
@@ -331,7 +364,7 @@ export default function ScripturePage() {
     };
     loadScripture();
   // 원본 의존성 배열 유지, bookmarkPending, clearBookmark, smoothCenter 추가
-  }, [selected, list, bookmarkPending, clearBookmark, smoothCenter]);
+  }, [selected, list, bookmarkPending, clearBookmark, smoothCenter, clampIndex, ttsSentences.length]);
 
   // 모달 탭 변경 시 처리 (원본 유지)
   useEffect(() => {
@@ -350,16 +383,16 @@ export default function ScripturePage() {
     if (
       bookmarkPending &&
       selected === bookmarkPending.title &&
-      displaySentences.length > 0 // displaySentences 기준으로 체크
+      ttsSentences.length > 0
     ) {
       console.log('✅ Bookmark Pending 최종 처리 (상태 업데이트 후):', bookmarkPending);
       // 이 useEffect는 bookmarkPending 상태가 설정되고,
       // selected가 해당 title로 바뀌고, displaySentences가 로드된 후에 실행됨.
       setTimeout(() => {
           const targetIndex = bookmarkPending.index;
-          if (targetIndex >= 0 && targetIndex < displaySentences.length) {
-              // setCurrentIndex(targetIndex); // 이미 설정되었을 가능성 높음
-              smoothCenter(targetIndex, true); // 스크롤만 확실히
+          if (ttsSentences.length > 0) {
+              const clamped = clampIndex(targetIndex);
+              smoothCenter(clamped, true); // 스크롤만 확실히
           } else {
               console.warn(`Bookmark index ${targetIndex} is out of bounds.`);
               smoothCenter(0, true);
@@ -369,7 +402,7 @@ export default function ScripturePage() {
       }, 200); // 조금 더 지연 시간 부여 가능
     }
   // 원본 의존성 배열 유지, smoothCenter 추가
-  }, [bookmarkPending, selected, displaySentences, clearBookmark, smoothCenter]);
+  }, [bookmarkPending, selected, ttsSentences, clearBookmark, smoothCenter, clampIndex]);
 
   // 스크롤 위치에 따른 현재 인덱스 동기화 (원본 유지)
   useEffect(() => {
@@ -457,6 +490,46 @@ export default function ScripturePage() {
     }
   }, [displaySentences.length, ttsSentences.length]);
 
+  const renderEmphasisText = (text: string, keyPrefix: string): ReactNode[] => {
+    const nodes: ReactNode[] = [];
+    const pattern = /(\*\*\*[^*]+?\*\*\*|\*\*[^*]+?\*\*|\*[^*]+?\*)/g;
+    let cursor = 0;
+    let match: RegExpExecArray | null = null;
+
+    while ((match = pattern.exec(text)) !== null) {
+      if (match.index > cursor) {
+        nodes.push(text.slice(cursor, match.index));
+      }
+
+      const token = match[0];
+      if (token.startsWith('***') && token.endsWith('***')) {
+        nodes.push(
+          <strong key={`${keyPrefix}-bi-${match.index}`}>
+            <em>{token.slice(3, -3)}</em>
+          </strong>,
+        );
+      } else if (token.startsWith('**') && token.endsWith('**')) {
+        nodes.push(
+          <strong key={`${keyPrefix}-b-${match.index}`}>{token.slice(2, -2)}</strong>,
+        );
+      } else if (token.startsWith('*') && token.endsWith('*')) {
+        nodes.push(
+          <em key={`${keyPrefix}-i-${match.index}`}>{token.slice(1, -1)}</em>,
+        );
+      } else {
+        nodes.push(token);
+      }
+
+      cursor = match.index + token.length;
+    }
+
+    if (cursor < text.length) {
+      nodes.push(text.slice(cursor));
+    }
+
+    return nodes;
+  };
+
   const renderInlineTerms = (text: string): ReactNode[] => {
     const nodes: ReactNode[] = [];
     const pattern = /\[\[([^[\]]+?)\]\]/g;
@@ -465,7 +538,12 @@ export default function ScripturePage() {
 
     while ((match = pattern.exec(text)) !== null) {
       if (match.index > cursor) {
-        nodes.push(text.slice(cursor, match.index));
+        nodes.push(
+          ...renderEmphasisText(
+            text.slice(cursor, match.index),
+            `plain-${match.index}`,
+          ),
+        );
       }
 
       const inner = match[1].trim();
@@ -493,7 +571,7 @@ export default function ScripturePage() {
     }
 
     if (cursor < text.length) {
-      nodes.push(text.slice(cursor));
+      nodes.push(...renderEmphasisText(text.slice(cursor), `tail-${cursor}`));
     }
 
     return nodes;
@@ -511,7 +589,7 @@ export default function ScripturePage() {
             </span>
             <span className="ml-1 text-base text-red-light"> <Search size={24} /></span>
           </div>
-          <span className="text-sm text-red-dark whitespace-nowrap flex-shrink-0 overflow-visible">{`${currentIndex + 1} / ${displaySentences.length}`}</span>
+          <span className="text-sm text-red-dark whitespace-nowrap flex-shrink-0 overflow-visible">{`${ttsSentences.length > 0 ? currentIndex + 1 : 0} / ${ttsSentences.length}`}</span>
           <div className="flex items-center gap-2">
             <button onClick={handleBookmark} className="w-24 h-9 bg-red-light text-white rounded-lg font-semibold">
               {isBookmarked ? '책갈피 삭제' : '책갈피 저장'}
@@ -542,13 +620,15 @@ export default function ScripturePage() {
 
         {/* 문단/문장 렌더링 (Markdown 지원) */}
         {(() => {
-          let sentenceCursor = 0;
+          let readCursor = 0;
           return contentBlocks.map((block, blockIdx) => {
             if (block.type === 'hr') {
               return <hr key={`hr-${blockIdx}`} className="my-5 border-t border-gray-300" />;
             }
 
             if (block.type === 'heading') {
+              const globalIndex = readCursor;
+              readCursor += 1;
               const headingClass =
                 block.level === 1
                   ? 'text-2xl font-bold mt-7 mb-3'
@@ -556,7 +636,12 @@ export default function ScripturePage() {
                     ? 'text-xl font-bold mt-6 mb-3'
                     : 'text-lg font-semibold mt-5 mb-2';
               return (
-                <h2 key={`heading-${blockIdx}`} className={`${headingClass} text-red-dark`}>
+                <h2
+                  key={`heading-${blockIdx}`}
+                  data-index={globalIndex}
+                  ref={(el) => { sentenceRefs.current[globalIndex] = el; }}
+                  className={`${headingClass} text-red-dark rounded-lg px-1 transition-colors duration-150 ${globalIndex === currentIndex ? 'bg-amber-200' : ''} ${bookmarkedIndexes.includes(globalIndex) ? 'underline decoration-red decoration-2 underline-offset-4' : ''}`}
+                >
                   {renderInlineTerms(block.text)}
                 </h2>
               );
@@ -565,11 +650,20 @@ export default function ScripturePage() {
             if (block.type === 'blockquote') {
               return (
                 <blockquote key={`quote-${blockIdx}`} className="border-l-4 border-red-light pl-3 my-4 text-gray-700">
-                  {block.lines.map((line, lineIdx) => (
-                    <p key={`quote-line-${lineIdx}`} className="mb-1 last:mb-0">
-                      {renderInlineTerms(line)}
-                    </p>
-                  ))}
+                  {block.lines.map((line, lineIdx) => {
+                    const globalIndex = readCursor;
+                    readCursor += 1;
+                    return (
+                      <p
+                        key={`quote-line-${lineIdx}`}
+                        data-index={globalIndex}
+                        ref={(el) => { sentenceRefs.current[globalIndex] = el; }}
+                        className={`mb-1 last:mb-0 rounded-lg px-1 transition-colors duration-150 ${globalIndex === currentIndex ? 'bg-amber-200' : ''} ${bookmarkedIndexes.includes(globalIndex) ? 'underline decoration-red decoration-2 underline-offset-4' : ''}`}
+                      >
+                        {renderInlineTerms(line)}
+                      </p>
+                    );
+                  })}
                 </blockquote>
               );
             }
@@ -577,8 +671,8 @@ export default function ScripturePage() {
             return (
               <div key={`paragraph-${blockIdx}`} className="mb-6">
                 {block.sentences.map((sentence) => {
-                  const globalIndex = sentenceCursor;
-                  sentenceCursor += 1;
+                  const globalIndex = readCursor;
+                  readCursor += 1;
                   return (
                     <span
                       key={`sentence-${globalIndex}`}

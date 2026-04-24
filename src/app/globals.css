@@ -174,10 +174,6 @@ img, svg {
   image-rendering: crisp-edges;
 }
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 canvas { touch-action: none; }
 
 

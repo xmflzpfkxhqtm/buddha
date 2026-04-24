@@ -169,6 +169,11 @@ type AskRequestBody = {
   parentId?: string | null;
 };
 
+type CitationHint = {
+  source: string;
+  sentenceStart: number;
+};
+
 export async function POST(request: NextRequest) {
   try {
     let body: AskRequestBody = {};
@@ -208,6 +213,7 @@ export async function POST(request: NextRequest) {
 
     // 임베딩 생성 및 벡터 검색
     let contextText = '';
+    let citationHints: CitationHint[] = [];
     try {
       // 임베딩 생성
       const embeddings = await withRetry(
@@ -231,6 +237,20 @@ export async function POST(request: NextRequest) {
         console.log('✅ 최적화 벡터 검색 완료, 결과 수:', documents.length);
         console.log('✅ 최적화 벡터 검색 완료:', documents);
         contextText = normalizeRagContext(documents.map(doc => doc.content).join('\n\n'));
+        const hintMap = new Map<string, number>();
+        for (const doc of documents) {
+          const source = String(doc.metadata?.source ?? '').trim();
+          if (!source || hintMap.has(source)) continue;
+          const sentenceStartRaw = doc.metadata?.sentence_start;
+          const sentenceStart = Number.isFinite(Number(sentenceStartRaw))
+            ? Number(sentenceStartRaw)
+            : 0;
+          hintMap.set(source, Math.max(0, sentenceStart));
+        }
+        citationHints = Array.from(hintMap.entries()).map(([source, sentenceStart]) => ({
+          source,
+          sentenceStart,
+        }));
       }
     } catch (error) {
       console.error('❌ 최적화 벡터 검색 실패, 일반 검색 시도:', error);
@@ -242,6 +262,20 @@ export async function POST(request: NextRequest) {
         console.log('✅ 일반 벡터 검색 완료, 결과 수:', documents.length);
         console.log('✅ 일반 벡터 검색 완료:', documents);
         contextText = normalizeRagContext(documents.map(doc => doc.content).join('\n\n'));
+        const hintMap = new Map<string, number>();
+        for (const doc of documents) {
+          const source = String(doc.metadata?.source ?? '').trim();
+          if (!source || hintMap.has(source)) continue;
+          const sentenceStartRaw = doc.metadata?.sentence_start;
+          const sentenceStart = Number.isFinite(Number(sentenceStartRaw))
+            ? Number(sentenceStartRaw)
+            : 0;
+          hintMap.set(source, Math.max(0, sentenceStart));
+        }
+        citationHints = Array.from(hintMap.entries()).map(([source, sentenceStart]) => ({
+          source,
+          sentenceStart,
+        }));
       } catch (fallbackError) {
         console.error('❌ 모든 벡터 검색 실패:', fallbackError);
         contextText = '벡터 검색 실패. 일반적인 지식으로 응답합니다.';
@@ -340,7 +374,11 @@ export async function POST(request: NextRequest) {
         throw new Error(error?.message || 'Unknown error');
       }
       
-      return NextResponse.json({ success: true, questionId: inserted.id });
+      return NextResponse.json({
+        success: true,
+        questionId: inserted.id,
+        citationHints,
+      });
     } catch (dbError) {
       console.error('❌ Supabase 저장 실패:', dbError);
       return NextResponse.json({ success: false, message: 'Supabase 저장에 실패했습니다.' }, { status: 500 });

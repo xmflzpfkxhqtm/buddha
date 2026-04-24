@@ -92,7 +92,7 @@ export default function SiteLayout({
   children,
 }: { children: React.ReactNode }) {
   return (
-    <html lang="ko" className="scroll-smooth">   {/* ← smooth 스크롤 */}
+    <html lang="ko" className="scroll-smooth">
       <body className="bg-black text-white antialiased">
         {children}
       </body>

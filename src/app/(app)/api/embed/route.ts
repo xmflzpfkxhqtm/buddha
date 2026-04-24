@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { execSync } from 'child_process';
 import { generateEmbeddingBatch } from '@/utils/upstage';
 import { saveDocumentBatch, DocumentBatch, DocumentMetadata } from '@/utils/supabase';
 import { chunkText, cleanScriptureTitle } from '@/utils/chunking';
@@ -8,6 +9,8 @@ import { supabase } from '@/utils/supabase';
 
 // 배치 사이즈 (한 번에 처리할 최대 청크 수)
 const BATCH_SIZE = 30;
+const EMBEDDING_MAX_RETRIES = 6;
+const INTER_BATCH_DELAY_MS = 450;
 
 // Supabase 테이블 이름
 const TABLE_NAME = 'documents';
@@ -25,6 +28,11 @@ interface FileProcessResult {
   totalChunks: number;
   processedChunks: number;
   skippedChunks: number;
+}
+
+interface RebuildOptions {
+  fullRebuild: boolean;
+  changedOnly: boolean;
 }
 
 const isScriptureDataFile = (fileName: string) =>
@@ -49,7 +57,7 @@ async function processBatch(batch: ProcessedChunk[]): Promise<number> {
   console.log(`임베딩 생성 요청: ${textsToEmbed.length}개의 텍스트`);
   
   const startTime = Date.now();
-  const embeddings = await generateEmbeddingBatch(textsToEmbed);
+  const embeddings = await generateEmbeddingBatchWithRetry(textsToEmbed);
   const endTime = Date.now();
   
   console.log(`임베딩 생성 완료: ${embeddings.length}개 생성됨 (${endTime - startTime}ms 소요)`);
@@ -102,6 +110,35 @@ async function processBatch(batch: ProcessedChunk[]): Promise<number> {
   }
   
   return validChunks.length;
+}
+
+function getRetryDelayMs(attempt: number): number {
+  const base = Math.min(500 * 2 ** (attempt - 1), 10000);
+  const jitter = Math.floor(Math.random() * 250);
+  return base + jitter;
+}
+
+function isRateLimitError(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error ?? '');
+  return msg.includes('429') || msg.toLowerCase().includes('rate limit');
+}
+
+async function generateEmbeddingBatchWithRetry(texts: string[]): Promise<number[][]> {
+  let lastError: unknown = null;
+  for (let attempt = 1; attempt <= EMBEDDING_MAX_RETRIES; attempt += 1) {
+    try {
+      return await generateEmbeddingBatch(texts);
+    } catch (error) {
+      lastError = error;
+      if (!isRateLimitError(error) || attempt === EMBEDDING_MAX_RETRIES) {
+        throw error;
+      }
+      const delayMs = getRetryDelayMs(attempt);
+      console.warn(`임베딩 레이트리밋 발생, ${delayMs}ms 후 재시도 (${attempt}/${EMBEDDING_MAX_RETRIES})`);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }
 
 /**
@@ -166,9 +203,144 @@ async function checkSourceExists(sourceName: string): Promise<boolean> {
   }
 }
 
-export async function GET() {
+function isTruthy(value: string | null): boolean {
+  if (!value) return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'y';
+}
+
+function getRebuildOptions(request: Request): RebuildOptions {
+  const url = new URL(request.url);
+  const mode = url.searchParams.get('mode')?.trim().toLowerCase();
+  const changedOnly = isTruthy(url.searchParams.get('changed_only')) || mode === 'changed_only';
+  return {
+    fullRebuild: isTruthy(url.searchParams.get('full_rebuild')),
+    changedOnly,
+  };
+}
+
+function isDeletedStatus(status: string): boolean {
+  return status[0] === 'D' || status[1] === 'D';
+}
+
+function collectChangedScriptureFiles(dataDir: string): string[] {
+  const raw = fs.existsSync(path.join(process.cwd(), '.git'))
+    ? execSync('git status --porcelain -z', { encoding: 'utf-8' })
+    : '';
+  const records = raw.split('\0');
+  const bySource = new Map<string, string>();
+
+  for (let i = 0; i < records.length; i += 1) {
+    const rec = records[i];
+    if (!rec) continue;
+    const status = rec.slice(0, 2);
+    let filePath = rec.slice(3);
+
+    if ((status[0] === 'R' || status[0] === 'C') && i + 1 < records.length) {
+      const renamedTo = records[i + 1];
+      if (renamedTo) {
+        filePath = renamedTo;
+        i += 1;
+      }
+    }
+
+    if (isDeletedStatus(status)) continue;
+    if (!filePath.startsWith('data/scripture/')) continue;
+    if (!isScriptureDataFile(filePath)) continue;
+
+    const fileName = path.basename(filePath);
+    const source = cleanScriptureTitle(fileName.replace(/\.(txt|md)$/i, ''));
+    const existing = bySource.get(source);
+    // 동일 source에서 md 우선
+    if (!existing || (fileName.endsWith('.md') && existing.endsWith('.txt'))) {
+      const fullPath = path.join(dataDir, fileName);
+      if (fs.existsSync(fullPath)) bySource.set(source, fileName);
+    }
+  }
+  return Array.from(bySource.values());
+}
+
+async function clearDocumentsTable(): Promise<number> {
+  const { count, error: countError } = await supabase
+    .from(TABLE_NAME)
+    .select('id', { count: 'exact', head: true });
+
+  if (countError) {
+    console.error('기존 documents 건수 조회 실패:', countError);
+    throw countError;
+  }
+
+  const toDelete = count ?? 0;
+  if (toDelete === 0) return 0;
+
+  let deleted = 0;
+  const deleteBatchSize = 1000;
+
+  while (true) {
+    const { data: ids, error: idError } = await supabase
+      .from(TABLE_NAME)
+      .select('id')
+      .limit(deleteBatchSize);
+
+    if (idError) {
+      console.error('documents 삭제 대상 조회 실패:', idError);
+      throw idError;
+    }
+    if (!ids || ids.length === 0) break;
+
+    const deleteIds = ids.map((row) => row.id);
+    const { error: deleteError } = await supabase
+      .from(TABLE_NAME)
+      .delete()
+      .in('id', deleteIds);
+
+    if (deleteError) {
+      console.error('documents 배치 삭제 실패:', deleteError);
+      throw deleteError;
+    }
+    deleted += deleteIds.length;
+    console.log(`documents 배치 삭제 진행: ${deleted}/${toDelete}`);
+  }
+  return deleted;
+}
+
+async function clearSourceDocuments(sourceName: string): Promise<number> {
+  let deleted = 0;
+  const deleteBatchSize = 500;
+
+  while (true) {
+    const { data: ids, error: idError } = await supabase
+      .from(TABLE_NAME)
+      .select('id')
+      .eq('metadata->>source', sourceName)
+      .limit(deleteBatchSize);
+
+    if (idError) {
+      console.error(`source(${sourceName}) 삭제 대상 조회 실패:`, idError);
+      throw idError;
+    }
+    if (!ids || ids.length === 0) break;
+
+    const deleteIds = ids.map((row) => row.id);
+    const { error: deleteError } = await supabase
+      .from(TABLE_NAME)
+      .delete()
+      .in('id', deleteIds);
+
+    if (deleteError) {
+      console.error(`source(${sourceName}) 배치 삭제 실패:`, deleteError);
+      throw deleteError;
+    }
+    deleted += deleteIds.length;
+  }
+  return deleted;
+}
+
+export async function GET(request: Request) {
   try {
     console.log('========== 임베딩 처리 시작 ==========');
+    const options = getRebuildOptions(request);
+    console.log(`옵션 - full_rebuild: ${options.fullRebuild}, changed_only: ${options.changedOnly}`);
     
     // 데이터 폴더의 경로 (scripture 폴더 사용)
     const dataDir = path.join(process.cwd(), 'data', 'scripture');
@@ -187,13 +359,38 @@ export async function GET() {
         return cleanScriptureTitle(baseName);
       }));
     console.log(`기존 처리된 파일 수: ${prevFileNames.size}개`);
+
+    let deletedRows = 0;
+    if (options.fullRebuild) {
+      console.log('full_rebuild 모드: 기존 documents 전체 삭제 시작');
+      deletedRows = await clearDocumentsTable();
+      console.log(`full_rebuild 모드: 기존 documents ${deletedRows}건 삭제 완료`);
+    }
     
     // 데이터 폴더의 모든 파일 읽기
     const files = fs.readdirSync(dataDir);
     console.log(`총 파일 수: ${files.length}개`);
-    
+
     // scripture 원문 파일(.txt/.md)만 필터링
-    const textFiles = files.filter(isScriptureDataFile);
+    let textFiles = files.filter(isScriptureDataFile);
+    if (options.changedOnly) {
+      const changedFiles = collectChangedScriptureFiles(dataDir);
+      textFiles = changedFiles;
+      console.log(`changed_only 모드 대상 파일 수: ${textFiles.length}개`);
+      console.log(`changed_only 처리 목록: ${textFiles.join(', ') || '(없음)'}`);
+    }
+
+    if (textFiles.length === 0) {
+      return NextResponse.json({
+        success: true,
+        message: '처리할 변경 source가 없습니다.',
+        fullRebuild: options.fullRebuild,
+        changedOnly: options.changedOnly,
+        deletedRows,
+        processedSources: [],
+        files: [],
+      });
+    }
     // 파일 목록을 역순으로 정렬 (뒤에서부터 처리)
     textFiles.reverse();
     console.log(`텍스트 파일 수: ${textFiles.length}개`);
@@ -205,13 +402,26 @@ export async function GET() {
     let skippedChunks = 0;
     let processedChunks = 0;
     let skippedFiles = 0;
+    const processedSources: string[] = [];
+    const sourceDeletedRows: Record<string, number> = {};
     
     // 각 파일 처리
     for (const file of textFiles) {
       console.log(`\n===== 파일 처리 시작: ${file} =====`);
+      const sourceName = cleanScriptureTitle(file.replace(/\.(txt|md)$/i, ''));
+
+      if (options.changedOnly) {
+        const deletedForSource = await clearSourceDocuments(sourceName);
+        deletedRows += deletedForSource;
+        sourceDeletedRows[sourceName] = deletedForSource;
+        processedSources.push(sourceName);
+        console.log(`changed_only: source(${sourceName}) 기존 문서 ${deletedForSource}건 삭제`);
+      }
       
       // 파일 단위로 먼저 중복 확인
-      const fileAlreadyProcessed = await isFileAlreadyProcessed(file, prevFileNames);
+      const fileAlreadyProcessed = (options.fullRebuild || options.changedOnly)
+        ? false
+        : await isFileAlreadyProcessed(file, prevFileNames);
       if (fileAlreadyProcessed) {
         console.log(`이미 처리된 파일 건너뛰기: ${file}`);
         skippedFiles++;
@@ -285,6 +495,7 @@ export async function GET() {
           fileProcessedChunks += processed;
           console.log(`배치 처리 완료: ${processed}개 처리됨, 누적 ${fileProcessedChunks}개`);
           currentBatch = []; // 배치 초기화
+          await new Promise((resolve) => setTimeout(resolve, INTER_BATCH_DELAY_MS));
         }
       }
       
@@ -312,7 +523,12 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       message: `${processedFiles.length}개의 파일이 성공적으로 처리되었습니다. 총 ${totalChunks}개의 청크 중 ${processedChunks}개 생성, ${skippedChunks}개 중복 건너뜀. 건너뛴 전체 파일: ${skippedFiles}개`,
-      files: processedFiles
+      fullRebuild: options.fullRebuild,
+      changedOnly: options.changedOnly,
+      deletedRows,
+      processedSources,
+      sourceDeletedRows,
+      files: processedFiles,
     });
   } catch (error) {
     console.error('임베딩 처리 오류:', error);

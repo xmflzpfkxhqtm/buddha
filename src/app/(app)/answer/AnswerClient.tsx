@@ -9,7 +9,8 @@ export const dynamic = 'force-dynamic';
 
 /* ----------------------------- 외부 라이브러리 ----------------------------- */
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Loading from '../../../../components/Loading';
 
 import { Capacitor } from '@capacitor/core';
 import { Share }     from '@capacitor/share';
@@ -92,7 +93,7 @@ const extractAnswerCandidates = (answer: string): string[] => {
 async function findCitationIndex(title: string, answer: string): Promise<number> {
   try {
     const res = await fetch(`/api/scripture?title=${encodeURIComponent(title)}`);
-    const data = await res.json();
+    const data = await parseJsonSafe<{ content?: string }>(res, {});
     if (!data?.content) return 0;
 
     const scriptureSentences = parseScriptureSentences(data.content);
@@ -127,6 +128,17 @@ const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number, fallback:
     new Promise<T>((resolve) => setTimeout(() => resolve(fallback), timeoutMs)),
   ]);
 };
+
+async function parseJsonSafe<T>(res: Response, fallback: T): Promise<T> {
+  try {
+    const text = await res.text();
+    if (!text || text.trim().length === 0) return fallback;
+    return JSON.parse(text) as T;
+  } catch (error) {
+    console.warn('JSON 파싱 실패, fallback 사용:', error);
+    return fallback;
+  }
+}
 
 function filterKnownScriptures(answer: string, known: string[]) {
   const norm = known.map(t => ({
@@ -192,11 +204,11 @@ const fmtTitle = (raw: string, volume?: number) =>
 /* -------------------------------------------------------------------------- */
 /*                                  COMPONENT                                 */
 /* -------------------------------------------------------------------------- */
-export default function AnswerClient() {
+export default function AnswerClient({ initialQuestionId = null }: { initialQuestionId?: string | null }) {
   /* ------- Router & Query Param ---------------------------------------- */
   const router      = useRouter();
   const params      = useSearchParams();
-  const questionId  = params.get('questionId');
+  const questionId  = initialQuestionId ?? params.get('questionId');
 
   /* ------- Global State ------------------------------------------------ */
   const { setParentId } = useAskStore();
@@ -207,6 +219,8 @@ export default function AnswerClient() {
   const [fullAnswer      , setFullAnswer]      = useState('');
   const [scriptureTitles , setScriptureTitles] = useState<string[]>([]);
   const [done            , setDone]            = useState(false);
+  const [isAnswerLoaded  , setIsAnswerLoaded]  = useState(false);
+  const [isTitlesLoaded  , setIsTitlesLoaded]  = useState(false);
 
   const [user            , setUser]           = useState<User | null>(null);
   const [saved           , setSaved]          = useState(false);
@@ -214,6 +228,7 @@ export default function AnswerClient() {
   const [openingKey      , setOpeningKey]     = useState<string | null>(null);
   const [citationIndexMap, setCitationIndexMap] = useState<Record<string, number>>({});
   const citationIndexMapRef = useRef<Record<string, number>>({});
+  const [citationHintsMap, setCitationHintsMap] = useState<Record<string, number>>({});
 
   /* ----------------------- Supabase & 데이터 로딩 ----------------------- */
   useEffect(() => {
@@ -221,7 +236,24 @@ export default function AnswerClient() {
   }, []);
 
   useEffect(() => {
-    if (!questionId) return;
+    if (!questionId) {
+      setDone(true);
+      setIsAnswerLoaded(true);
+      setIsTitlesLoaded(true);
+      return;
+    }
+
+    let cancelled = false;
+    setDone(false);
+    setIsAnswerLoaded(false);
+    setIsTitlesLoaded(false);
+    setQuestion('');
+    setFullAnswer('');
+    setScriptureTitles([]);
+    setOpeningKey(null);
+    setCitationIndexMap({});
+    setCitationHintsMap({});
+    citationIndexMapRef.current = {};
 
     /* 질문 + 답변 로드 */
     supabase
@@ -230,20 +262,74 @@ export default function AnswerClient() {
       .eq('id', questionId)
       .single()
       .then(({ data, error }) => {
+        if (cancelled) return;
         if (error || !data) {
           setFullAnswer('부처님과의 연결이 원활하지 않습니다. 다시 시도해 주세요.');
         } else {
           setQuestion(data.question);
           setFullAnswer(data.answer);
         }
+        setIsAnswerLoaded(true);
         setDone(true);
       });
 
     /* 경전 제목 리스트 로드 */
-    fetch('/api/scripture/list')
-      .then(r => r.json())
-      .then(j => setScriptureTitles(j.titles || []));
+    void (async () => {
+      try {
+        const res = await fetch('/api/scripture/list');
+        const json = await parseJsonSafe<{ titles?: string[] }>(res, {});
+        if (cancelled) return;
+        setScriptureTitles(Array.isArray(json.titles) ? json.titles : []);
+      } catch {
+        if (cancelled) return;
+        setScriptureTitles([]);
+      } finally {
+        if (cancelled) return;
+        setIsTitlesLoaded(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [questionId]);
+
+  useEffect(() => {
+    if (!question || question.trim().length === 0) return;
+    let cancelled = false;
+
+    const loadCitationHints = async () => {
+      try {
+        const res = await fetch('/api/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: question, limit: 10 }),
+        });
+        const json = await parseJsonSafe<{
+          results?: Array<{ metadata?: { source?: string; sentence_start?: number | string } }>;
+        }>(res, {});
+        const results = Array.isArray(json?.results) ? json.results : [];
+        const hints = new Map<string, number>();
+
+        for (const r of results) {
+          const source = String(r?.metadata?.source ?? '').trim();
+          if (!source || hints.has(source)) continue;
+          const raw = Number(r?.metadata?.sentence_start);
+          const sentenceStart = Number.isFinite(raw) ? Math.max(0, raw) : 0;
+          hints.set(source, sentenceStart);
+        }
+
+        if (!cancelled) {
+          setCitationHintsMap(Object.fromEntries(hints.entries()));
+        }
+      } catch {
+        if (!cancelled) setCitationHintsMap({});
+      }
+    };
+
+    loadCitationHints();
+    return () => { cancelled = true; };
+  }, [question]);
 
   /* -------------------------- URL 공유 ------------------------------ */
   const shareUrl = async () => {
@@ -318,6 +404,18 @@ export default function AnswerClient() {
     router.prefetch('/scripture');
   }, [router]);
 
+  const getHintIndexForTitle = useCallback((scriptureTitle: string): number | undefined => {
+    const direct = citationHintsMap[scriptureTitle];
+    if (direct !== undefined) return direct;
+
+    const base = scriptureTitle.replace(/_\d+권$/, '');
+    const entries = Object.entries(citationHintsMap);
+    for (const [source, idx] of entries) {
+      if (source === base || source.startsWith(base)) return idx;
+    }
+    return undefined;
+  }, [citationHintsMap]);
+
   useEffect(() => {
     if (!fullAnswer || dedupedRefs.length === 0) return;
     let cancelled = false;
@@ -337,7 +435,10 @@ export default function AnswerClient() {
                 })[0];
 
         if (!match || citationIndexMapRef.current[match] !== undefined) continue;
-        const idx = await withTimeout(findCitationIndex(match, fullAnswer), 4000, 0);
+        const hintedIdx = getHintIndexForTitle(match);
+        const idx = hintedIdx !== undefined
+          ? hintedIdx
+          : await withTimeout(findCitationIndex(match, fullAnswer), 4000, 0);
         if (cancelled) return;
         setCitationIndexMap((prev) => ({ ...prev, [match]: idx }));
       }
@@ -345,15 +446,24 @@ export default function AnswerClient() {
 
     primeCitationIndexes();
     return () => { cancelled = true; };
-  }, [dedupedRefs, fullAnswer, scriptureTitles]);
+  }, [dedupedRefs, fullAnswer, scriptureTitles, getHintIndexForTitle]);
 
   const openScriptureAtCitation = async (scriptureTitle: string, key: string) => {
     setOpeningKey(key);
     const cached = citationIndexMapRef.current[scriptureTitle];
-    const targetIndex = cached !== undefined ? cached : await findCitationIndex(scriptureTitle, fullAnswer);
+    const hintedIdx = getHintIndexForTitle(scriptureTitle);
+    const targetIndex = cached !== undefined
+      ? cached
+      : hintedIdx !== undefined
+        ? hintedIdx
+        : await findCitationIndex(scriptureTitle, fullAnswer);
     setBookmark(scriptureTitle, targetIndex);
     router.push('/scripture');
   };
+
+  if (!isAnswerLoaded || !isTitlesLoaded) {
+    return <Loading />;
+  }
 
   return (
     <main className="relative min-h-screen w-full max-w-[460px] flex flex-col items-center mx-auto bg-white px-6 py-6">

@@ -6,7 +6,11 @@ import AnswerClient from './AnswerClient';
 
 export default function AnswerPage() {
   return (
-    <SuspenseWrapper>
+    <SuspenseWrapper
+      fallback={
+        <main className="min-h-screen w-full max-w-[460px] mx-auto bg-background text-foreground" />
+      }
+    >
       <AnswerClient />
     </SuspenseWrapper>
   );

@@ -1,10 +1,4 @@
-'use client';
-
-import { useEffect } from 'react';
 import { Geist, Geist_Mono } from 'next/font/google';
-import { App } from '@capacitor/app';
-import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
-import { useRouter } from 'next/navigation';
 import AppInstallOverlay from '../../../components/AppInstallOverlay'
 
 import '../globals.css';
@@ -17,6 +11,7 @@ import BottomNav        from '../../../components/BottomNav';
 import DeepLinkHandler  from '../../../components/DeepLinkHandler';
 import NativeInit       from '../../../components/NativeInit';
 import TopNav           from '../../../components/TopNav';
+import AppStateRedirect from '../../../components/AppStateRedirect';
 import UpdateBlocker    from '../../../components/UpdateBlocker';   // ★ iOS 강제 업데이트
 import ReviewPrompt     from '../../../components/ReviewPrompt';
 
@@ -24,34 +19,6 @@ const geistSans = Geist({ variable: '--font-geist-sans',  subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
-
-  /* ─────────────────────────────────────────
-   *  2 h 이상 백그라운드 → /dashboard 리다이렉트
-   * ───────────────────────────────────────── */
-  useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
-
-    let lastBackground: number | null = null;
-    let listener: PluginListenerHandle | undefined;
-
-    (async () => {
-      listener = await App.addListener('appStateChange', ({ isActive }) => {
-        const now = Date.now();
-
-        if (!isActive) {
-          lastBackground = now;
-        } else if (lastBackground && now - lastBackground > 7.2e6) {
-          router.replace('/dashboard');
-        }
-      });
-    })();
-
-    return () => {
-      listener?.remove();
-    };
-  }, [router]);
-
   return (
     <html lang="ko">
       <head>
@@ -69,6 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
       >
+        <AppStateRedirect />
         <NativeInit />
         <ReviewPrompt /> 
         <TopNav className="top-nav-safe" />
