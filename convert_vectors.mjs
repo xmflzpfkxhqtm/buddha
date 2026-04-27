@@ -1,13 +1,28 @@
 import { Pool } from 'pg';
 import { cpus } from 'os';
 
-// 데이터베이스 연결 설정
+const {
+  SUPABASE_DB_USER,
+  SUPABASE_DB_PASSWORD,
+  SUPABASE_DB_HOST,
+  SUPABASE_DB_PORT,
+  SUPABASE_DB_NAME,
+} = process.env;
+
+const required = { SUPABASE_DB_USER, SUPABASE_DB_PASSWORD, SUPABASE_DB_HOST };
+for (const [key, value] of Object.entries(required)) {
+  if (!value) {
+    console.error(`환경변수 ${key} 가 설정되지 않았습니다. .env.local 또는 셸 환경에서 설정 후 다시 실행하세요.`);
+    process.exit(1);
+  }
+}
+
 const pool = new Pool({
-  user: 'postgres.ekqucunjkiimfisgiyfp',
-  password: 'gkftndlTek1!',
-  host: 'aws-0-ap-northeast-2.pooler.supabase.com',
-  port: 6543,
-  database: 'postgres',
+  user: SUPABASE_DB_USER,
+  password: SUPABASE_DB_PASSWORD,
+  host: SUPABASE_DB_HOST,
+  port: Number(SUPABASE_DB_PORT ?? 6543),
+  database: SUPABASE_DB_NAME ?? 'postgres',
   ssl: { rejectUnauthorized: false },
   statement_timeout: 300000  // 5분으로 타임아웃 늘림
 });
