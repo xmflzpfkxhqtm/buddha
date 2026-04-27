@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1777034187021,
+  "lastScanned": 1777266999430,
   "projectRoot": "/Users/singyuseob/Dev/Buddha/buddha",
   "techStack": {
     "languages": [
@@ -64,7 +64,9 @@
     "workspaces": [],
     "mainDirectories": [
       "components",
+      "docs",
       "public",
+      "scripts",
       "src"
     ],
     "gitBranches": {
@@ -78,7 +80,7 @@
       "path": "android",
       "purpose": null,
       "fileCount": 8,
-      "lastAccessed": 1777034186956,
+      "lastAccessed": 1777266998553,
       "keyFiles": [
         "build.gradle",
         "capacitor.settings.gradle",
@@ -91,7 +93,7 @@
       "path": "components",
       "purpose": "UI components",
       "fileCount": 21,
-      "lastAccessed": 1777034186962,
+      "lastAccessed": 1777266998554,
       "keyFiles": [
         "AppInstallOverlay.tsx",
         "AppStateRedirect.tsx",
@@ -104,7 +106,7 @@
       "path": "data",
       "purpose": "Data files",
       "fileCount": 108,
-      "lastAccessed": 1777034186979,
+      "lastAccessed": 1777266998668,
       "keyFiles": [
         "금강반야론_1권_GPT4.1번역.txt",
         "금강반야론_2권_GPT4.1번역.txt",
@@ -117,24 +119,33 @@
       "path": "dictionary",
       "purpose": null,
       "fileCount": 2,
-      "lastAccessed": 1777034186979,
+      "lastAccessed": 1777266998866,
       "keyFiles": [
         "glossary-v0.8.csv",
         "wiki-terms.csv"
+      ]
+    },
+    "docs": {
+      "path": "docs",
+      "purpose": "Documentation",
+      "fileCount": 1,
+      "lastAccessed": 1777266998931,
+      "keyFiles": [
+        "2026-04-24-supabase-마이그레이션-노트.md"
       ]
     },
     "ios": {
       "path": "ios",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1777034186980,
+      "lastAccessed": 1777266998933,
       "keyFiles": []
     },
     "public": {
       "path": "public",
       "purpose": "Public files",
       "fileCount": 41,
-      "lastAccessed": 1777034186980,
+      "lastAccessed": 1777266998952,
       "keyFiles": [
         "aivip.png",
         "android-chrome-192x192.png",
@@ -147,23 +158,32 @@
       "path": "resources",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1777034186980,
+      "lastAccessed": 1777266998970,
       "keyFiles": [
         "splash.jpg"
+      ]
+    },
+    "scripts": {
+      "path": "scripts",
+      "purpose": "Build/utility scripts",
+      "fileCount": 1,
+      "lastAccessed": 1777266998971,
+      "keyFiles": [
+        "migrate-scriptures.mjs"
       ]
     },
     "src": {
       "path": "src",
       "purpose": "Source code",
       "fileCount": 0,
-      "lastAccessed": 1777034186981,
+      "lastAccessed": 1777266998971,
       "keyFiles": []
     },
     "android/app": {
       "path": "android/app",
       "purpose": "Application code",
       "fileCount": 5,
-      "lastAccessed": 1777034186981,
+      "lastAccessed": 1777266998987,
       "keyFiles": [
         "build.gradle",
         "capacitor.build.gradle",
@@ -174,14 +194,14 @@
       "path": "android/build",
       "purpose": "Build output",
       "fileCount": 0,
-      "lastAccessed": 1777034186982,
+      "lastAccessed": 1777266999020,
       "keyFiles": []
     },
     "ios/App": {
       "path": "ios/App",
       "purpose": "Application code",
       "fileCount": 2,
-      "lastAccessed": 1777034186985,
+      "lastAccessed": 1777266999077,
       "keyFiles": [
         "Podfile",
         "Podfile.lock"
@@ -191,7 +211,7 @@
       "path": "src/app",
       "purpose": "Application code",
       "fileCount": 2,
-      "lastAccessed": 1777034186986,
+      "lastAccessed": 1777266999221,
       "keyFiles": [
         "globals.css",
         "sitemap.ts"
@@ -201,7 +221,7 @@
       "path": "src/data",
       "purpose": "Data files",
       "fileCount": 1,
-      "lastAccessed": 1777034186986,
+      "lastAccessed": 1777266999243,
       "keyFiles": [
         "copyTexts.ts"
       ]
@@ -210,7 +230,7 @@
       "path": "src/lib",
       "purpose": "Library code",
       "fileCount": 7,
-      "lastAccessed": 1777034186987,
+      "lastAccessed": 1777266999365,
       "keyFiles": [
         "copyStore.ts",
         "initNative.ts",
@@ -221,7 +241,7 @@
       "path": "src/types",
       "purpose": "Type definitions",
       "fileCount": 1,
-      "lastAccessed": 1777034186988,
+      "lastAccessed": 1777266999428,
       "keyFiles": [
         "supabase.d.ts"
       ]
@@ -230,7 +250,7 @@
       "path": "src/utils",
       "purpose": "Utility functions",
       "fileCount": 6,
-      "lastAccessed": 1777034186990,
+      "lastAccessed": 1777266999430,
       "keyFiles": [
         "chunking.ts",
         "exportGlossaryV08ToCsv.ts",
@@ -238,133 +258,6 @@
       ]
     }
   },
-  "hotPaths": [
-    {
-      "path": "src/app/(app)/dashboard/page.tsx",
-      "accessCount": 4,
-      "lastAccessed": 1777039674247,
-      "type": "file"
-    },
-    {
-      "path": "next.config.js",
-      "accessCount": 3,
-      "lastAccessed": 1777039572143,
-      "type": "file"
-    },
-    {
-      "path": "src/app/(app)/api/scripture/route.ts",
-      "accessCount": 2,
-      "lastAccessed": 1777039137974,
-      "type": "file"
-    },
-    {
-      "path": "src/app/(app)/api/scripture/list/route.ts",
-      "accessCount": 2,
-      "lastAccessed": 1777039146749,
-      "type": "file"
-    },
-    {
-      "path": "src/app/(app)/api/global-search/route.ts",
-      "accessCount": 2,
-      "lastAccessed": 1777039161066,
-      "type": "file"
-    },
-    {
-      "path": "src/app/(app)/api/ask/warmup/route.ts",
-      "accessCount": 1,
-      "lastAccessed": 1777035160657,
-      "type": "file"
-    },
-    {
-      "path": "src/utils/supabase.ts",
-      "accessCount": 1,
-      "lastAccessed": 1777035813427,
-      "type": "file"
-    },
-    {
-      "path": "scripts/migrate-scriptures.mjs",
-      "accessCount": 1,
-      "lastAccessed": 1777039051178,
-      "type": "file"
-    },
-    {
-      "path": "src/app/(app)/layout.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1777039482513,
-      "type": "file"
-    },
-    {
-      "path": "components/BottomNav.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1777039492310,
-      "type": "file"
-    },
-    {
-      "path": "components/AppStateRedirect.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1777039492477,
-      "type": "file"
-    },
-    {
-      "path": "components/PageTransition.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1777039492489,
-      "type": "file"
-    },
-    {
-      "path": "src/app/(app)/api/today-teaching/route.ts",
-      "accessCount": 1,
-      "lastAccessed": 1777039492933,
-      "type": "file"
-    },
-    {
-      "path": "capacitor.config.ts",
-      "accessCount": 1,
-      "lastAccessed": 1777039520500,
-      "type": "file"
-    },
-    {
-      "path": "components/NativeInit.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1777039521600,
-      "type": "file"
-    },
-    {
-      "path": "src/app/(app)/metadata.ts",
-      "accessCount": 1,
-      "lastAccessed": 1777039522014,
-      "type": "file"
-    },
-    {
-      "path": "src/lib/initNative.ts",
-      "accessCount": 1,
-      "lastAccessed": 1777039571921,
-      "type": "file"
-    },
-    {
-      "path": "src/app/globals.css",
-      "accessCount": 1,
-      "lastAccessed": 1777039576577,
-      "type": "file"
-    },
-    {
-      "path": "src/app/(app)/answer/AnswerClient.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1777039591916,
-      "type": "file"
-    },
-    {
-      "path": "src/app/(app)/ask/confirm/page.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1777039593102,
-      "type": "file"
-    },
-    {
-      "path": "components/Loading.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1777039593168,
-      "type": "file"
-    }
-  ],
+  "hotPaths": [],
   "userDirectives": []
 }
