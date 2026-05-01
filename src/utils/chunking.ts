@@ -1,6 +1,6 @@
-import path from 'path';
 import crypto from 'crypto';
 import { DocumentMetadata } from '@/utils/supabase';
+import { scriptureTitleFromRelativePath } from '@/utils/scripturePaths';
 
 /**
  * 텍스트 내용에 대한 해시값 생성
@@ -63,8 +63,9 @@ export function chunkText(
   overlap: number = 50,
   maxChunkSize: number = 1000
 ): { text: string, metadata: DocumentMetadata }[] {
-  // 경전 이름 추출 (확장자/txt/md 접미사 제거)
-  const scriptureTitle = cleanScriptureTitle(path.basename(fileName).replace(/\.(txt|md)$/i, ''));
+  // 경전 이름: 평면 파일명 또는 `data/scripture/` 기준 상대경로(폴더/파일.md) → `_` 로 합친 키
+  const relativePosix = fileName.replace(/\\/g, '/');
+  const scriptureTitle = cleanScriptureTitle(scriptureTitleFromRelativePath(relativePosix));
   console.log(`경전 이름: ${scriptureTitle}`);
 
   const normalizedText = normalizeMarkdownForEmbedding(text);

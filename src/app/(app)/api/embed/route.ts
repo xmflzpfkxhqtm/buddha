@@ -5,6 +5,7 @@ import { execSync } from 'child_process';
 import { generateEmbeddingBatch } from '@/utils/upstage';
 import { saveDocumentBatch, DocumentBatch, DocumentMetadata } from '@/utils/supabase';
 import { chunkText, cleanScriptureTitle } from '@/utils/chunking';
+import { scriptureTitleFromRelativePath } from '@/utils/scripturePaths';
 import { supabase } from '@/utils/supabase';
 
 // 배치 사이즈 (한 번에 처리할 최대 청크 수)
@@ -38,6 +39,49 @@ interface RebuildOptions {
 const isScriptureDataFile = (fileName: string) =>
   (fileName.endsWith('.txt') || fileName.endsWith('.md')) &&
   !fileName.includes('용어사전');
+
+function shouldSkipScriptureWalkDir(name: string): boolean {
+  return name === 'backup' || name === '.git';
+}
+
+/** `data/scripture` 이하 모든 .md/.txt 상대경로(posix) */
+function listScriptureDataFilesRecursive(dirAbs: string): string[] {
+  const out: string[] = [];
+  function walk(abs: string, relPosix: string) {
+    if (!fs.existsSync(abs)) return;
+    for (const entry of fs.readdirSync(abs, { withFileTypes: true })) {
+      if (shouldSkipScriptureWalkDir(entry.name)) continue;
+      const nextRel = relPosix ? `${relPosix}/${entry.name}` : entry.name;
+      const absNext = path.join(abs, entry.name);
+      if (entry.isDirectory()) {
+        walk(absNext, nextRel);
+      } else if (entry.isFile() && isScriptureDataFile(entry.name)) {
+        out.push(nextRel);
+      }
+    }
+  }
+  walk(dirAbs, '');
+  return out;
+}
+
+/** 임베딩 스킵 판단용: `data/` 평면 + `data/scripture/**` 에 이미 있는 canonical 제목 키 */
+function buildCanonicalTitleKeysForEmbed(): Set<string> {
+  const set = new Set<string>();
+  const dataRoot = path.join(process.cwd(), 'data');
+  if (fs.existsSync(dataRoot)) {
+    for (const name of fs.readdirSync(dataRoot)) {
+      if (!isScriptureDataFile(name) || name.includes('용어사전')) continue;
+      set.add(cleanScriptureTitle(scriptureTitleFromRelativePath(name)));
+    }
+  }
+  const scriptureRoot = path.join(dataRoot, 'scripture');
+  if (fs.existsSync(scriptureRoot)) {
+    for (const rel of listScriptureDataFilesRecursive(scriptureRoot)) {
+      set.add(cleanScriptureTitle(scriptureTitleFromRelativePath(rel)));
+    }
+  }
+  return set;
+}
 
 /**
  * 배치를 처리하고 임베딩한 후 저장 (재시도 메커니즘 추가)
@@ -145,15 +189,13 @@ async function generateEmbeddingBatchWithRetry(texts: string[]): Promise<number[
  * 파일이 이미 처리되었는지 확인
  */
 async function isFileAlreadyProcessed(fileName: string, prevNames: Set<string>): Promise<boolean> {
-  // 파일명에서 확장자 제거 및 정리
-  const baseName = fileName.replace(/\.(txt|md)$/i, '');
-  const cleanedName = cleanScriptureTitle(baseName);
+  const cleanedName = cleanScriptureTitle(scriptureTitleFromRelativePath(fileName));
   
   console.log(`파일 중복 확인 중: ${fileName} (정리된 이름: ${cleanedName})`);
   
   // 이미 prevFileNames에서 확인한 경우 중복 확인
   if (prevNames.has(cleanedName)) {
-    console.log(`중복 확인: ${cleanedName} - 기존 데이터 폴더에 존재함`);
+    console.log(`중복 확인: ${cleanedName} - 기존 데이터 경로에 존재함`);
     return true;
   }
   
@@ -248,13 +290,16 @@ function collectChangedScriptureFiles(dataDir: string): string[] {
     if (!filePath.startsWith('data/scripture/')) continue;
     if (!isScriptureDataFile(filePath)) continue;
 
-    const fileName = path.basename(filePath);
-    const source = cleanScriptureTitle(fileName.replace(/\.(txt|md)$/i, ''));
+    const relFromScripture = filePath.slice('data/scripture/'.length).replace(/\\/g, '/');
+    const source = cleanScriptureTitle(scriptureTitleFromRelativePath(relFromScripture));
     const existing = bySource.get(source);
     // 동일 source에서 md 우선
-    if (!existing || (fileName.endsWith('.md') && existing.endsWith('.txt'))) {
-      const fullPath = path.join(dataDir, fileName);
-      if (fs.existsSync(fullPath)) bySource.set(source, fileName);
+    if (
+      !existing ||
+      (relFromScripture.toLowerCase().endsWith('.md') && existing.toLowerCase().endsWith('.txt'))
+    ) {
+      const fullPath = path.join(dataDir, ...relFromScripture.split('/'));
+      if (fs.existsSync(fullPath)) bySource.set(source, relFromScripture);
     }
   }
   return Array.from(bySource.values());
@@ -347,18 +392,8 @@ export async function GET(request: Request) {
     console.log(`데이터 폴더: ${dataDir}`);
     
     // 기존 처리된 데이터 폴더 (중복 확인용)
-    const prevDataDir = path.join(process.cwd(), 'data');
-    const prevFiles = fs.existsSync(prevDataDir) ? fs.readdirSync(prevDataDir) : [];
-    // 파일명에서 _GPT4.1번역 등을 제거한 파일명 세트 생성
-    const prevFileNames = new Set(prevFiles
-      .filter(file => file.endsWith('.txt') || file.endsWith('.md'))
-      .filter(file => !file.includes('용어사전'))
-      .map(file => {
-        // 접미사 제거 및 확장자 제외하고 기본 이름만 저장
-        const baseName = file.replace(/\.(txt|md)$/i, '');
-        return cleanScriptureTitle(baseName);
-      }));
-    console.log(`기존 처리된 파일 수: ${prevFileNames.size}개`);
+    const prevFileNames = buildCanonicalTitleKeysForEmbed();
+    console.log(`기존 데이터 기준 canonical 제목 키 수: ${prevFileNames.size}개`);
 
     let deletedRows = 0;
     if (options.fullRebuild) {
@@ -367,9 +402,8 @@ export async function GET(request: Request) {
       console.log(`full_rebuild 모드: 기존 documents ${deletedRows}건 삭제 완료`);
     }
     
-    // 데이터 폴더의 모든 파일 읽기
-    const files = fs.readdirSync(dataDir);
-    console.log(`총 파일 수: ${files.length}개`);
+    const files = listScriptureDataFilesRecursive(dataDir);
+    console.log(`총 파일 수(data/scripture 재귀): ${files.length}개`);
 
     // scripture 원문 파일(.txt/.md)만 필터링
     let textFiles = files.filter(isScriptureDataFile);
@@ -408,7 +442,7 @@ export async function GET(request: Request) {
     // 각 파일 처리
     for (const file of textFiles) {
       console.log(`\n===== 파일 처리 시작: ${file} =====`);
-      const sourceName = cleanScriptureTitle(file.replace(/\.(txt|md)$/i, ''));
+      const sourceName = cleanScriptureTitle(scriptureTitleFromRelativePath(file));
 
       if (options.changedOnly) {
         const deletedForSource = await clearSourceDocuments(sourceName);
@@ -437,7 +471,7 @@ export async function GET(request: Request) {
         continue; // 다음 파일로 넘어감
       }
       
-      const filePath = path.join(dataDir, file);
+      const filePath = path.join(dataDir, ...file.split('/'));
       const content = fs.readFileSync(filePath, 'utf-8');
       const fileSize = fs.statSync(filePath).size;
       console.log(`파일 크기: ${Math.round(fileSize / 1024)}KB, 문자 수: ${content.length}`);
