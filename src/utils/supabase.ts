@@ -74,16 +74,19 @@ export async function saveDocument(content: string, embedding: number[], metadat
  */
 export async function saveDocumentBatch(documents: DocumentBatch[]) {
   if (documents.length === 0) return { inserted: 0 };
-  
+
   try {
-    // 테이블 이름에 스키마를 명시적으로 포함
+    // hash unique 제약(documents_hash_unique)을 활용해 중복 청크는 silent skip.
     const { error } = await supabase
       .from(TABLE_NAME)
-      .insert(documents.map(doc => ({
-        content: doc.content,
-        embedding: doc.embedding,
-        metadata: doc.metadata
-      })));
+      .upsert(
+        documents.map(doc => ({
+          content: doc.content,
+          embedding: doc.embedding,
+          metadata: doc.metadata,
+        })),
+        { onConflict: 'hash', ignoreDuplicates: true }
+      );
 
     if (error) {
       console.error('Supabase 저장 오류 상세:', error);
