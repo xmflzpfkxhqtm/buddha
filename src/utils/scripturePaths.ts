@@ -11,7 +11,7 @@ import path from 'path';
 export function scriptureTitleFromRelativePath(relativePath: string): string {
   const posix = relativePath.replace(/\\/g, '/');
   const withoutExt = posix.replace(/\.(md|txt)$/i, '');
-  return withoutExt.split('/').filter(Boolean).join('_');
+  return withoutExt.split('/').filter(Boolean).join('_').normalize('NFC');
 }
 
 /** `data/scripture` 루트와 파일 절대경로로부터 저장소에 쓸 상대 경로(posix) */

@@ -6,11 +6,11 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 
-/** `data/scripture/foo/bar.md` → `foo_bar` (DB title / API 키) */
+/** `data/scripture/foo/bar.md` → `foo_bar` (DB title / API 키). macOS NFD 파일명을 NFC 로 통일. */
 function scriptureTitleFromRelativePath(relativePath) {
   const posix = relativePath.replace(/\\/g, '/');
   const withoutExt = posix.replace(/\.(md|txt)$/i, '');
-  return withoutExt.split('/').filter(Boolean).join('_');
+  return withoutExt.split('/').filter(Boolean).join('_').normalize('NFC');
 }
 
 function shouldSkipDir(name) {
@@ -27,7 +27,7 @@ async function collectFlatFiles(dir, subfolder) {
     const fullPath = path.join(dir, entry.name);
     const content = await fs.readFile(fullPath, 'utf-8');
     const format = entry.name.toLowerCase().endsWith('.md') ? 'md' : 'txt';
-    const rel = entry.name.replace(/\\/g, '/');
+    const rel = entry.name.replace(/\\/g, '/').normalize('NFC');
     const title = scriptureTitleFromRelativePath(rel);
     files.push({ title, filename: rel, format, subfolder, scripture_group: null, content });
   }
@@ -53,7 +53,7 @@ async function collectRecursiveScripture(dir, subfolder) {
         const title = scriptureTitleFromRelativePath(nextRel);
         files.push({
           title,
-          filename: nextRel.replace(/\\/g, '/'),
+          filename: nextRel.replace(/\\/g, '/').normalize('NFC'),
           format,
           subfolder,
           scripture_group: group ?? null,
@@ -143,13 +143,27 @@ async function main() {
   console.log(`Total content size: ${(totalBytes / 1024 / 1024).toFixed(2)} MB`);
 
   const batchSize = 50;
+  const maxRetries = 3;
   let done = 0;
   const startedAt = Date.now();
   for (let i = 0; i < final.length; i += batchSize) {
     const batch = final.slice(i, i + batchSize);
-    const { error } = await supabase.from('scriptures').upsert(batch, { onConflict: 'title' });
-    if (error) {
-      console.error(`Batch ${i}..${i + batch.length} failed:`, error.message);
+    let lastError = null;
+    for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
+      const { error } = await supabase.from('scriptures').upsert(batch, { onConflict: 'title' });
+      if (!error) { lastError = null; break; }
+      lastError = error;
+      if (attempt < maxRetries) {
+        const waitMs = 1000 * 2 ** (attempt - 1);
+        process.stdout.write('\n');
+        console.warn(`Batch ${i}..${i + batch.length} attempt ${attempt} failed (${error.code ?? '-'}), retrying in ${waitMs}ms...`);
+        await new Promise((r) => setTimeout(r, waitMs));
+      }
+    }
+    if (lastError) {
+      process.stdout.write('\n');
+      console.error(`Batch ${i}..${i + batch.length} failed after ${maxRetries} attempts:`);
+      console.error(JSON.stringify(lastError, null, 2));
       process.exit(1);
     }
     done += batch.length;
