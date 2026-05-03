@@ -40,16 +40,16 @@ export default function ReviewPrompt({ force = false }: Props) {
   /* ── 모달 ── */
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-40">
-      <div className="w-80 rounded-2xl bg-white p-6 text-center space-y-5 shadow-xl">
+      <div className="w-80 rounded-2xl bg-surface-elevated p-6 text-center space-y-5 shadow-xl">
         <h2 className="text-lg font-semibold">앱이 마음에 드셨나요?</h2>
-        <p className="text-base text-red-dark">
+        <p className="text-base text-accent">
           짧은 리뷰 한 줄이 큰 힘이 됩니다. <br />
           법을 전하는 일에 공덕을 보태주세요 🙏
         </p>
 
         <div className="flex justify-center gap-4">
           <button
-            className="px-4 py-2 bg-red-light text-white rounded-2xl hover:bg-red transition"
+            className="px-4 py-2 bg-accent-soft text-on-brand rounded-2xl hover:bg-accent transition"
             onClick={async () => {
               try { await InAppReview.requestReview(); } catch {}
               localStorage.setItem('reviewDate', new Date().toDateString());
@@ -60,7 +60,7 @@ export default function ReviewPrompt({ force = false }: Props) {
           </button>
 
           <button
-            className="px-4 py-2 border border-red text-red rounded-2xl hover:bg-red hover:text-white transition"
+            className="px-4 py-2 border border-accent text-accent rounded-2xl hover:bg-accent hover:text-on-brand transition"
             onClick={() => {
               localStorage.setItem('reviewDate', new Date().toDateString());
               setOpen(false);

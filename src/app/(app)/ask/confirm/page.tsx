@@ -226,35 +226,35 @@ export default function ConfirmPage() {
   return (
     <>
       <main
-        className="relative min-h-screen w-full max-w-[460px] flex flex-col justify-start items-center bg-white px-6 pb-6"
+        className="relative min-h-screen w-full max-w-[460px] flex flex-col justify-start items-center bg-surface-elevated px-6 pb-6"
         style={{ paddingTop: 'calc(max(44px, env(safe-area-inset-top)) + 24px)' }}
       >
         <div className="w-full z-1">
-          <h2 className="text-3xl text-red font-semibold text-start mb-4">
+          <h2 className="text-3xl text-accent font-semibold text-start mb-4">
             부처님께 여쭈기 전,
             <br />마음을 다시 한번 바라보세요
           </h2>
-          <p className="text-base text-red font-medium text-start mb-6">
+          <p className="text-base text-accent font-medium text-start mb-6">
             작성한 내용을 확인하시고, <br />준비되셨다면 마음을 전해 보세요.
           </p>
         </div>
 
         {previousQA && (
-          <div className="w-full bg-[#FFFDF8] border border-gray-200 p-4 mt-2 mb-4 rounded-xl text-sm">
-            <p className="text-gray-500 font-medium mb-1">📌 이전 질문</p>
-            <p className="text-black font-semibold mb-2 whitespace-pre-wrap">{previousQA.question}</p>
-            <p className="text-gray-500 font-medium mb-1">🪷 부처님의 응답</p>
-            <p className="text-black italic whitespace-pre-wrap">{previousQA.answer}</p>
+          <div className="w-full bg-surface-elevated border border-line p-4 mt-2 mb-4 rounded-xl text-sm">
+            <p className="text-ink-subtle font-medium mb-1">📌 이전 질문</p>
+            <p className="text-ink font-semibold mb-2 whitespace-pre-wrap">{previousQA.question}</p>
+            <p className="text-ink-subtle font-medium mb-1">🪷 부처님의 응답</p>
+            <p className="text-ink italic whitespace-pre-wrap">{previousQA.answer}</p>
             <button
               onClick={handleCancelFollowup}
-              className="text-sm text-red mt-2 float-right"
+              className="text-sm text-accent mt-2 float-right"
             >
               이전 질문 삭제
             </button>
           </div>
         )}
 
-        <div className="min-h-[12rem] w-full bg-[#FFFDF8] border border-red-light rounded-xl p-4 text-base text-gray-500 whitespace-pre-wrap mb-4">
+        <div className="min-h-[12rem] w-full bg-surface-elevated border border-accent-soft rounded-xl p-4 text-base text-ink-subtle whitespace-pre-wrap mb-4">
           {question}
         </div>
 
@@ -269,7 +269,7 @@ export default function ConfirmPage() {
         )}
 
         <div className="flex flex-row w-full space-x-6 mb-4">
-          <p className="text-start text-red text-sm mb-4">
+          <p className="text-start text-accent text-sm mb-4">
             고요히 응시한 물음일수록, 그 안에 담긴 마음의 결이 섬세할수록<br />
             부처님의 가르침은 더욱 깊고 분명하게 되돌아옵니다.<br /><br />
             질문에는 상황과 감정을 구체적으로 담아보세요.<br />
@@ -280,7 +280,7 @@ export default function ConfirmPage() {
         <div className="flex flex-row w-full space-x-6 mb-12">
           <button
             onClick={handleBack}
-            className="w-full px-1 py-3 font-bold border border-red bg-white text-lg text-red-dark rounded-4xl hover:bg-red hover:text-white transition"
+            className="w-full px-1 py-3 font-bold border border-accent bg-surface-elevated text-lg text-accent rounded-4xl hover:bg-accent hover:text-on-brand transition"
           >
             수정하기
           </button>
@@ -288,7 +288,7 @@ export default function ConfirmPage() {
           <button
             onClick={handleSubmit}
             disabled={isLoading}
-            className="w-full px-1 py-3 font-bold bg-red-light text-lg text-white rounded-4xl hover:bg-red transition disabled:opacity-50"
+            className="w-full px-1 py-3 font-bold bg-accent-soft text-lg text-on-brand rounded-4xl hover:bg-accent transition disabled:opacity-50"
           >
             {isLoading ? '부처님께 전송 중...' : '제출하기'}
           </button>
@@ -302,19 +302,19 @@ export default function ConfirmPage() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-xl p-6 w-[90%] max-w-[360px] text-center shadow-xl"
+            className="bg-surface-elevated rounded-xl p-6 w-[90%] max-w-[360px] text-center shadow-xl"
           >
-            <p className="text-lg font-semibold text-red mb-4">정말 추가 질문을 취소할까요?</p>
+            <p className="text-lg font-semibold text-accent mb-4">정말 추가 질문을 취소할까요?</p>
             <div className="flex justify-center gap-4">
               <button
                 onClick={() => setConfirmCancelModal(false)}
-                className="px-4 py-2 border rounded-lg text-sm text-gray-600"
+                className="px-4 py-2 border rounded-lg text-sm text-ink-muted"
               >
                 아니오
               </button>
               <button
                 onClick={confirmCancel}
-                className="px-4 py-2 bg-red-light text-white rounded-lg text-sm"
+                className="px-4 py-2 bg-accent-soft text-on-brand rounded-lg text-sm"
               >
                 네, 취소할게요
               </button>

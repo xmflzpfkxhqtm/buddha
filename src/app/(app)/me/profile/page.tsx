@@ -90,12 +90,12 @@ export default function ProfilePage() {
   };
 
   return (
-    <main className="min-h-screen max-w-[430px] mx-auto bg-[#F5F1E6] px-6 py-10 flex flex-col gap-6">
-      <div className="bg-white shadow border rounded-xl p-6">
+    <main className="min-h-screen max-w-[430px] mx-auto bg-surface px-6 py-10 flex flex-col gap-6">
+      <div className="bg-surface-elevated shadow border rounded-xl p-6">
         <h2 className="text-lg font-bold mb-4">👤 프로필 관리</h2>
 
         {user && (
-          <div className="mb-6 text-sm text-gray-600 space-y-1">
+          <div className="mb-6 text-sm text-ink-muted space-y-1">
             <p>🔑 로그인 방식: <strong>{provider}</strong></p>
             <p>📧 로그인 이메일: <strong>{user.email}</strong></p>
             <p>🗓️ 가입일: <strong>{formatDate(user.created_at)}</strong></p>
@@ -108,24 +108,24 @@ export default function ProfilePage() {
 
         {/* 이름 (username) */}
         <div className="mb-4">
-          <label className="block text-sm font-semibold text-gray-700 mb-1">이름</label>
+          <label className="block text-sm font-semibold text-ink-muted mb-1">이름</label>
           <input
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            className="w-full border border-line rounded-lg px-3 py-2 text-sm"
             placeholder="이름을 입력하세요"
           />
         </div>
 
         {/* 생년월일 */}
         <div className="mb-4">
-          <label className="block text-sm font-semibold text-gray-700 mb-1">생년월일</label>
+          <label className="block text-sm font-semibold text-ink-muted mb-1">생년월일</label>
           <input
             type="date"
             value={birthDate}
             onChange={(e) => setBirthDate(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            className="w-full border border-line rounded-lg px-3 py-2 text-sm"
           />
         </div>
 
@@ -138,7 +138,7 @@ export default function ProfilePage() {
             onChange={(e) => setNotification(e.target.checked)}
             className="mr-2"
           />
-          <label htmlFor="notification" className="text-sm text-gray-700">
+          <label htmlFor="notification" className="text-sm text-ink-muted">
             공지사항 및 알림 수신에 동의합니다
           </label>
         </div>
@@ -146,26 +146,26 @@ export default function ProfilePage() {
         <button
           onClick={handleSave}
           disabled={isSaving}
-          className="w-full mt-2 bg-red-light hover:bg-red text-white py-2 px-4 rounded-lg text-sm font-semibold"
+          className="w-full mt-2 bg-accent-soft hover:bg-accent text-on-brand py-2 px-4 rounded-lg text-sm font-semibold"
         >
           {isSaving ? '저장 중...' : '저장하기'}
         </button>
 
         {saveMessage && (
-          <p className="text-sm text-center mt-3 text-gray-700">{saveMessage}</p>
+          <p className="text-sm text-center mt-3 text-ink-muted">{saveMessage}</p>
         )}
 
-<p className="text-xs text-center text-gray-500 mt-4">
+<p className="text-xs text-center text-ink-subtle mt-4">
   입력하신 개인정보는 서비스 이용을 위한 본인 식별 및 통계 분석 목적으로만 사용되며,
   동의 없이 외부에 제공되지 않습니다.
 </p>
-<p className="text-xs text-center text-gray-500">
-  자세한 내용은 <a href="/privacy" className="underline hover:text-red-dark">개인정보 처리방침</a>을 확인해주세요.
+<p className="text-xs text-center text-ink-subtle">
+  자세한 내용은 <a href="/privacy" className="underline hover:text-accent">개인정보 처리방침</a>을 확인해주세요.
 </p>
-<p className="text-xs text-center text-gray-400 mt-2">
+<p className="text-xs text-center text-ink-subtle mt-2">
   <button
     onClick={() => router.push('/me/profile/account-delete')}
-    className="underline hover:text-red-dark"
+    className="underline hover:text-accent"
   >
     계정 삭제 요청하기
   </button>

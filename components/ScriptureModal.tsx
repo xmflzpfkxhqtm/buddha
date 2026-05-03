@@ -68,7 +68,7 @@ export default function ScriptureModal({
 
   return (
     <div onClick={onClose} className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[100] flex items-end justify-center">
-      <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-t-2xl p-4 h-[80vh] overflow-y-auto w-full max-w-md flex flex-col justify-between">
+      <div onClick={(e) => e.stopPropagation()} className="bg-surface-elevated rounded-t-2xl p-4 h-[80vh] overflow-y-auto w-full max-w-md flex flex-col justify-between">
         <div>
           {/* 탭 메뉴 */}
           <div className="flex mb-4">
@@ -76,7 +76,7 @@ export default function ScriptureModal({
               <button
                 key={tab}
                 onClick={() => setModalTab(tab)}
-                className={`flex-1 py-2 ${modalTab === tab ? 'bg-red text-white' : 'bg-red-light text-white'} ${tab === 'title' ? 'rounded-l-xl' : tab === 'global' ? 'rounded-r-xl' : ''}`}
+                className={`flex-1 py-2 ${modalTab === tab ? 'bg-accent text-on-brand' : 'bg-accent-soft text-on-brand'} ${tab === 'title' ? 'rounded-l-xl' : tab === 'global' ? 'rounded-r-xl' : ''}`}
               >
                 {tab === 'title' ? '경전명' : tab === 'content' ? '본문검색' : '전체검색'}
               </button>
@@ -99,7 +99,7 @@ export default function ScriptureModal({
                   <button
                     key={initial}
                     onClick={() => setInitialFilter(initial)}
-                    className={`px-3 py-1 text-base text-start w-16 ${initialFilter === initial ? 'rounded-lg bg-red-100 text-black font-semibold' : 'bg-white text-red-dark border-red'}`}
+                    className={`px-3 py-1 text-base text-start w-16 ${initialFilter === initial ? 'rounded-lg bg-accent-soft/20 text-ink font-semibold' : 'bg-surface-elevated text-accent border-accent'}`}
                   >
                     {initial}
                   </button>
@@ -110,7 +110,7 @@ export default function ScriptureModal({
                 <div>
                 <button
   disabled
-  className="h-8 w-full px-4 text-left bg-red-100 text-red-dark font-semibold rounded-lg flex items-center justify-start"
+  className="h-8 w-full px-4 text-left bg-accent-soft/20 text-accent font-semibold rounded-lg flex items-center justify-start"
 >
   <span className="truncate whitespace-nowrap overflow-hidden">
     {formatDisplayTitle(selected).replace(/\s*\d+권$/, '')}
@@ -140,7 +140,7 @@ export default function ScriptureModal({
                                 setSelected(sortedTitles[0]);
                                 onClose();
                               }}
-                              className="w-full px-4 py-2 text-left bg-white hover:bg-red-100 rounded-lg"
+                              className="w-full px-4 py-2 text-left bg-surface-elevated hover:bg-accent-soft/20 rounded-lg"
                             >
                               {base}
                             </button>
@@ -148,7 +148,7 @@ export default function ScriptureModal({
                             <>
                               <button
                                 onClick={() => setExpandedBase(expandedBase === base ? null : base)}
-                                className="w-full flex justify-between items-center px-4 py-2 bg-white hover:bg-red-100 rounded-lg"
+                                className="w-full flex justify-between items-center px-4 py-2 bg-surface-elevated hover:bg-accent-soft/20 rounded-lg"
                               >
                                 <span>{base}</span>
                                 <span>{expandedBase === base ? '⏶' : '⏷'}</span>
@@ -162,7 +162,7 @@ export default function ScriptureModal({
                                           setSelected(title);
                                           onClose();
                                         }}
-                                        className={`w-full text-left text-sm hover:underline ${title === selected ? 'text-red font-semibold' : 'text-gray-700'}`}
+                                        className={`w-full text-left text-sm hover:underline ${title === selected ? 'text-accent font-semibold' : 'text-ink-muted'}`}
                                       >
                                         {formatDisplayTitle(title)}
                                       </button>
@@ -184,7 +184,7 @@ export default function ScriptureModal({
           {modalTab === 'content' && (
             <>
               {search.trim().length === 0 ? (
-                <p className="text-center text-sm text-gray-500 mt-4">
+                <p className="text-center text-sm text-ink-subtle mt-4">
                   검색어를 입력하면 현재 경전에서 검색됩니다.
                 </p>
               ) : (
@@ -202,10 +202,10 @@ export default function ScriptureModal({
                               sentenceRefs.current[index]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                             }, 200);
                           }}
-                          className="w-full text-left px-4 py-2 hover:bg-red-100 text-sm"
+                          className="w-full text-left px-4 py-2 hover:bg-accent-soft/20 text-sm"
                         >
                           <div className="line-clamp-3">
-                            <span className="text-gray-500">[{index + 1}행]</span> {text}
+                            <span className="text-ink-subtle">[{index + 1}행]</span> {text}
                           </div>
                         </button>
                       </li>
@@ -221,7 +221,7 @@ export default function ScriptureModal({
               <button
                 onClick={handleGlobalSearch}
                 disabled={isSearching || !search.trim()}
-                className={`w-full py-2 mb-4 rounded-lg ${isSearching ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : 'bg-red-light text-white'}`}
+                className={`w-full py-2 mb-4 rounded-lg ${isSearching ? 'bg-gray-300 text-ink-muted cursor-not-allowed' : 'bg-accent-soft text-on-brand'}`}
               >
                 {isSearching ? '🔍 검색 중입니다...' : '전체 검색 실행'}
               </button>
@@ -236,12 +236,12 @@ onClick={() => {
   onClose();
   setBookmarkPending({ title, index });  // ✅ 여기다 임시로 저장
 }}
-                      className="w-full text-left px-4 py-4 hover:bg-red-100 hover:text-white text-sm"
+                      className="w-full text-left px-4 py-4 hover:bg-accent-soft/20 hover:text-on-brand text-sm"
                       disabled={isSearching}
                     >
                       <div className="line-clamp-3">
-                        <span className="text-gray-500">[{formatDisplayTitle(title)} {index + 1}행]</span>
-                        <div className="mt-1 text-black">{text || '(본문을 불러오지 못했습니다)'}</div>
+                        <span className="text-ink-subtle">[{formatDisplayTitle(title)} {index + 1}행]</span>
+                        <div className="mt-1 text-ink">{text || '(본문을 불러오지 못했습니다)'}</div>
                       </div>
                     </button>
                   </li>
@@ -253,7 +253,7 @@ onClick={() => {
 
         <button
           onClick={onClose}
-          className="mt-4 w-full py-2 border border-red text-red-dark rounded-lg"
+          className="mt-4 w-full py-2 border border-accent text-accent rounded-lg"
         >
           닫기
         </button>

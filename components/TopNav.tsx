@@ -65,7 +65,7 @@ export default function TopNav({ className }: TopNavProps) {
       {/* iOS safe-area: bg 가 status bar 자리까지 채우도록 padding-top 으로 늘림. */}
       <header
         className={`fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[460px]
-                   bg-white z-40 select-none flex items-center border-b border-grey/50 ${className ?? ''}`}
+                   bg-surface-elevated z-40 select-none flex items-center border-b border-line-strong/50 ${className ?? ''}`}
         style={{
           // 일부 iOS Capacitor WKWebView 가 env() 를 0 으로 평가하는 케이스 대비 max() fallback.
           paddingTop: 'max(44px, env(safe-area-inset-top))',
@@ -74,7 +74,7 @@ export default function TopNav({ className }: TopNavProps) {
       >
         {showBack && (
           <button
-            className="absolute left-4 flex items-center gap-1 font-semibold text-red-dark
+            className="absolute left-4 flex items-center gap-1 font-semibold text-accent
                        active:scale-95 h-10"
             onClick={() => {
               if (customTarget) {
@@ -92,7 +92,7 @@ export default function TopNav({ className }: TopNavProps) {
         )}
 
         {/* 라벨 – 중앙 고정 */}
-        <h1 className="absolute left-1/2 -translate-x-1/2 text-base font-semibold text-red-dark">
+        <h1 className="absolute left-1/2 -translate-x-1/2 text-base font-semibold text-accent">
           {label}
         </h1>
       </header>

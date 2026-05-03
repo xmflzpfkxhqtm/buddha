@@ -223,7 +223,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
       <button
         onClick={() => skip(-1)}
         disabled={internalIndex.current <= 0}
-        className="bg-red-light text-white rounded-full w-12 h-12 flex items-center justify-center shadow-md disabled:opacity-50"
+        className="bg-accent-soft text-on-brand rounded-full w-12 h-12 flex items-center justify-center shadow-md disabled:opacity-50"
         aria-label="이전 문장"
       >
         <SkipBack size={24} />
@@ -232,7 +232,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
       <button
         onClick={handlePlayPause}
         disabled={!sentences.length}
-        className="bg-red-light text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg disabled:opacity-50"
+        className="bg-accent-soft text-on-brand rounded-full w-16 h-16 flex items-center justify-center shadow-lg disabled:opacity-50"
         aria-label={isSpeaking ? '일시정지' : '재생'}
       >
         {isSpeaking ? <Pause size={36} /> : <Play size={36} fill="currentColor" />}
@@ -241,7 +241,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({
       <button
         onClick={() => skip(1)}
         disabled={internalIndex.current >= sentences.length - 1}
-        className="bg-red-light text-white rounded-full w-12 h-12 flex items-center justify-center shadow-md disabled:opacity-50"
+        className="bg-accent-soft text-on-brand rounded-full w-12 h-12 flex items-center justify-center shadow-md disabled:opacity-50"
         aria-label="다음 문장"
       >
         <SkipForward size={24} />

@@ -59,11 +59,11 @@ export default function AnswerPage() {
   };
 
   return (
-    <main className="min-h-screen max-w-[430px] mx-auto bg-[#F5F1E6] px-4 py-10 relative">
-      <h1 className="text-xl font-bold text-red-dark mb-4">🪷 내가 저장한 말씀들</h1>
+    <main className="min-h-screen max-w-[430px] mx-auto bg-surface px-4 py-10 relative">
+      <h1 className="text-xl font-bold text-accent mb-4">🪷 내가 저장한 말씀들</h1>
 
       {answers.length === 0 ? (
-        <p className="text-sm text-gray-500">아직 저장된 말씀이 없습니다.</p>
+        <p className="text-sm text-ink-subtle">아직 저장된 말씀이 없습니다.</p>
       ) : (
         <>
           <ul className="grid grid-cols-2 gap-4 mb-6">
@@ -71,23 +71,23 @@ export default function AnswerPage() {
               <li
                 key={item.id}
                 onClick={() => setSelectedItem(item)}
-                className="p-4 h-[300px] rounded-xl shadow border bg-white flex flex-col cursor-pointer"
+                className="p-4 h-[300px] rounded-xl shadow border bg-surface-elevated flex flex-col cursor-pointer"
               >
-                <div className="flex justify-between items-center text-sm text-gray-400 mb-4">
+                <div className="flex justify-between items-center text-sm text-ink-subtle mb-4">
                   <span>{new Date(item.created_at).toLocaleDateString()}</span>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       setDeleteTargetId(item.id);
                     }}
-                    className="text-red hover:underline"
+                    className="text-accent hover:underline"
                   >
                     삭제
                   </button>
                 </div>
-                <p className="text-base text-red font-semibold mb-1 line-clamp-1">📜 나의 질문</p>
-                <p className="text-base text-gray-800 mb-2 line-clamp-2">「{item.question}」</p>
-                <p className="text-base text-red font-semibold mb-1 line-clamp-1">🪷 부처님 말씀</p>
+                <p className="text-base text-accent font-semibold mb-1 line-clamp-1">📜 나의 질문</p>
+                <p className="text-base text-ink mb-2 line-clamp-2">「{item.question}」</p>
+                <p className="text-base text-accent font-semibold mb-1 line-clamp-1">🪷 부처님 말씀</p>
                 <p className="text-base text-gray-900 line-clamp-5">{item.answer}</p>
               </li>
             ))}
@@ -97,7 +97,7 @@ export default function AnswerPage() {
             <button
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className="text-sm px-2 py-1 rounded border bg-white disabled:text-gray-300"
+              className="text-sm px-2 py-1 rounded border bg-surface-elevated disabled:text-gray-300"
             >
               ◀
             </button>
@@ -106,7 +106,7 @@ export default function AnswerPage() {
                 key={page}
                 onClick={() => handlePageChange(page)}
                 className={`text-base px-3 py-1 rounded border ${
-                  page === currentPage ? 'bg-red text-white' : 'bg-white text-gray-700'
+                  page === currentPage ? 'bg-accent text-on-brand' : 'bg-surface-elevated text-ink-muted'
                 }`}
               >
                 {page}
@@ -115,7 +115,7 @@ export default function AnswerPage() {
             <button
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="text-base px-2 py-1 rounded border bg-white disabled:text-gray-300"
+              className="text-base px-2 py-1 rounded border bg-surface-elevated disabled:text-gray-300"
             >
               ▶
             </button>
@@ -129,26 +129,26 @@ export default function AnswerPage() {
           onClick={() => setSelectedItem(null)}
         >
           <div
-            className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[75vh] overflow-y-auto p-6 relative"
+            className="bg-surface-elevated rounded-2xl shadow-xl max-w-md w-full max-h-[75vh] overflow-y-auto p-6 relative"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => setSelectedItem(null)}
-              className="absolute top-3 right-4 text-gray-400 hover:text-black text-xl"
+              className="absolute top-3 right-4 text-ink-subtle hover:text-ink text-xl"
             >
               ×
             </button>
 
-            <p className="text-sm text-gray-500 text-right mb-2">
+            <p className="text-sm text-ink-subtle text-right mb-2">
               {new Date(selectedItem.created_at).toLocaleDateString()}
             </p>
 
-            <p className="text-base font-semibold text-red mb-1">📜 나의 질문</p>
-            <p className="text-base text-gray-800 mb-4 whitespace-pre-line">
+            <p className="text-base font-semibold text-accent mb-1">📜 나의 질문</p>
+            <p className="text-base text-ink mb-4 whitespace-pre-line">
               「{selectedItem.question}」
             </p>
 
-            <p className="text-base font-semibold text-red mb-1">🪷 부처님 말씀</p>
+            <p className="text-base font-semibold text-accent mb-1">🪷 부처님 말씀</p>
             <p className="text-base text-gray-900 whitespace-pre-line">
   {simplifyScriptureCitations(selectedItem.answer)}
 </p>
@@ -159,7 +159,7 @@ export default function AnswerPage() {
                 setSelectedItem(null);
                 router.push('/ask');
               }}
-              className="w-full my-6 py-3 border bg-red-light border-red text-white font-bold rounded-4xl hover:bg-red hover:text-red=darl transition"
+              className="w-full my-6 py-3 border bg-accent-soft border-accent text-on-brand font-bold rounded-4xl hover:bg-accent hover:text-accent=darl transition"
             >
               문답을 이어갑니다
             </button>
@@ -174,13 +174,13 @@ export default function AnswerPage() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-xl p-6 w-[90%] max-w-[360px] text-center shadow-xl"
+            className="bg-surface-elevated rounded-xl p-6 w-[90%] max-w-[360px] text-center shadow-xl"
           >
-            <p className="text-lg font-semibold text-red mb-4">정말 삭제하시겠습니까?</p>
+            <p className="text-lg font-semibold text-accent mb-4">정말 삭제하시겠습니까?</p>
             <div className="flex justify-center gap-4 mt-4">
               <button
                 onClick={() => setDeleteTargetId(null)}
-                className="px-4 py-2 border rounded-lg text-sm text-gray-600"
+                className="px-4 py-2 border rounded-lg text-sm text-ink-muted"
               >
                 아니오
               </button>
@@ -197,7 +197,7 @@ export default function AnswerPage() {
                     alert('삭제에 실패했습니다.');
                   }
                 }}
-                className="px-4 py-2 bg-red-light text-white rounded-lg text-sm"
+                className="px-4 py-2 bg-accent-soft text-on-brand rounded-lg text-sm"
               >
                 예, 삭제합니다
               </button>

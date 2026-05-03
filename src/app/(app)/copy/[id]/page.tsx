@@ -180,15 +180,15 @@ const everyDone   = strokesDone.length === chars.length &&
 
 
       {/* 제목 */}
-      <div className="w-full h-16 bg-red-light rounded-xl flex items-center mb-4 pl-1">
+      <div className="w-full h-16 bg-accent-soft rounded-xl flex items-center mb-4 pl-1">
         <Image src="/lotusbeige.png" alt="lotus" width={48} height={48}
-               className="object-contain border-beige mx-2"/>
+               className="object-contain border-on-brand mx-2"/>
         <div>
           <div className="flex items-baseline">
-            <h2 className="text-2xl text-beige font-semibold">{textObj.title}</h2>
-            <p className="px-4 text-sm text-beige">{idx+1}/{chars.length}</p>
+            <h2 className="text-2xl text-on-brand font-semibold">{textObj.title}</h2>
+            <p className="px-4 text-sm text-on-brand">{idx+1}/{chars.length}</p>
           </div>
-          <p className="text-sm text-beige">고요히 마음을 비워보세요</p>
+          <p className="text-sm text-on-brand">고요히 마음을 비워보세요</p>
         </div>
       </div>
 
@@ -208,11 +208,11 @@ const everyDone   = strokesDone.length === chars.length &&
       {/* 하단 버튼들 */}
       <div className="w-full flex gap-4 my-4">
         <button onClick={handleReset}
-                className="flex-1 px-4 py-2 font-bold border border-red bg-white text-red-dark rounded-xl hover:bg-red hover:text-white transition">
+                className="flex-1 px-4 py-2 font-bold border border-accent bg-surface-elevated text-accent rounded-xl hover:bg-accent hover:text-on-brand transition">
           전체 리셋
         </button>
         <button onClick={handleMidSave}
-                className="flex-1 px-4 py-2 font-bold border bg-red-light text-white rounded-xl hover:bg-red hover:text-white transition">
+                className="flex-1 px-4 py-2 font-bold border bg-accent-soft text-on-brand rounded-xl hover:bg-accent hover:text-on-brand transition">
           중간 저장
         </button>
       </div>
@@ -221,8 +221,8 @@ const everyDone   = strokesDone.length === chars.length &&
       <button onClick={gotoComplete} disabled={!isFinished}
               className={`w-full px-4 py-2 font-bold rounded-xl transition ${
                 isFinished
-                  ? 'border border-red-light bg-red-light text-white hover:bg-red'
-                  : 'border border-gray-300 text-gray-400 cursor-not-allowed'
+                  ? 'border border-accent-soft bg-accent-soft text-on-brand hover:bg-accent'
+                  : 'border border-line text-ink-subtle cursor-not-allowed'
               }`}>
         완성본 보기
       </button>

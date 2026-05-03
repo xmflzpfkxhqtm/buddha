@@ -135,7 +135,7 @@ export default function Home() {
     
   if (isLoading || !fontReady) {
     return (
-      <div className="relative min-h-screen w-full max-w-[460px] mx-auto bg-gradient-to-b from-red to-redbrown flex flex-col items-center justify-center px-6 overflow-hidden">
+      <div className="relative min-h-screen w-full max-w-[460px] mx-auto bg-gradient-to-b from-accent to-surface-brand flex flex-col items-center justify-center px-6 overflow-hidden">
         {/* 배경 이미지 (투명도 + 혼합 모드) */}
         <Image
           src="/bg_loading.png"
@@ -156,10 +156,10 @@ export default function Home() {
         />
   
         {/* 로딩 문구 */}
-        <p className="mt-6 text-white text-lg font-maruburi animate-fade z-10">
+        <p className="mt-6 text-on-brand text-lg font-maruburi animate-fade z-10">
         마음을 바라봅니다
         </p>
-        <p className="mt-2 text-sm text-pink-light font-maruburi animate-fade z-10">
+        <p className="mt-2 text-sm text-on-brand-muted font-maruburi animate-fade z-10">
         </p>
       </div>
     );
@@ -169,7 +169,7 @@ export default function Home() {
   return (
     <>
       <MarbleOverlay />
-      <div className="absolute w-full bg-[#551102]">
+      <div className="absolute w-full bg-surface-brand">
         {/* iOS status bar 영역(safe-area-top)은 빨간 bg 가 그대로 채우고, 컨텐츠는 그 아래부터 시작. */}
         <main
           className="min-h-screen w-full max-w-[460px] flex flex-col justify-start items-center mx-auto px-6"
@@ -183,7 +183,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => setNotesOpen((v) => !v)}
-                className="w-full h-16 bg-[#4d0e00] border border-red-light rounded-xl flex flex-row items-center pl-1 pr-3 justify-start cursor-pointer text-left"
+                className="w-full h-16 bg-surface-brand-elevated border border-accent-soft rounded-xl flex flex-row items-center pl-1 pr-3 justify-start cursor-pointer text-left"
                 aria-expanded={notesOpen}
               >
                 <Image
@@ -191,18 +191,18 @@ export default function Home() {
                   alt="lotus"
                   width={48}
                   height={48}
-                  className="object-contain border-beige mx-2"
+                  className="object-contain border-on-brand mx-2"
                 />
                 <div className="flex flex-col flex-1 min-w-0">
-                  <p className="mb-0 text-base font-medium text-white truncate">
+                  <p className="mb-0 text-base font-medium text-on-brand truncate">
                     {updateNotes[0].title}
                   </p>
-                  <p className="mt-0 text-sm font-base text-pink-light">
+                  <p className="mt-0 text-sm font-base text-on-brand-muted">
                     업데이트 노트 {notesOpen ? '닫기' : '열기'}
                   </p>
                 </div>
                 <span
-                  className={`ml-2 text-pink-light transition-transform duration-200 ${notesOpen ? 'rotate-180' : ''}`}
+                  className={`ml-2 text-on-brand-muted transition-transform duration-200 ${notesOpen ? 'rotate-180' : ''}`}
                   aria-hidden
                 >
                   ▾
@@ -210,11 +210,11 @@ export default function Home() {
               </button>
 
               {notesOpen && (
-                <div className="w-full mt-2 bg-[#4d0e00] border border-red-light rounded-xl p-4 space-y-4">
+                <div className="w-full mt-2 bg-surface-brand-elevated border border-accent-soft rounded-xl p-4 space-y-4">
                   {updateNotes.map((note) => (
                     <div key={note.id} className="space-y-1">
-                      <p className="text-base font-semibold text-white">{note.title}</p>
-                      <p className="text-xs text-pink-light">
+                      <p className="text-base font-semibold text-on-brand">{note.title}</p>
+                      <p className="text-xs text-on-brand-muted">
                         {new Date(note.published_at).toLocaleDateString('ko-KR', {
                           year: 'numeric',
                           month: 'long',
@@ -222,7 +222,7 @@ export default function Home() {
                         })}
                       </p>
                       {note.body && (
-                        <p className="text-sm text-white/90 whitespace-pre-wrap leading-relaxed [overflow-wrap:anywhere]">
+                        <p className="text-sm text-on-brand/90 whitespace-pre-wrap leading-relaxed [overflow-wrap:anywhere]">
                           {note.body}
                         </p>
                       )}
@@ -235,7 +235,7 @@ export default function Home() {
 
           {/* 어서오세요 문구 */}
           <div className="w-full rounded-xl flex flex-col items-start pl-1 justify-start">
-          <p className="font-semibold text-white text-center mt-4">
+          <p className="font-semibold text-on-brand text-center mt-4">
   어서오세요, {!!userName?.trim() ? `${userName}님` : '불자님'}
 </p>          
 
@@ -251,25 +251,25 @@ export default function Home() {
       setBookmark(title, index);
       router.push('/scripture');
     }}
-              className="w-full rounded-xl bg-[#4d0e00] border border-red-light flex flex-row items-center pl-1 pr-4 py-2 mt-4 justify-start cursor-pointer"
+              className="w-full rounded-xl bg-surface-brand-elevated border border-accent-soft flex flex-row items-center pl-1 pr-4 py-2 mt-4 justify-start cursor-pointer"
             >
               <Image
                 src="/lotusbeige.png"
                 alt="lotus"
                 width={48}
                 height={48}
-                className="object-contain border-beige mx-2"
+                className="object-contain border-on-brand mx-2"
               />
               
               <div className="flex flex-col">
-                <p className="mb-0 text-base font-semibold text-white text-start">
+                <p className="mb-0 text-base font-semibold text-on-brand text-start">
                   오늘의 법문 📖 
                 </p>
-                <p className="mb-0 text-base font-medium text-white text-start">
+                <p className="mb-0 text-base font-medium text-on-brand text-start">
                 &ldquo;{sentence}&rdquo;
                 </p>
 
-                <p className="mt-0 text-sm font-base text-pink-light text-left">
+                <p className="mt-0 text-sm font-base text-on-brand-muted text-left">
   {formatDisplayTitle(title) || '내용을 불러오는 중입니다.'} 
 </p>
               </div>
@@ -278,10 +278,10 @@ export default function Home() {
 
           {/* 오늘의 수행 영역 */}
           <div className="w-full overflow-x-auto no-scrollbar rounded-xl mt-2 py-4">
-            <p className="font-semibold text-white text-left">
+            <p className="font-semibold text-on-brand text-left">
               오늘의 수행은 🪷
             </p>
-            <div className="flex space-x-4 overflow-x-auto no-scrollbar mt-4 py-2 border-b border-red-light">
+            <div className="flex space-x-4 overflow-x-auto no-scrollbar mt-4 py-2 border-b border-accent-soft">
               {/* 카드 1 */}
               <div
                 onClick={() => router.push('/ask')}
@@ -297,8 +297,8 @@ export default function Home() {
                   />
                 </div>
                 <div className="flex-1 px-3 py-2">
-                  <p className="text-base text-left text-white font-medium">부처님께 여쭙기</p>
-                  <p className="text-base text-left text-pink-light font-medium">
+                  <p className="text-base text-left text-on-brand font-medium">부처님께 여쭙기</p>
+                  <p className="text-base text-left text-on-brand-muted font-medium">
                     나의 고민에 대해 부처님이라면 어떤 말씀을 하실까요? <br></br>인공지능이 부처님의 지혜로 안내합니다
                   </p>
                 </div>
@@ -321,8 +321,8 @@ export default function Home() {
                   />
                 </div>
                 <div className="flex-1 px-3 py-2">
-                  <p className="text-base text-left text-white font-medium">디지털 팔만대장경</p>
-                  <p className="text-base text-left text-pink-light font-medium">
+                  <p className="text-base text-left text-on-brand font-medium">디지털 팔만대장경</p>
+                  <p className="text-base text-left text-on-brand-muted font-medium">
                   알기 쉬운 현대어로 풀어쓴 불경 모음<br></br> 방대한 경전의 모든 말씀을 쉽고 편안한 말로 담았습니다
                   </p>
                 </div>
@@ -345,8 +345,8 @@ export default function Home() {
     />
   </div>
   <div className="flex-1 px-3 py-2">
-    <p className="text-base text-left text-white font-medium">사경하기</p>
-    <p className="text-base text-left text-pink-light font-medium">
+    <p className="text-base text-left text-on-brand font-medium">사경하기</p>
+    <p className="text-base text-left text-on-brand-muted font-medium">
     붓을 들고 호흡을 고르며 한 획 한 획 마음을 담아봅니다<br />
 지금 이 순간에만 머무는 깊은 집중을 경험하세요
     </p>
@@ -355,9 +355,9 @@ export default function Home() {
 </div>
           </div>
 
-          <div className="w-full h-[1px] opacity-30 bg-[#E0DBCF] mt-6" />
+          <div className="w-full h-[1px] opacity-30 bg-line mt-6" />
 
-          <p className="text-sm font-medium text-white text-center mt-6 mb-24">
+          <p className="text-sm font-medium text-on-brand text-center mt-6 mb-24">
             &ldquo;연등&rdquo;은 누구나 수행하고 위로받을 수 있는 작은 법당입니다.
           </p>
           

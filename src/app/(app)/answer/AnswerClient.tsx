@@ -466,18 +466,18 @@ export default function AnswerClient({ initialQuestionId = null }: { initialQues
   }
 
   return (
-    <main className="relative min-h-screen w-full max-w-[460px] flex flex-col items-center mx-auto bg-white px-6 py-6">
+    <main className="relative min-h-screen w-full max-w-[460px] flex flex-col items-center mx-auto bg-surface-elevated px-6 py-6">
       {/* ======================== 카드 영역 ======================== */}
       <div className="rounded-2xl px-2">
-        <h2 className="text-2xl text-red font-semibold">
+        <h2 className="text-2xl text-accent font-semibold">
           부처님이라면 분명<br />이렇게 말씀하셨을 것입니다
         </h2>
       {/* ----------- 질문 ----------- */}
       <section className="mt-8">
-          <header className="rounded-xl flex items-center text-red font-semibold">
+          <header className="rounded-xl flex items-center text-accent font-semibold">
             나의 질문은
           </header>
-          <div className="py-2 whitespace-pre-wrap break-words rounded-xl border-red whitespace-pre-wrap text-base text-black">
+          <div className="py-2 whitespace-pre-wrap break-words rounded-xl border-accent whitespace-pre-wrap text-base text-ink">
             {question}
           </div>
         </section>
@@ -485,10 +485,10 @@ export default function AnswerClient({ initialQuestionId = null }: { initialQues
 
         {/* ----------- 답변 ----------- */}
         <section className="mt-10">
-          <header className="h-12 bg-red-light rounded-xl flex items-center pl-3 text-white font-semibold">
+          <header className="h-12 bg-accent-soft rounded-xl flex items-center pl-3 text-on-brand font-semibold">
             🪷 이르시길
           </header>
-          <div className="p-4 mt-4 rounded-xl shadow-xl border font-maruburi border-red whitespace-pre-wrap w-full text-base text-black"
+          <div className="p-4 mt-4 rounded-xl shadow-xl border font-maruburi border-accent whitespace-pre-wrap w-full text-base text-ink"
             style={{ wordBreak: 'break-all' }}>
           {formatted}
           </div>
@@ -499,7 +499,7 @@ export default function AnswerClient({ initialQuestionId = null }: { initialQues
         {/* ----------- 인용 경전 ----------- */}
         {refs.length > 0 && (
           <section className="my-12">
-            <p className="text-sm text-red-dark font-semibold mb-2">📖 인용된 경전</p>
+            <p className="text-sm text-accent font-semibold mb-2">📖 인용된 경전</p>
             <ul className="space-y-2">
               {dedupedRefs.map(({ title, volume }, i) => {
                 const key = `${title}_${volume ?? 'no'}`;
@@ -522,7 +522,7 @@ export default function AnswerClient({ initialQuestionId = null }: { initialQues
                   <li
                     key={i}
                     onClick={() => openScriptureAtCitation(match, key)}
-                    className="cursor-pointer text-red-dark hover:underline text-sm"
+                    className="cursor-pointer text-accent hover:underline text-sm"
                   >
                     {fmtTitle(match, volume)} {openingKey === key ? '위치 찾는 중…' : '열람 →'}
                   </li>
@@ -540,7 +540,7 @@ export default function AnswerClient({ initialQuestionId = null }: { initialQues
           <div className="flex space-x-4">
             <button
               onClick={shareUrl}
-              className="w-full py-3 bg-white text-red-dark border border-red font-bold rounded-4xl hover:bg-red hover:text-white transition"
+              className="w-full py-3 bg-surface-elevated text-accent border border-accent font-bold rounded-4xl hover:bg-accent hover:text-on-brand transition"
             >
               공유하기
             </button>
@@ -549,8 +549,8 @@ export default function AnswerClient({ initialQuestionId = null }: { initialQues
               disabled={saved}
               className={`w-full py-3 font-bold rounded-4xl transition ${
                 saved
-                  ? 'bg-red text-white cursor-not-allowed'
-                  : 'bg-white text-red-dark border border-red hover:bg-red hover:text-white'
+                  ? 'bg-accent text-on-brand cursor-not-allowed'
+                  : 'bg-surface-elevated text-accent border border-accent hover:bg-accent hover:text-on-brand'
               }`}
             >
               {saved ? '✔︎ 보관됨' : '보관하기'}
@@ -560,7 +560,7 @@ export default function AnswerClient({ initialQuestionId = null }: { initialQues
           {/* 2행: 새로운 문답 */}
           <button
             onClick={() => router.push('/ask')}
-            className="w-full py-3 bg-red-light text-white font-bold rounded-4xl hover:bg-red transition"
+            className="w-full py-3 bg-accent-soft text-on-brand font-bold rounded-4xl hover:bg-accent transition"
           >
             새로운 문답을 시작합니다
           </button>
@@ -572,7 +572,7 @@ export default function AnswerClient({ initialQuestionId = null }: { initialQues
               setParentId(questionId);
               router.push('/ask');
             }}
-            className="w-full py-3 bg-red-light text-white font-bold rounded-4xl hover:bg-red transition"
+            className="w-full py-3 bg-accent-soft text-on-brand font-bold rounded-4xl hover:bg-accent transition"
           >
             문답을 이어갑니다
           </button>
@@ -581,7 +581,7 @@ export default function AnswerClient({ initialQuestionId = null }: { initialQues
 
       {/* ---------------- Toast (URL 복사) ---------------- */}
       {showCopied && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-black text-white text-sm px-4 py-2 rounded-full shadow-md z-50">
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-black text-on-brand text-sm px-4 py-2 rounded-full shadow-md z-50">
           ✅ 주소가 복사되었습니다
         </div>
       )}

@@ -18,10 +18,10 @@ export default function CopyHome() {
     <main className="min-h-screen w-full max-w-[460px] h-full py-6 px-6 space-y-4">
       {/* --- ▼▼▼ 1. 상단 텍스트 수정 ▼▼▼ --- */}
       <div className="w-full z-1 pb-6">
-          <h2 className="text-4xl text-red font-semibold text-start">
+          <h2 className="text-4xl text-accent font-semibold text-start">
             법문을 <br />마음에 새겨보세요
           </h2>
-          <p className="text-base text-red font-medium text-start mt-2">
+          <p className="text-base text-accent font-medium text-start mt-2">
             고요히 말씀을 손으로 좇아보는 시간
           </p>
       </div>
@@ -39,8 +39,8 @@ export default function CopyHome() {
             className={
               btnBase +
               (lang === b.id
-                ? ' border-red bg-red-light text-white' // 활성 상태
-                : ' border-red bg-white text-black') // 비활성 상태
+                ? ' border-accent bg-accent-soft text-on-brand' // 활성 상태
+                : ' border-accent bg-surface-elevated text-ink') // 비활성 상태
             }
           >
             {b.label}
@@ -48,7 +48,7 @@ export default function CopyHome() {
         ))}
       </div>
 
-      <h1 className="text-xl text-red-dark font-bold">사경할 경전 선택</h1>
+      <h1 className="text-xl text-accent font-bold">사경할 경전 선택</h1>
 
       <ul className="space-y-3">
         {copyTexts
@@ -57,7 +57,7 @@ export default function CopyHome() {
             <li key={t.id}>
               <Link
                 href={`/copy/${t.id}`}
-                className="block border border-red-light bg-red-light text-beige p-4 rounded-xl hover:bg-white hover:border hover:border-red-light hover:text-red-dark transition-colors"
+                className="block border border-accent-soft bg-accent-soft text-on-brand p-4 rounded-xl hover:bg-surface-elevated hover:border hover:border-accent-soft hover:text-accent transition-colors"
               >
                 {t.title}
               </Link>
@@ -66,7 +66,7 @@ export default function CopyHome() {
       </ul>
 
       {/* --- ▼▼▼ 2. 사용법/주의사항 텍스트 공간 추가 ▼▼▼ --- */}
-      <div className="text-base text-red mt-8 pt-4 border-t border-gray-200">
+      <div className="text-base text-accent mt-8 pt-4 border-t border-line">
         <p className="leading-relaxed">
           마음에 드는 경전을 골라 붓을 들어보세요.<br />
           한 획 한 획에 집중하다 보면 어느새 마음이 차분해질 거예요.<br />

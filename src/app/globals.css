@@ -58,6 +58,65 @@ html { font-family: "YujiMai", serif; }
   --background: #F8F5EE;
   --foreground: #2E2B28;
   --font-main: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', sans-serif;
+
+  /* ──────────────────────────────────────────────────────────────
+     Semantic 토큰 (light 모드 기본값).
+     역할 기반 이름이라 다크모드에서 같은 토큰만 다른 색으로 매핑하면
+     컴포넌트 코드 변경 없이 양쪽 모드 모두 자연스럽게 동작.
+     기존 hardcoded 색(`bg-white`, `bg-[#551102]` 등)은 그대로 유지되며,
+     점진적으로 이 토큰들로 마이그레이션 예정.
+
+     Tailwind v4 가 @theme inline 의 --color-X 를 그대로 utility 이름으로
+     쓰기 때문에, 짧고 명확한 이름으로 둠 (예: --color-ink → text-ink).
+     ────────────────────────────────────────────────────────────── */
+  --surface:                 #F8F5EE;  /* 페이지 기본 배경 (베이지) */
+  --surface-elevated:        #FFFFFF;  /* 카드/모달/리스트 (흰색) */
+  --surface-sunken:          #EFE9DA;  /* 인용/입력란 등 살짝 들어간 영역 */
+  --surface-brand:           #551102;  /* 강조 영역 (대시보드 hero 등) */
+  --surface-brand-elevated:  #4D0E00;  /* 브랜드 영역 위 카드 */
+
+  --ink:                     #2E2B28;  /* 본문 텍스트 (거의 검정) */
+  --ink-muted:               #6B6660;  /* 보조 텍스트 */
+  --ink-subtle:              #9C968F;  /* 더 흐릿한 캡션 */
+  --on-brand:                #FFFFFF;  /* 어두운 브랜드 bg 위 텍스트 / 테두리 */
+  --on-brand-muted:          #E1BABA;  /* 어두운 브랜드 bg 위 보조 텍스트 */
+
+  --accent:                  #6E1517;  /* 주 강조 (red) — bg/text/border 모두 */
+  --accent-soft:             #9A4345;  /* 보조 강조 (red-light) */
+
+  --line:                    #E0DBCF;  /* 흐린 구분선 */
+  --line-strong:             #C1C1C1;  /* 기본 테두리 */
+
+  --highlight:               #FDE68A;  /* 현재 문장 하이라이터 — 따뜻한 amber */
+}
+
+/* 다크 모드 — next-themes 가 html.dark 클래스를 토글.
+   Kindle "편안한 읽기" 톤 — 따뜻한 다크 갈색 bg + 약간 누른 따뜻한 크림 텍스트.
+   순수 검정 + 순수 흰색의 강한 대비 대신, 장시간 읽어도 눈에 부담 적은
+   중간 대비 sepia-on-dark 느낌. */
+.dark {
+  --background: #342D26;  /* body bg = NavBar/카드와 동일하게 평탄한 톤 (단계적 위계 제거) */
+  --foreground: #E0D5C2;
+
+  --surface:                 #342D26;  /* 페이지 bg — 너무 검지 않은 따뜻한 다크 (Kindle-ish) */
+  --surface-elevated:        #342D26;  /* 카드/리스트/내비 — 동일 톤 (시각 일관성 우선) */
+  --surface-sunken:          #2A241E;  /* 인용/입력란 살짝 가라앉음 */
+  --surface-brand:           #401004;
+  --surface-brand-elevated:  #501308;
+
+  --ink:                     #E0D5C2;
+  --ink-muted:               #A89E8C;
+  --ink-subtle:              #756A5E;
+  --on-brand:                #E0D5C2;
+  --on-brand-muted:          #C9A8A8;
+
+  --accent:                  #B05050;
+  --accent-soft:             #985050;
+
+  --line:                    #2E2620;
+  --line-strong:             #3D332B;
+
+  --highlight:               #5A2D1C;  /* 다크: 따뜻한 적갈 — 크림 텍스트와 대비 + 적갈 브랜드 와 조화 */
 }
 
 /* 애니메이션 */
@@ -147,6 +206,27 @@ html { font-family: "YujiMai", serif; }
   --color-orange-dark: #F25C05;
   --color-grey: #C1C1C1;
   --color-pink-light: #E1BABA;
+
+  /* Semantic 토큰 → Tailwind 유틸 매핑.
+     매핑된 이름이 그대로 utility prefix 가 됨:
+       --color-ink → text-ink, bg-ink, border-ink
+       --color-surface-elevated → bg-surface-elevated, text-surface-elevated, etc.
+     마이그레이션 진행 시 `bg-white` → `bg-surface-elevated` 같이 점진적으로 교체. */
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-brand: var(--surface-brand);
+  --color-surface-brand-elevated: var(--surface-brand-elevated);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-subtle: var(--ink-subtle);
+  --color-on-brand: var(--on-brand);
+  --color-on-brand-muted: var(--on-brand-muted);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-highlight: var(--highlight);
 }
 
 html {
