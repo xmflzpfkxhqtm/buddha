@@ -227,7 +227,7 @@ export default function ConfirmPage() {
     <>
       <main
         className="relative min-h-screen w-full max-w-[460px] flex flex-col justify-start items-center bg-white px-6 pb-6"
-        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}
+        style={{ paddingTop: 'calc(max(44px, env(safe-area-inset-top)) + 24px)' }}
       >
         <div className="w-full z-1">
           <h2 className="text-3xl text-red font-semibold text-start mb-4">

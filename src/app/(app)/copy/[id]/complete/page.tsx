@@ -133,7 +133,7 @@ export default function CompletePage() {
   return (
     <main
       className="p-6 max-w-[460px] mb-4"
-      style={{ marginTop: 'calc(env(safe-area-inset-top) + 16px)' }}
+      style={{ marginTop: 'calc(max(44px, env(safe-area-inset-top)) + 16px)' }}
     >
       <h1 className="font-bold text-red mb-4 text-2xl">
         {textObj.title} ({lang === 'han' ? '한문' : '한글'})
