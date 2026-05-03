@@ -555,7 +555,7 @@ export default function ScripturePage() {
         <button
           key={`term-${match.index}-${lookupTerm}`}
           type="button"
-          className="font-bold text-[#9A4345] underline decoration-[#9A4345] decoration-2 underline-offset-2 hover:opacity-85 active:opacity-70 transition-opacity cursor-pointer whitespace-nowrap"
+          className="font-bold text-[#9A4345] underline decoration-[#9A4345] decoration-2 underline-offset-2 hover:opacity-85 active:opacity-70 transition-opacity cursor-pointer [overflow-wrap:anywhere]"
           onClick={() =>
             setTermPopup({
               term: lookupTerm,
@@ -579,7 +579,7 @@ export default function ScripturePage() {
 
   return (
     // JSX 구조 및 클래스명 원본 유지
-    <main className="p-4 pb-[120px] max-w-[460px] mx-auto relative">
+    <main className="p-4 pb-[120px] max-w-[460px] mx-auto relative overflow-x-hidden [overflow-wrap:anywhere]">
       {/* 상단 UI (원본 유지) */}
       <div className="sticky top-0 z-50 bg-white h-16 py-2">
         <div className="flex items-center justify-between gap-2">
