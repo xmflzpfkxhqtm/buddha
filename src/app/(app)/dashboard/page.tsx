@@ -8,6 +8,13 @@ import { useEffect, useState } from 'react';
 import { useBookmarkStore } from '@/stores/useBookmarkStore';
 import { supabase } from '@/lib/supabaseClient';
 
+interface UpdateNote {
+  id: number;
+  title: string;
+  body: string | null;
+  published_at: string;
+}
+
 export default function Home() {
   const router = useRouter();
   const { setBookmark } = useBookmarkStore();
@@ -18,6 +25,8 @@ export default function Home() {
   const [userName, setUserName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true); // 👈 최소 로딩용 상태
   const [fontReady, setFontReady] = useState(false); // 폰트 로딩 상태
+  const [updateNotes, setUpdateNotes] = useState<UpdateNote[]>([]);
+  const [notesOpen, setNotesOpen] = useState(false);
 
   function formatDisplayTitle(rawTitle: string): string {
     return rawTitle
@@ -64,9 +73,10 @@ export default function Home() {
       console.log('✅ fetchAll 실행됨');
 
       try {
-        const [teachingRes, userRes] = await Promise.all([
+        const [teachingRes, userRes, notesRes] = await Promise.all([
           fetch('/api/today-teaching').then((res) => res.json()),
           supabase.auth.getUser(),
+          fetch('/api/update-notes').then((res) => res.json()).catch(() => ({ notes: [] })),
         ]);
 
         console.log('✅ API 응답:', teachingRes);
@@ -74,6 +84,7 @@ export default function Home() {
         setTitle(teachingRes.title);
         setIndex(teachingRes.index);
         setSentence(teachingRes.sentence);
+        setUpdateNotes(Array.isArray(notesRes?.notes) ? notesRes.notes : []);
         console.log('✅ title:', teachingRes.title);
         console.log('✅ index:', teachingRes.index);
         console.log('✅ sentence:', teachingRes.sentence);
@@ -149,27 +160,61 @@ export default function Home() {
         <main className="min-h-screen w-full max-w-[460px] flex flex-col justify-start items-center mx-auto px-6 pt">
           <ScrollHeader />
 
-          {/* 상단 홍보 배너 */}
-          <div
-  onClick={() => router.push('/ask')}
-  className="w-full h-16  bg-[#4d0e00] border border-red-light rounded-xl flex flex-row items-center pl-1 mt-4 justify-start cursor-pointer"
->
-            <Image
-              src="/lotusbeige.png"
-              alt="lotus"
-              width={48}
-              height={48}
-              className="object-contain border-beige mx-2"
-            />
-            <div className="flex flex-col">
-              <p className="mb-0 text-base font-medium text-white text-start">
-                부처님께 여쭙기 AI 기능이 출시되었습니다
-              </p>
-              <p className="mt-0 text-sm font-base text-pink-light text-start">
-                클릭하여 자세히 알아보세요
-              </p>
+          {/* 업데이트 노트 토글 (Supabase update_notes 테이블에서 관리) */}
+          {updateNotes.length > 0 && (
+            <div className="w-full mt-4">
+              <button
+                type="button"
+                onClick={() => setNotesOpen((v) => !v)}
+                className="w-full h-16 bg-[#4d0e00] border border-red-light rounded-xl flex flex-row items-center pl-1 pr-3 justify-start cursor-pointer text-left"
+                aria-expanded={notesOpen}
+              >
+                <Image
+                  src="/lotusbeige.png"
+                  alt="lotus"
+                  width={48}
+                  height={48}
+                  className="object-contain border-beige mx-2"
+                />
+                <div className="flex flex-col flex-1 min-w-0">
+                  <p className="mb-0 text-base font-medium text-white truncate">
+                    {updateNotes[0].title}
+                  </p>
+                  <p className="mt-0 text-sm font-base text-pink-light">
+                    업데이트 노트 {notesOpen ? '닫기' : '열기'}
+                  </p>
+                </div>
+                <span
+                  className={`ml-2 text-pink-light transition-transform duration-200 ${notesOpen ? 'rotate-180' : ''}`}
+                  aria-hidden
+                >
+                  ▾
+                </span>
+              </button>
+
+              {notesOpen && (
+                <div className="w-full mt-2 bg-[#4d0e00] border border-red-light rounded-xl p-4 space-y-4">
+                  {updateNotes.map((note) => (
+                    <div key={note.id} className="space-y-1">
+                      <p className="text-base font-semibold text-white">{note.title}</p>
+                      <p className="text-xs text-pink-light">
+                        {new Date(note.published_at).toLocaleDateString('ko-KR', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })}
+                      </p>
+                      {note.body && (
+                        <p className="text-sm text-white/90 whitespace-pre-wrap leading-relaxed [overflow-wrap:anywhere]">
+                          {note.body}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
+          )}
 
           {/* 어서오세요 문구 */}
           <div className="w-full rounded-xl flex flex-col items-start pl-1 justify-start">
