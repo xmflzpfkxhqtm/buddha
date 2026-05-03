@@ -108,38 +108,38 @@ export default function AskPage() {
 
   return (
     <>
-          <main className="relative min-h-screen w-full max-w-[460px] flex flex-col justify-start items-center bg-white px-6 py-6">
+          <main className="relative min-h-screen w-full max-w-[460px] flex flex-col justify-start items-center bg-surface-elevated px-6 py-6">
        
        
        
         <div className="w-full z-1">
-          <h2 className="text-4xl text-red font-semibold text-start">
+          <h2 className="text-4xl text-accent font-semibold text-start">
             부처님의 지혜에<br />귀를 기울여 보세요
           </h2>
-          <p className="text-base text-red font-medium text-start mt-2">
+          <p className="text-base text-accent font-medium text-start mt-2">
             무엇이든 여쭈어 보세요.<br />부처님께서 답하십니다.
           </p>
         </div>
 
         {previousQA && (
-          <div className="w-full bg-[#FFFDF8] border border-gray-200 p-4 mt-6 mb-4 rounded-xl text-sm">
-            <p className="text-gray-500 font-medium mb-1">📌 이전 질문</p>
-            <p className="text-black font-semibold mb-2 whitespace-pre-wrap">{previousQA.question}</p>
-            <p className="text-gray-500 font-medium mb-1">🪷 부처님의 응답</p>
-            <p className="text-black italic whitespace-pre-wrap">{previousQA.answer}</p>
+          <div className="w-full bg-surface-elevated border border-line p-4 mt-6 mb-4 rounded-xl text-sm">
+            <p className="text-ink-subtle font-medium mb-1">📌 이전 질문</p>
+            <p className="text-ink font-semibold mb-2 whitespace-pre-wrap">{previousQA.question}</p>
+            <p className="text-ink-subtle font-medium mb-1">🪷 부처님의 응답</p>
+            <p className="text-ink italic whitespace-pre-wrap">{previousQA.answer}</p>
             <button
               onClick={handleCancelFollowup}
-              className="text-sm text-red mt-2 float-right"
+              className="text-sm text-accent mt-2 float-right"
             >
               이전 질문 삭제
             </button>
           </div>
         )}
 
-        <div className="w-full h-16 bg-red-light rounded-xl flex flex-row items-center mt-6 pl-1 justify-start">
-          <Image src="/lotusbeige.png" alt="lotus" width={48} height={48} className="object-contain border-beige mx-2" />
+        <div className="w-full h-16 bg-accent-soft rounded-xl flex flex-row items-center mt-6 pl-1 justify-start">
+          <Image src="/lotusbeige.png" alt="lotus" width={48} height={48} className="object-contain border-on-brand mx-2" />
           <div className="flex flex-col">
-            <p className="text-base font-base text-white text-start">
+            <p className="text-base font-base text-on-brand text-start">
               한 자 한 자 마음을 담아 적어보세요.<br />
               말씀이 깊을수록, 깨달음도 또렷해집니다.
             </p>
@@ -150,7 +150,7 @@ export default function AskPage() {
     <span className="font-bold text-base mr-2 my-2">예시 질문 보기</span>
     <button
       onClick={() => setShowExamples((prev) => !prev)}
-      className="flex items-center text-sm text-red hover:underline"
+      className="flex items-center text-sm text-accent hover:underline"
     >
       {showExamples ? '숨기기' : '펼쳐보기'}
       <svg
@@ -166,7 +166,7 @@ export default function AskPage() {
   </div>
 
   {showExamples && (
-  <ul className="list-disc list-outside space-y-2 mx-4 mb-4 text-sm text-gray-700 whitespace-pre-line">
+  <ul className="list-disc list-outside space-y-2 mx-4 mb-4 text-sm text-ink-muted whitespace-pre-line">
     {exampleQuestions.map((ex, i) => (
       <li
       key={i}
@@ -175,7 +175,7 @@ export default function AskPage() {
         setShowExamples(false); // ✅ 여기 추가
       }}
           
-        className="cursor-pointer hover:text-red-dark hover:underline"
+        className="cursor-pointer hover:text-accent hover:underline"
       >
         {ex}
       </li>
@@ -186,7 +186,7 @@ export default function AskPage() {
 
         <div className="max-w-md w-full z-1 mt-2">
           <textarea
-            className="w-full h-40 p-4 text-black rounded-xl border border-red-light bg-[#FFFDF8] text-base resize-none focus:outline-none focus:ring-2 focus:ring-red"
+            className="w-full h-40 p-4 text-ink rounded-xl border border-accent-soft bg-surface-elevated text-base resize-none focus:outline-none focus:ring-2 focus:ring-red"
             rows={5}
             value={question}
             onChange={(e) => {
@@ -204,7 +204,7 @@ export default function AskPage() {
           />
           <button
             onClick={() => setQuestion('')}
-            className="text-sm text-red mt-0 float-right"
+            className="text-sm text-accent mt-0 float-right"
           >
             작성 내용 삭제
           </button>
@@ -215,7 +215,7 @@ export default function AskPage() {
     <span className="font-bold text-base mr-2">내가 보관한 문답 보기</span>
     <button
       onClick={() => setShowSaved((prev) => !prev)}
-      className="flex items-center text-sm text-red hover:underline"
+      className="flex items-center text-sm text-accent hover:underline"
     >
       {showSaved ? '숨기기' : '펼쳐보기'}
       <svg
@@ -239,24 +239,24 @@ export default function AskPage() {
                   <div
                     key={item.id}
                     onClick={() => setSelectedItem(item)}
-                    className="min-w-[300px] bg-[#FFFDF8] p-4 rounded-xl border shadow cursor-pointer"
+                    className="min-w-[300px] bg-surface-elevated p-4 rounded-xl border shadow cursor-pointer"
                   >
-                    <p className="text-sm text-gray-400 mb-2">{new Date(item.created_at).toLocaleDateString()}</p>
-                    <p className="text-sm font-semibold text-red mb-1">📜 나의 질문</p>
-                    <p className="text-sm text-gray-800 line-clamp-2 mb-2">{item.question}</p>
-                    <p className="text-sm font-semibold text-red mb-1">🪷 부처님 말씀</p>
+                    <p className="text-sm text-ink-subtle mb-2">{new Date(item.created_at).toLocaleDateString()}</p>
+                    <p className="text-sm font-semibold text-accent mb-1">📜 나의 질문</p>
+                    <p className="text-sm text-ink line-clamp-2 mb-2">{item.question}</p>
+                    <p className="text-sm font-semibold text-accent mb-1">🪷 부처님 말씀</p>
                     <p className="text-sm text-gray-900 line-clamp-4">{item.answer}</p>
                   </div>
                 ))
               ) : (
-                <div className="text-sm text-gray-500">저장된 문답이 없습니다.</div>
+                <div className="text-sm text-ink-subtle">저장된 문답이 없습니다.</div>
               )
             ) : (
-              <div className="min-w-[300px] py-4 rounded-xl shadow text-start text-sm text-gray-700">
+              <div className="min-w-[300px] py-4 rounded-xl shadow text-start text-sm text-ink-muted">
                 <span>
                   <button
                     onClick={() => router.push('/login')}
-                    className="text-red underline hover:text-red-dark"
+                    className="text-accent underline hover:text-accent"
                   >
                     로그인
                   </button>
@@ -268,7 +268,7 @@ export default function AskPage() {
             {user && savedAnswers.length >= 5 && (
               <div
                 onClick={() => router.push('/me/answers')}
-                className="min-w-[120px] flex justify-center items-center text-red border border-dashed border-red rounded-xl text-sm cursor-pointer hover:bg-red-light hover:text-white"
+                className="min-w-[120px] flex justify-center items-center text-accent border border-dashed border-accent rounded-xl text-sm cursor-pointer hover:bg-accent-soft hover:text-on-brand"
               >
                 더 보기 →
               </div>
@@ -284,20 +284,20 @@ export default function AskPage() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[75vh] overflow-y-auto p-6 relative"
+            className="bg-surface-elevated rounded-2xl shadow-xl max-w-md w-full max-h-[75vh] overflow-y-auto p-6 relative"
           >
             <button
               onClick={() => setSelectedItem(null)}
-              className="absolute top-3 right-4 text-gray-400 hover:text-black text-xl"
+              className="absolute top-3 right-4 text-ink-subtle hover:text-ink text-xl"
             >×</button>
-            <p className="text-sm text-gray-500 text-right mb-2">
+            <p className="text-sm text-ink-subtle text-right mb-2">
               {new Date(selectedItem.created_at).toLocaleDateString()}
             </p>
-            <p className="text-base font-semibold text-red mb-1">📜 나의 질문</p>
-            <p className="text-base text-gray-800 mb-4 whitespace-pre-line">
+            <p className="text-base font-semibold text-accent mb-1">📜 나의 질문</p>
+            <p className="text-base text-ink mb-4 whitespace-pre-line">
               「{selectedItem.question}」
             </p>
-            <p className="text-base font-semibold text-red mb-1">🪷 부처님 말씀</p>
+            <p className="text-base font-semibold text-accent mb-1">🪷 부처님 말씀</p>
             <p className="text-base text-gray-900 whitespace-pre-line">
               {selectedItem.answer}
             </p>
@@ -307,13 +307,13 @@ export default function AskPage() {
                 setSelectedItem(null);
                 router.push('/ask');
               }}
-              className="w-full mt-4 py-3 border bg-red-light border-red text-white font-bold rounded-4xl hover:bg-red hover:text-white transition"
+              className="w-full mt-4 py-3 border bg-accent-soft border-accent text-on-brand font-bold rounded-4xl hover:bg-accent hover:text-on-brand transition"
             >
               문답을 이어갑니다
             </button>
             <button
               onClick={() => setSelectedItem(null)}
-              className="w-full mt-4 py-3 border border-red-light text-gray-700 font-bold rounded-4xl hover:bg-red hover:text-white transition"
+              className="w-full mt-4 py-3 border border-accent-soft text-ink-muted font-bold rounded-4xl hover:bg-accent hover:text-on-brand transition"
             >
               닫기
             </button>
@@ -335,8 +335,8 @@ export default function AskPage() {
                   onClick={() => setSelectedModel(model.id)}
                   className={`p-3 rounded-lg border cursor-pointer transition ${
                     selectedModel === model.id
-                      ? 'border border-red bg-red-light text-white'
-                      : 'border border-red bg-white text-black'
+                      ? 'border border-accent bg-accent-soft text-on-brand'
+                      : 'border border-accent bg-surface-elevated text-ink'
                   }`}
                 >
                   <div className="font-bold">{model.name}</div>
@@ -355,8 +355,8 @@ export default function AskPage() {
                   onClick={() => setSelectedLength(length.id)}
                   className={`p-3 rounded-lg border text-left cursor-pointer transition ${
                     selectedLength === length.id
-                      ? 'border border-red bg-red-light text-white'
-                      : 'border border-red bg-white text-black'
+                      ? 'border border-accent bg-accent-soft text-on-brand'
+                      : 'border border-accent bg-surface-elevated text-ink'
                   }`}
                 >
                   <div className="font-bold">{length.name}</div>
@@ -368,7 +368,7 @@ export default function AskPage() {
         </div>
 
         <button
-          className="mt-2 w-full px-6 py-3 font-bold bg-red-light text-lg text-white rounded-4xl hover:bg-red transition"
+          className="mt-2 w-full px-6 py-3 font-bold bg-accent-soft text-lg text-on-brand rounded-4xl hover:bg-accent transition"
           onClick={handleNext}
           disabled={!question.trim()}
         >
@@ -377,7 +377,7 @@ export default function AskPage() {
 
         <button
           onClick={() => setShowGuideModal(true)}
-          className="text-sm text-black underline mt-4 mb-8"
+          className="text-sm text-ink underline mt-4 mb-8"
         >
           어떻게 사용하는 건가요?
         </button>
@@ -391,19 +391,19 @@ export default function AskPage() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-xl p-6 w-[90%] max-w-[360px] text-center shadow-xl"
+            className="bg-surface-elevated rounded-xl p-6 w-[90%] max-w-[360px] text-center shadow-xl"
           >
-            <p className="text-lg font-semibold text-red mb-4">정말 추가 질문을 취소할까요?</p>
+            <p className="text-lg font-semibold text-accent mb-4">정말 추가 질문을 취소할까요?</p>
             <div className="flex justify-center gap-4">
               <button
                 onClick={() => setConfirmCancelModal(false)}
-                className="px-4 py-2 border rounded-lg text-sm text-gray-600"
+                className="px-4 py-2 border rounded-lg text-sm text-ink-muted"
               >
                 아니오
               </button>
               <button
                 onClick={confirmCancel}
-                className="px-4 py-2 bg-red-light text-white rounded-lg text-sm"
+                className="px-4 py-2 bg-accent-soft text-on-brand rounded-lg text-sm"
               >
                 네, 취소할게요
               </button>
@@ -419,10 +419,10 @@ export default function AskPage() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-xl p-6 w-[90%] max-w-[360px] text-start shadow-xl"
+            className="bg-surface-elevated rounded-xl p-6 w-[90%] max-w-[360px] text-start shadow-xl"
           >
-            <h3 className="text-lg font-bold text-red mb-4">사용 방법 안내</h3>
-            <ul className="space-y-2 text-sm leading-relaxed text-gray-800">
+            <h3 className="text-lg font-bold text-accent mb-4">사용 방법 안내</h3>
+            <ul className="space-y-2 text-sm leading-relaxed text-ink">
               <li>🪷 마음속 고민이나 질문을 자유롭게 입력하세요.</li>
               <li>❓ 물음이 상세할수록 더 깊은 답변을 들으실 수 있습니다.</li>
               <li>📜 부처님의 말씀과 함께 인용된 경전도 함께 확인할 수 있습니다.</li>
@@ -431,7 +431,7 @@ export default function AskPage() {
             </ul>
             <button
               onClick={() => setShowGuideModal(false)}
-              className="w-full mt-6 py-2 bg-red-light text-white rounded-lg hover:bg-red transition"
+              className="w-full mt-6 py-2 bg-accent-soft text-on-brand rounded-lg hover:bg-accent transition"
             >
               닫기
             </button>

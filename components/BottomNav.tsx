@@ -61,7 +61,7 @@ export default function BottomNav() {
   if (hide) return null;
 
   return (
-    <nav className="fixed bottom-0 left-1/2 select-none -translate-x-1/2 w-full max-w-[460px] h-[84px] bg-white border-t border-red flex justify-around items-center z-30">
+    <nav className="fixed bottom-0 left-1/2 select-none -translate-x-1/2 w-full max-w-[460px] h-[84px] bg-surface-elevated border-t border-accent-soft flex justify-around items-center z-30">
       {navItems.map((item) => {
         const isActive = pathname === item.path;
         const Icon = item.icon;
@@ -71,13 +71,13 @@ export default function BottomNav() {
             key={item.label}
             onClick={() => (item.action ? item.action() : router.push(item.path))}
             className={`flex flex-col items-center text-sm transition duration-200 hover:scale-110 ${
-              isActive ? 'text-red-light font-semibold' : 'text-red-dark'
+              isActive ? 'text-accent-soft font-semibold' : 'text-accent'
             }`}
           >
             <Icon
               size={24}
               className={`mb-1 transition duration-200 ${
-                isActive ? 'text-red-light' : 'text-red-dark'
+                isActive ? 'text-accent-soft' : 'text-accent'
               }`}
             />
             <span>{item.label}</span>

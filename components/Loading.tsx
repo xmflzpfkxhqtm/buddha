@@ -24,7 +24,7 @@ export default function Loading({ fadeOut = false }: { fadeOut?: boolean }) {
 
   return (
     <div
-      className={`relative flex flex-col justify-center text-base items-center h-screen bg-red text-white
+      className={`relative flex flex-col justify-center text-base items-center h-screen bg-accent text-on-brand
         transition-opacity duration-1500 ${fadeOut ? 'opacity-0' : 'opacity-100'}`}
     >
       <MarbleOverlay />
@@ -35,7 +35,7 @@ export default function Loading({ fadeOut = false }: { fadeOut?: boolean }) {
           alt="lotus"
           width={48}
           height={48}
-          className="object-contain border-beige mx-2"
+          className="object-contain border-on-brand mx-2"
         />
       </div>
 

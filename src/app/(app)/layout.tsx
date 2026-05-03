@@ -14,13 +14,14 @@ import TopNav           from '../../../components/TopNav';
 import AppStateRedirect from '../../../components/AppStateRedirect';
 import UpdateBlocker    from '../../../components/UpdateBlocker';   // ★ iOS 강제 업데이트
 import ReviewPrompt     from '../../../components/ReviewPrompt';
+import ThemeProvider    from '../../../components/ThemeProvider';
 
 const geistSans = Geist({ variable: '--font-geist-sans',  subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ko">
+    <html lang="ko" suppressHydrationWarning>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
         <link rel="manifest" href="/manifest.json" />
@@ -38,26 +39,30 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
       >
-        <AppStateRedirect />
-        <NativeInit />
-        <ReviewPrompt /> 
-        <TopNav className="top-nav-safe" />
+        {/* next-themes: html 의 class 에 'light'/'dark' 를 적용. 토글은 useTheme() 로 제어.
+            지금은 기본값 light, system 자동 감지는 끔 (의도적인 사용자 토글로만 변경되도록). */}
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+          <AppStateRedirect />
+          <NativeInit />
+          <ReviewPrompt />
+          <TopNav className="top-nav-safe" />
 
-        {/* ───────── PUSH ───────── */}
-        <PushProvider>
-          <PushDebug />
-          <div className="relative min-h-screen w-full max-w-[460px] mx-auto pb-[64px]">
-            <PageTransition>{children}</PageTransition>
-          </div>
-        </PushProvider>
+          {/* ───────── PUSH ───────── */}
+          <PushProvider>
+            <PushDebug />
+            <div className="relative min-h-screen w-full max-w-[460px] mx-auto pb-[64px]">
+              <PageTransition>{children}</PageTransition>
+            </div>
+          </PushProvider>
 
-        <DeepLinkHandler />
-        <BottomNav />
-        <MarbleOverlay />
-        <AppInstallOverlay /> 
+          <DeepLinkHandler />
+          <BottomNav />
+          <MarbleOverlay />
+          <AppInstallOverlay />
 
-        {/* iOS 필수 업데이트 오버레이 */}
-        <UpdateBlocker />
+          {/* iOS 필수 업데이트 오버레이 */}
+          <UpdateBlocker />
+        </ThemeProvider>
       </body>
     </html>
   );

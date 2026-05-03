@@ -146,11 +146,11 @@ export default function BookmarkPage() {
   };
 
   return (
-    <main className="min-h-screen max-w-[430px] mx-auto bg-[#F5F1E6] px-4 py-10">
-      <h1 className="text-xl font-bold text-red-dark mb-4">📌 저장한 책갈피</h1>
+    <main className="min-h-screen max-w-[430px] mx-auto bg-surface px-4 py-10">
+      <h1 className="text-xl font-bold text-accent mb-4">📌 저장한 책갈피</h1>
 
       {bookmarks.length === 0 ? (
-        <p className="text-base text-gray-500">아직 책갈피가 없습니다.</p>
+        <p className="text-base text-ink-subtle">아직 책갈피가 없습니다.</p>
       ) : (
         <>
           <ul className="space-y-3 mb-6">
@@ -158,21 +158,21 @@ export default function BookmarkPage() {
               <li
                 key={bm.id}
                 onClick={() => handleClick(bm.title, bm.index)}
-                className="bg-white p-4 rounded-xl shadow cursor-pointer border"
+                className="bg-surface-elevated p-4 rounded-xl shadow cursor-pointer border"
               >
                 {/* 1행 */}
                 <div className="flex justify-between items-center mb-1">
-                <p className="font-semibold text-red-dark text-base truncate">
+                <p className="font-semibold text-accent text-base truncate">
   📖 {formatDisplayTitle(bm.title)} – {bm.index + 1}행
 </p>
-                  <span className="text-base ml-4 text-gray-400 whitespace-nowrap">
+                  <span className="text-base ml-4 text-ink-subtle whitespace-nowrap">
                     {new Date(bm.created_at).toLocaleDateString()}
                   </span>
                 </div>
 
                 {/* 2행 */}
                 <div className="flex justify-between items-start">
-                  <p className="text-base text-gray-700 w-[70%]">
+                  <p className="text-base text-ink-muted w-[70%]">
                     {scriptureMap[bm.title]?.[bm.index] || '내용을 불러올 수 없습니다.'}
                   </p>
                   <div className="flex gap-2">
@@ -182,7 +182,7 @@ export default function BookmarkPage() {
                           e.stopPropagation();
                           openMemoModal(bm);
                         }}
-                        className="text-sm text-red hover:underline"
+                        className="text-sm text-accent hover:underline"
                       >
                         메모
                       </button>
@@ -192,7 +192,7 @@ export default function BookmarkPage() {
                         e.stopPropagation();
                         setDeleteTargetId(bm.id);
                       }}
-                      className="text-sm text-red-light hover:underline"
+                      className="text-sm text-accent-soft hover:underline"
                     >
                       삭제
                     </button>
@@ -201,9 +201,9 @@ export default function BookmarkPage() {
 
                 {/* 3행: 메모 존재 시 */}
                 {bm.memo && (
-  <div className="mt-3 border-t border-gray-200 pt-2">
+  <div className="mt-3 border-t border-line pt-2">
     <div className="flex justify-between items-start">
-      <p className="text-sm text-gray-600 whitespace-pre-wrap w-[70%] leading-snug">
+      <p className="text-sm text-ink-muted whitespace-pre-wrap w-[70%] leading-snug">
         ✏️ {bm.memo}
       </p>
       <div className="flex gap-2 text whitespace-nowrap items-start mt-[-2px]">
@@ -221,7 +221,7 @@ export default function BookmarkPage() {
             e.stopPropagation();
             deleteMemo(bm);
           }}
-          className="text-sm text-red hover:underline"
+          className="text-sm text-accent hover:underline"
         >
           삭제
         </button>
@@ -239,7 +239,7 @@ export default function BookmarkPage() {
             <button
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className="text-base px-2 py-1 rounded border bg-white disabled:text-gray-300"
+              className="text-base px-2 py-1 rounded border bg-surface-elevated disabled:text-gray-300"
             >
               ◀
             </button>
@@ -248,7 +248,7 @@ export default function BookmarkPage() {
                 key={page}
                 onClick={() => handlePageChange(page)}
                 className={`text-base px-3 py-1 rounded border ${
-                  page === currentPage ? 'bg-red text-white' : 'bg-white text-gray-700'
+                  page === currentPage ? 'bg-accent text-on-brand' : 'bg-surface-elevated text-ink-muted'
                 }`}
               >
                 {page}
@@ -257,7 +257,7 @@ export default function BookmarkPage() {
             <button
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="text-base px-2 py-1 rounded border bg-white disabled:text-gray-300"
+              className="text-base px-2 py-1 rounded border bg-surface-elevated disabled:text-gray-300"
             >
               ▶
             </button>
@@ -273,13 +273,13 @@ export default function BookmarkPage() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-xl p-6 w-[90%] max-w-[360px] text-center shadow-xl"
+            className="bg-surface-elevated rounded-xl p-6 w-[90%] max-w-[360px] text-center shadow-xl"
           >
-            <p className="text-lg font-semibold text-red mb-4">정말 책갈피를 삭제할까요?</p>
+            <p className="text-lg font-semibold text-accent mb-4">정말 책갈피를 삭제할까요?</p>
             <div className="flex justify-center gap-4 mt-4">
               <button
                 onClick={() => setDeleteTargetId(null)}
-                className="px-4 py-2 border rounded-lg text-base text-gray-600"
+                className="px-4 py-2 border rounded-lg text-base text-ink-muted"
               >
                 아니오
               </button>
@@ -296,7 +296,7 @@ export default function BookmarkPage() {
                     alert('삭제에 실패했습니다.');
                   }
                 }}
-                className="px-4 py-2 bg-red-light text-white rounded-lg text-base"
+                className="px-4 py-2 bg-accent-soft text-on-brand rounded-lg text-base"
               >
                 예, 삭제합니다
               </button>
@@ -313,12 +313,12 @@ export default function BookmarkPage() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-xl p-6 w-[90%] max-w-[360px] shadow-xl"
+            className="bg-surface-elevated rounded-xl p-6 w-[90%] max-w-[360px] shadow-xl"
           >
-            <h2 className="text-lg font-semibold text-gray-800 mb-3">메모하기</h2>
+            <h2 className="text-lg font-semibold text-ink mb-3">메모하기</h2>
             <textarea
   rows={4}
-  className="w-full border border-gray-600 rounded p-2 text-base text-gray-800 focus:outline-none focus:border-red-light focus:ring-1 focus:ring-red-light"
+  className="w-full border border-gray-600 rounded p-2 text-base text-ink focus:outline-none focus:border-accent-soft focus:ring-1 focus:ring-red-light"
   value={memoInput}
   onChange={(e) => setMemoInput(e.target.value)}
 />
@@ -326,13 +326,13 @@ export default function BookmarkPage() {
             <div className="flex justify-end gap-2 mt-4">
               <button
                 onClick={() => setMemoTarget(null)}
-                className="px-4 py-2 border rounded-lg text-sm text-gray-600"
+                className="px-4 py-2 border rounded-lg text-sm text-ink-muted"
               >
                 취소
               </button>
               <button
                 onClick={saveMemo}
-                className="px-4 py-2 bg-red-light text-white rounded-lg text-sm"
+                className="px-4 py-2 bg-accent-soft text-on-brand rounded-lg text-sm"
               >
                 저장
               </button>

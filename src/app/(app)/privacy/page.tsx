@@ -1,6 +1,6 @@
 export default function PrivacyPolicyPage() {
     return (
-      <main className="p-6 max-w-[600px] mx-auto text-sm leading-relaxed text-gray-800 bg-white">
+      <main className="p-6 max-w-[600px] mx-auto text-sm leading-relaxed text-ink bg-surface-elevated">
         <h1 className="text-xl font-bold mb-4">📜 개인정보 처리방침</h1>
   
         <p className="mb-4">
@@ -37,7 +37,7 @@ export default function PrivacyPolicyPage() {
           문의 사항은 서비스 내 피드백 또는 이메일을 통해 접수해주시면 성실히 응답하겠습니다.<br />choe.junekyung@gmail.com
         </p>
   
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-ink-subtle">
           본 방침은 {new Date().getFullYear()}년 {new Date().getMonth() + 1}월 {new Date().getDate()}일 기준으로 적용됩니다.
         </p>
       </main>

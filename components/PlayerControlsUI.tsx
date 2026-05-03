@@ -22,11 +22,14 @@ const PlayerControlsUI: React.FC<PlayerControlsUIProps> = ({
   isPlayPauseDisabled,
 }) => {
   return (
-    <div className="fixed bottom-[96px] left-1/2 -translate-x-1/2 flex items-center gap-4 z-50 bg-white/80 backdrop-blur-sm p-2 rounded-full shadow-lg">
+    <div
+      className="fixed bottom-[96px] left-1/2 -translate-x-1/2 flex items-center gap-4 z-50 bg-surface-elevated/80 backdrop-blur-sm p-2 rounded-full shadow-2xl ring-1 ring-black/10"
+      style={{ boxShadow: '0 12px 32px -4px rgba(0,0,0,0.45), 0 4px 12px -2px rgba(0,0,0,0.3)' }}
+    >
       <button
         onClick={onSkipBackward}
         disabled={isBackwardDisabled}
-        className="bg-red-light text-white rounded-full w-12 h-12 flex items-center justify-center shadow-md disabled:opacity-50 transition-opacity duration-200"
+        className="bg-accent-soft text-on-brand rounded-full w-12 h-12 flex items-center justify-center shadow-lg disabled:opacity-50 transition-opacity duration-200"
         aria-label="이전 문장"
       >
         <SkipBack size={24} />
@@ -35,7 +38,7 @@ const PlayerControlsUI: React.FC<PlayerControlsUIProps> = ({
       <button
         onClick={onPlayPause}
         disabled={isPlayPauseDisabled}
-        className="bg-red-light text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg disabled:opacity-50 transition-opacity duration-200"
+        className="bg-accent-soft text-on-brand rounded-full w-16 h-16 flex items-center justify-center shadow-xl disabled:opacity-50 transition-opacity duration-200"
         aria-label={isPlaying ? '일시정지' : '재생'}
       >
         {isPlaying ? <Pause size={36} fill="currentColor" /> : <Play size={36} fill="currentColor" />}
@@ -44,7 +47,7 @@ const PlayerControlsUI: React.FC<PlayerControlsUIProps> = ({
       <button
         onClick={onSkipForward}
         disabled={isForwardDisabled}
-        className="bg-red-light text-white rounded-full w-12 h-12 flex items-center justify-center shadow-md disabled:opacity-50 transition-opacity duration-200"
+        className="bg-accent-soft text-on-brand rounded-full w-12 h-12 flex items-center justify-center shadow-lg disabled:opacity-50 transition-opacity duration-200"
         aria-label="다음 문장"
       >
         <SkipForward size={24} />

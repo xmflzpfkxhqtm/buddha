@@ -582,7 +582,7 @@ export default function ScripturePage() {
         <button
           key={`term-${match.index}-${lookupTerm}`}
           type="button"
-          className="font-bold text-[#9A4345] underline decoration-[#9A4345] decoration-2 underline-offset-2 hover:opacity-85 active:opacity-70 transition-opacity cursor-pointer [overflow-wrap:anywhere]"
+          className="font-bold text-accent-soft underline decoration-accent-soft decoration-2 underline-offset-2 hover:opacity-85 active:opacity-70 transition-opacity cursor-pointer [overflow-wrap:anywhere]"
           onClick={() =>
             setTermPopup({
               term: lookupTerm,
@@ -606,10 +606,10 @@ export default function ScripturePage() {
 
   return (
     // JSX 구조 및 클래스명 원본 유지
-    <main className="px-4 pb-[120px] max-w-[460px] mx-auto relative overflow-x-hidden [overflow-wrap:anywhere] bg-white min-h-screen">
+    <main className="px-4 pb-[120px] max-w-[460px] mx-auto relative overflow-x-hidden [overflow-wrap:anywhere] bg-surface-elevated min-h-screen">
       {/* 상단 UI: sticky top-0 + safe-area top padding 으로 status bar 영역까지 흰 bg 가 채우고 컨텐츠는 아래에 */}
       <div
-        className="sticky top-0 z-50 bg-white"
+        className="sticky top-0 z-50 bg-surface-elevated"
         style={{
           paddingTop: 'calc(max(44px, env(safe-area-inset-top)) + 8px)',
           paddingBottom: '8px',
@@ -618,17 +618,17 @@ export default function ScripturePage() {
       >
         <div className="flex items-center justify-between gap-2">
           <div onClick={() => setShowModal(true)} className="cursor-pointer flex items-center max-w-[140px]">
-            <span className="text-base font-semibold text-red-dark truncate">
+            <span className="text-base font-semibold text-accent truncate">
               {formatDisplayTitle(selected)}
             </span>
-            <span className="ml-1 text-base text-red-light"> <Search size={24} /></span>
+            <span className="ml-1 text-base text-accent-soft"> <Search size={24} /></span>
           </div>
-          <span className="text-sm text-red-dark whitespace-nowrap flex-shrink-0 overflow-visible">{`${ttsSentences.length > 0 ? currentIndex + 1 : 0} / ${ttsSentences.length}`}</span>
+          <span className="text-sm text-accent whitespace-nowrap flex-shrink-0 overflow-visible">{`${ttsSentences.length > 0 ? currentIndex + 1 : 0} / ${ttsSentences.length}`}</span>
           <div className="flex items-center gap-2">
-            <button onClick={handleBookmark} className="w-24 h-9 bg-red-light text-white rounded-lg font-semibold">
+            <button onClick={handleBookmark} className="w-24 h-9 bg-accent-soft text-on-brand rounded-lg font-semibold">
               {isBookmarked ? '책갈피 삭제' : '책갈피 저장'}
             </button>
-            <button onClick={cycleFontSize} className="w-9 h-9 bg-red-light text-white rounded-lg">
+            <button onClick={cycleFontSize} className="w-9 h-9 bg-accent-soft text-on-brand rounded-lg">
               {fontSize === 'base' ? '가' : fontSize === 'lg' ? <span className="text-lg">가</span> : <span className="text-xl font-semibold">가</span>}
             </button>
           </div>
@@ -636,9 +636,9 @@ export default function ScripturePage() {
       </div>
 
       {/* 본문 (원본 유지) */}
-      <div className={`whitespace-pre-wrap break-keep font-maruburi bg-white rounded-xl ${fontSizeClass} leading-relaxed`}>
+      <div className={`whitespace-pre-wrap break-keep font-maruburi bg-surface-elevated rounded-xl ${fontSizeClass} leading-relaxed`}>
         {/* 안내 문구 (원본 유지) */}
-           <div style={{ minHeight: '40vh' }} className="flex flex-col justify-center gap-3 text-red-dark pt-4 pb-8">
+           <div style={{ minHeight: '40vh' }} className="flex flex-col justify-center gap-3 text-accent pt-4 pb-8">
             <p className="text-lg font-bold">{formatDisplayTitle(selected)}</p>
             <p className="text-base leading-relaxed">
               천천히 아래로 스크롤하며 경전을 읽어보세요.<br />
@@ -657,7 +657,7 @@ export default function ScripturePage() {
           let readCursor = 0;
           return contentBlocks.map((block, blockIdx) => {
             if (block.type === 'hr') {
-              return <hr key={`hr-${blockIdx}`} className="my-5 border-t border-gray-300" />;
+              return <hr key={`hr-${blockIdx}`} className="my-5 border-t border-line" />;
             }
 
             if (block.type === 'heading') {
@@ -674,7 +674,7 @@ export default function ScripturePage() {
                   key={`heading-${blockIdx}`}
                   data-index={globalIndex}
                   ref={(el) => { sentenceRefs.current[globalIndex] = el; }}
-                  className={`${headingClass} text-red-dark rounded-lg px-1 transition-colors duration-150 ${globalIndex === currentIndex ? 'bg-amber-200' : ''} ${bookmarkedIndexes.includes(globalIndex) ? 'underline decoration-red decoration-2 underline-offset-4' : ''}`}
+                  className={`${headingClass} text-accent rounded-lg px-1 transition-colors duration-150 ${globalIndex === currentIndex ? 'bg-highlight' : ''} ${bookmarkedIndexes.includes(globalIndex) ? 'underline decoration-accent decoration-2 underline-offset-4' : ''}`}
                 >
                   {renderInlineTerms(block.text)}
                 </h2>
@@ -683,7 +683,7 @@ export default function ScripturePage() {
 
             if (block.type === 'blockquote') {
               return (
-                <blockquote key={`quote-${blockIdx}`} className="border-l-4 border-red-light pl-3 my-4 text-gray-700">
+                <blockquote key={`quote-${blockIdx}`} className="border-l-4 border-accent-soft pl-3 my-4 text-ink-muted">
                   {block.lines.map((line, lineIdx) => {
                     const globalIndex = readCursor;
                     readCursor += 1;
@@ -692,7 +692,7 @@ export default function ScripturePage() {
                         key={`quote-line-${lineIdx}`}
                         data-index={globalIndex}
                         ref={(el) => { sentenceRefs.current[globalIndex] = el; }}
-                        className={`mb-1 last:mb-0 rounded-lg px-1 transition-colors duration-150 ${globalIndex === currentIndex ? 'bg-amber-200' : ''} ${bookmarkedIndexes.includes(globalIndex) ? 'underline decoration-red decoration-2 underline-offset-4' : ''}`}
+                        className={`mb-1 last:mb-0 rounded-lg px-1 transition-colors duration-150 ${globalIndex === currentIndex ? 'bg-highlight' : ''} ${bookmarkedIndexes.includes(globalIndex) ? 'underline decoration-accent decoration-2 underline-offset-4' : ''}`}
                       >
                         {renderInlineTerms(line)}
                       </p>
@@ -712,7 +712,7 @@ export default function ScripturePage() {
                       key={`sentence-${globalIndex}`}
                       data-index={globalIndex}
                       ref={(el) => { sentenceRefs.current[globalIndex] = el; }}
-                      className={`block px-1 rounded-lg transition-colors duration-150 ${globalIndex === currentIndex ? 'bg-amber-200' : ''} ${bookmarkedIndexes.includes(globalIndex) ? 'underline decoration-red decoration-2 underline-offset-4' : ''}`}
+                      className={`block px-1 rounded-lg transition-colors duration-150 ${globalIndex === currentIndex ? 'bg-highlight' : ''} ${bookmarkedIndexes.includes(globalIndex) ? 'underline decoration-accent decoration-2 underline-offset-4' : ''}`}
                     >
                       {renderInlineTerms(sentence)}
                     </span>
@@ -757,11 +757,11 @@ export default function ScripturePage() {
 
       {/* 메시지 표시 (원본 유지) */}
       {showMessage && (
-        <div onClick={() => setShowMessage(false)} className="fixed inset-0 z-[200] bg-black/30 backdrop-blur-sm flex items-center justify-center">
-          <div className="bg-white px-6 py-4 rounded-2xl shadow-lg text-center max-w-[80%]">
-            <p className="whitespace-pre-wrap text-sm text-gray-800">{message}</p>
+        <div onClick={() => setShowMessage(false)} className="fixed inset-0 z-[200] bg-ink/30 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-surface-elevated px-6 py-4 rounded-2xl shadow-lg text-center max-w-[80%]">
+            <p className="whitespace-pre-wrap text-sm text-ink">{message}</p>
             <button onClick={() => { setShowMessage(false); if (message === '로그인 정보를 불러올 수 없습니다.') { router.push('/login'); } }}
-              className="mt-4 px-4 py-1 bg-red-light text-white rounded-xl text-sm">
+              className="mt-4 px-4 py-1 bg-accent-soft text-on-brand rounded-xl text-sm">
               확인
             </button>
           </div>
@@ -771,18 +771,18 @@ export default function ScripturePage() {
       {termPopup && (
         <div
           onClick={() => setTermPopup(null)}
-          className="fixed inset-0 z-[190] bg-black/20 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-[190] bg-ink/20 backdrop-blur-sm flex items-center justify-center p-4"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-[80%] max-w-[368px] max-h-[75vh] overflow-y-auto bg-white rounded-2xl shadow-xl border border-red-100 p-4 font-maruburi"
+            className="w-[80%] max-w-[368px] max-h-[75vh] overflow-y-auto bg-surface-elevated rounded-2xl shadow-xl border border-accent-soft/30 p-4 font-maruburi"
           >
-            <p className="font-bold text-[#9A4345] text-lg">{termPopup.term}</p>
-            <p className="mt-2 text-black leading-relaxed">{termPopup.description}</p>
+            <p className="font-bold text-accent-soft text-lg">{termPopup.term}</p>
+            <p className="mt-2 text-ink leading-relaxed">{termPopup.description}</p>
             <button
               type="button"
               onClick={() => setTermPopup(null)}
-              className="mt-4 w-full py-2.5 rounded-xl bg-red-light text-white font-semibold"
+              className="mt-4 w-full py-2.5 rounded-xl bg-accent-soft text-on-brand font-semibold"
             >
               닫기
             </button>
@@ -792,12 +792,12 @@ export default function ScripturePage() {
 
       {/* 검색 중 로딩 표시 (원본 유지, 클래스명 원본으로 복구) */}
       {isSearching && (
-        <div className="fixed inset-0 bg-red/10 backdrop-blur-xs z-[150] flex flex-col items-center justify-center">
+        <div className="fixed inset-0 bg-accent/10 backdrop-blur-xs z-[150] flex flex-col items-center justify-center">
           <Image
             src="/logo.png" alt="로딩" width={64} height={64}
             className="animate-float rounded-4xl mb-4" // 원본 클래스명 복구
           />
-          <p className="text-black text-xl font-semibold">팔만대장경 전체 검색 중입니다</p>
+          <p className="text-ink text-xl font-semibold">팔만대장경 전체 검색 중입니다</p>
         </div>
       )}
     </main>

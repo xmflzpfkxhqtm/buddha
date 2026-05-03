@@ -103,7 +103,7 @@ export default function LoginPage() {
   /* ---------- UI ---------- */
   return (
     <main
-      className="relative min-h-screen flex flex-col items-center justify-start bg-red px-6 pb-4"
+      className="relative min-h-screen flex flex-col items-center justify-start bg-accent px-6 pb-4"
       style={{ paddingTop: 'calc(max(44px, env(safe-area-inset-top)) + 16px)' }}
     >
       <Image
@@ -115,7 +115,7 @@ export default function LoginPage() {
       />
       <ScrollHeader />
 
-      <div className="w-full max-w-xs bg-white rounded-2xl border text-red-dark border-red-light p-8 text-center mt-12 space-y-6 z-10">
+      <div className="w-full max-w-xs bg-surface-elevated rounded-2xl border text-accent border-accent-soft p-8 text-center mt-12 space-y-6 z-10">
         <h1 className="text-xl font-semibold">로그인 및 회원가입</h1>
         <span>
           간편하게 로그인하고 <br />
@@ -126,7 +126,7 @@ export default function LoginPage() {
           {/* 구글 */}
           <button
             onClick={handleGoogleLogin}
-            className="w-full flex items-center justify-center gap-2 border bg-white border-gray-300 rounded-lg py-2 hover:bg-gray-100 transition"
+            className="w-full flex items-center justify-center gap-2 border bg-surface-elevated border-line rounded-lg py-2 hover:bg-gray-100 transition"
           >
             <FcGoogle size={20} />
             <span className="font-medium">Google로 로그인</span>
@@ -138,7 +138,7 @@ export default function LoginPage() {
             className="w-full flex items-center justify-center gap-2 border bg-yellow-400 border-yellow-300 rounded-lg py-2 hover:bg-yellow-300 transition"
           >
             <SiKakaotalk size={20} color="#381E1F" />
-            <span className="font-medium text-black">카카오톡으로 로그인</span>
+            <span className="font-medium text-ink">카카오톡으로 로그인</span>
           </button>
 
           {/* Apple – iOSㆍAndroid 네이티브 모두 표시 */}
@@ -148,7 +148,7 @@ export default function LoginPage() {
               className="w-full flex items-center justify-center gap-2 border bg-black border-black rounded-lg py-2 hover:bg-gray-800 transition"
             >
               <SiApple size={20} color="#fff" />
-              <span className="font-medium text-white">Apple로 로그인</span>
+              <span className="font-medium text-on-brand">Apple로 로그인</span>
             </button>
           )}
         </div>

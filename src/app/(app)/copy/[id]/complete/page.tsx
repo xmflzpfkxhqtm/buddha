@@ -135,15 +135,15 @@ export default function CompletePage() {
       className="p-6 max-w-[460px] mb-4"
       style={{ marginTop: 'calc(max(44px, env(safe-area-inset-top)) + 16px)' }}
     >
-      <h1 className="font-bold text-red mb-4 text-2xl">
+      <h1 className="font-bold text-accent mb-4 text-2xl">
         {textObj.title} ({lang === 'han' ? '한문' : '한글'})
       </h1>
-      <p className="mb-4 text-start text-red-dark text-sm">
+      <p className="mb-4 text-start text-accent text-sm">
         오늘도 마음에 새긴 한 글자,<br />나를 위한 작은 수행입니다.
       </p>
 
       {/* ---------- 시트 ---------- */}
-      <div ref={sheetRef} className="flex justify-center bg-white my-4 py-4 rounded-xl">
+      <div ref={sheetRef} className="flex justify-center bg-surface-elevated my-4 py-4 rounded-xl">
         {lang === 'kor'
           ? <KoreanSheet chars={chars} svgs={svgs} />
           : <HanjaSheet   chars={chars} svgs={svgs} />}
@@ -155,13 +155,13 @@ export default function CompletePage() {
         <div className="flex space-x-4">
           <button
             onClick={() => router.push(`/copy/${id}?resume=1`)}
-            className="w-full py-3 bg-white text-red-dark border border-red font-bold rounded-4xl hover:bg-red hover:text-white transition">
+            className="w-full py-3 bg-surface-elevated text-accent border border-accent font-bold rounded-4xl hover:bg-accent hover:text-on-brand transition">
             수정하기
           </button>
           <button
             onClick={handleShare}
             disabled={!jpegUrl}
-            className="w-full py-3 bg-white text-red-dark border border-red font-bold rounded-4xl hover:bg-red hover:text-white transition disabled:opacity-40">
+            className="w-full py-3 bg-surface-elevated text-accent border border-accent font-bold rounded-4xl hover:bg-accent hover:text-on-brand transition disabled:opacity-40">
             공유하기
           </button>
         </div>
@@ -170,13 +170,13 @@ export default function CompletePage() {
         <button
           onClick={saveToNotebook}
           disabled={!jpegUrl}
-          className="w-full py-3 bg-red-light text-white font-bold rounded-4xl hover:bg-red transition disabled:opacity-40">
+          className="w-full py-3 bg-accent-soft text-on-brand font-bold rounded-4xl hover:bg-accent transition disabled:opacity-40">
           나의 사경노트에 저장
         </button>
       </div>
 
       {/* JPEG 생성 중 표시 */}
-      {!jpegUrl && <p className="mt-6 text-gray-500">이미지 생성 중…</p>}
+      {!jpegUrl && <p className="mt-6 text-ink-subtle">이미지 생성 중…</p>}
     </main>
   );
 }
@@ -189,16 +189,16 @@ function KoreanSheet({ chars, svgs }: { chars: string[]; svgs: (string | null)[]
   return (
     <div className="flex flex-col shadow rounded p-2">
       {rows.map((row, r) => (
-        <div key={r} className="flex border-red-light border-t">
+        <div key={r} className="flex border-accent-soft border-t">
           {row.map((c, cIdx) => {
             const idx = r * 7 + cIdx;
             return (
               <div key={cIdx} className="w-[50px] h-[50px] relative flex items-center justify-center rounded">
-                <span className="absolute inset-0 flex items-center justify-center opacity-10 select-none text-2xl font-['MaruBuri'] text-red-dark">
+                <span className="absolute inset-0 flex items-center justify-center opacity-10 select-none text-2xl font-['MaruBuri'] text-accent">
                   {c}
                 </span>
                 {svgs[idx] && (
-                  <svg className="absolute inset-0" viewBox="0 0 50 50" dangerouslySetInnerHTML={{ __html: svgs[idx]! }} />
+                  <svg className="absolute inset-0 text-ink" viewBox="0 0 50 50" dangerouslySetInnerHTML={{ __html: svgs[idx]!.replace(/fill="black"/g, 'fill="currentColor"') }} />
                 )}
               </div>
             );
@@ -214,16 +214,16 @@ function HanjaSheet({ chars, svgs }: { chars: string[]; svgs: (string | null)[] 
   return (
     <div className="flex flex-row-reverse shadow rounded p-2">
       {cols.map((col, c) => (
-        <div key={c} className="flex flex-col border-red-light border-r">
+        <div key={c} className="flex flex-col border-accent-soft border-r">
           {col.map((ch, rIdx) => {
             const idx = c * 5 + rIdx;
             return (
               <div key={rIdx} className="w-[50px] h-[50px] relative flex items-center justify-center rounded">
-                <span className="absolute inset-0 flex items-center justify-center opacity-10 select-none text-2xl font-['Yuji_Mai'] text-red-dark">
+                <span className="absolute inset-0 flex items-center justify-center opacity-10 select-none text-2xl font-['Yuji_Mai'] text-accent">
                   {ch}
                 </span>
                 {svgs[idx] && (
-                  <svg className="absolute inset-0" viewBox="0 0 50 50" dangerouslySetInnerHTML={{ __html: svgs[idx]! }} />
+                  <svg className="absolute inset-0 text-ink" viewBox="0 0 50 50" dangerouslySetInnerHTML={{ __html: svgs[idx]!.replace(/fill="black"/g, 'fill="currentColor"') }} />
                 )}
               </div>
             );

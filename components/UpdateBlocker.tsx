@@ -15,10 +15,10 @@ export default function UpdateBlocker() {
                             : '스토어';
 
   return (
-    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#F5F1E6]">
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-surface">
       <p className="text-lg font-bold mb-2">업데이트가 필요합니다</p>
 
-      <p className="text-sm text-gray-600 mb-6 text-center px-6">
+      <p className="text-sm text-ink-muted mb-6 text-center px-6">
         최신 버전을 설치하신 뒤 다시 시도해 주세요.
         <br />
         ({storeName}로 자동 이동되지 않았다면, 수동으로 열어 업데이트하시면 됩니다)
@@ -26,7 +26,7 @@ export default function UpdateBlocker() {
 
       <button
         onClick={() => location.reload()}
-        className="px-4 py-2 rounded-md bg-red-600 text-white"
+        className="px-4 py-2 rounded-md bg-red-600 text-on-brand"
       >
         다시 시도
       </button>

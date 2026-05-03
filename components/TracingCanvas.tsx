@@ -4,6 +4,7 @@ import { useRef, useState, useEffect } from 'react';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import getStroke from 'perfect-freehand';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { useTheme } from 'next-themes';
 
 type Point = [number, number];
 
@@ -40,6 +41,10 @@ export default function TracingCanvas({
   lang,
   isLast = false,
 }: Props) {
+  /* canvas 는 CSS color 자동 상속이 안 되므로 theme 별로 ink 색을 직접 적용. */
+  const { resolvedTheme } = useTheme();
+  const inkColor = resolvedTheme === 'dark' ? '#E0D5C2' : '#2E2B28';
+
   /* ---------------- state ---------------- */
   const [dSmallList, setDSmallList] = useState<string[]>([]);
   useEffect(() => {
@@ -69,6 +74,7 @@ export default function TracingCanvas({
     ctx.font = `${CELL * SCALE * 0.7}px ${guideFont}, serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = inkColor;
     ctx.globalAlpha = 0.18;
 
     const m = ctx.measureText(char);
@@ -78,6 +84,7 @@ export default function TracingCanvas({
     ctx.globalAlpha = 1;
 
     /* 2) committed strokes */
+    ctx.fillStyle = inkColor;
     dSmallList.forEach((dSmall) => {
       ctx.save();
       ctx.scale(SCALE, SCALE);
@@ -90,7 +97,7 @@ export default function TracingCanvas({
     live.width = W;
     live.height = H;
     live.getContext('2d')!.clearRect(0, 0, W, H);
-  }, [char, dSmallList, lang]);
+  }, [char, dSmallList, lang, inkColor]);
 
   /* ---------------- drawing ---------------- */
   const points = useRef<Point[]>([]);
@@ -100,10 +107,12 @@ export default function TracingCanvas({
   const handleDown = (e: React.PointerEvent) => {
     drawing.current = true;
     points.current = [[e.nativeEvent.offsetX, e.nativeEvent.offsetY]];
-    liveCtx().beginPath();
-    liveCtx().moveTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
-    liveCtx().lineWidth = 4;
-    liveCtx().lineCap = 'round';
+    const lc = liveCtx();
+    lc.beginPath();
+    lc.moveTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
+    lc.lineWidth = 4;
+    lc.lineCap = 'round';
+    lc.strokeStyle = inkColor;
   };
 
   const handleMove = (e: React.PointerEvent) => {
@@ -160,8 +169,9 @@ export default function TracingCanvas({
 
   const handleFinish = async () => {
     if (dSmallList.length === 0) return;
+    /* fill="currentColor" 로 저장하면 렌더 시 부모의 color 를 따라가서 라이트/다크 모두 자연스럽게 보임. */
     const svgSmall = dSmallList
-      .map((d) => `<path d="${d}" fill="black"/>`)
+      .map((d) => `<path d="${d}" fill="currentColor"/>`)
       .join('');
     onFinish(svgSmall);
     setDSmallList([]);
@@ -180,7 +190,7 @@ export default function TracingCanvas({
             key={i}
             className={`w-[50px] h-[50px] flex items-center justify-center text-2xl ${
               lang === 'kor' ? "font-['MaruBuri']" : "font-['Yuji_Mai']"
-            } text-red-dark`}
+            } text-accent`}
           >
             {g}
           </div>
@@ -192,13 +202,14 @@ export default function TracingCanvas({
         {prevSvgs.map((svg, i) => (
           <div
             key={i}
-            className="w-[50px] h-[50px] border-1 border-red-light relative rounded"
+            className="w-[50px] h-[50px] border-1 border-accent-soft relative rounded"
           >
             {svg && (
               <svg
-                className="absolute inset-0"
+                className="absolute inset-0 text-ink"
                 viewBox={`0 0 ${CELL} ${CELL}`}
-                dangerouslySetInnerHTML={{ __html: svg }}
+                /* 기존에 fill="black" 으로 저장된 항목도 currentColor 로 변환해 다크모드에서 보이게. */
+                dangerouslySetInnerHTML={{ __html: svg.replace(/fill="black"/g, 'fill="currentColor"') }}
               />
             )}
           </div>
@@ -208,7 +219,7 @@ export default function TracingCanvas({
       {/* drawing canvas */}
       <div className="flex justify-center">
         <div
-          className="relative my-8 border-2 border-red-light rounded-lg shadow-md"
+          className="relative my-8 border-2 border-accent-soft rounded-lg shadow-md"
           style={{ width: CELL * SCALE, height: CELL * SCALE }}
         >
           <canvas ref={baseRef} className="absolute inset-0" />
@@ -230,10 +241,10 @@ export default function TracingCanvas({
           <button
             onClick={onPrev}
             disabled={!canPrev}
-            className="flex-none px-2 py-1 text-2xl text-red-dark disabled:opacity-30 hover:bg-red-100"
+            className="flex-none px-2 py-1 text-2xl text-accent disabled:opacity-30 hover:bg-accent-soft/20"
             aria-label="이전 글자"
           >
-            <ArrowLeft className="text-red" />
+            <ArrowLeft className="text-accent" />
           </button>
         ) : (
           <span className="flex-none w-[40px]" />
@@ -243,14 +254,14 @@ export default function TracingCanvas({
         <div className="flex-auto flex justify-center gap-4">
           <button
             onClick={handleClear}
-            className="px-4 py-2 font-bold border border-red-light bg-white text-red-dark rounded-xl hover:bg-red hover:text-white transition"
+            className="px-4 py-2 font-bold border border-accent-soft bg-surface-elevated text-accent rounded-xl hover:bg-accent hover:text-on-brand transition"
           >
             다시 쓰기
           </button>
           <button
             onClick={handleFinish}
             disabled={dSmallList.length === 0}
-            className="px-4 py-2 font-bold border border-red bg-red-light text-white rounded-xl enabled:hover:bg-red enabled:hover:text-white disabled:opacity-40 transition"
+            className="px-4 py-2 font-bold border border-accent bg-accent-soft text-on-brand rounded-xl enabled:hover:bg-accent enabled:hover:text-on-brand disabled:opacity-40 transition"
           >
             {isLast ? '완성하기' : '다음 글자'}
           </button>
@@ -261,10 +272,10 @@ export default function TracingCanvas({
           <button
             onClick={onNext}
             disabled={!canNext}
-            className="flex-none px-2 py-1 text-2xl text-red-dark disabled:opacity-30 hover:bg-red-100"
+            className="flex-none px-2 py-1 text-2xl text-accent disabled:opacity-30 hover:bg-accent-soft/20"
             aria-label="다음 글자"
           >
-            <ArrowRight className="text-red" />
+            <ArrowRight className="text-accent" />
           </button>
         ) : (
           <span className="flex-none w-[40px]" />
