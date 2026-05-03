@@ -486,8 +486,8 @@ export async function GET(request: Request) {
         console.log(`changed_only: source(${sourceName}) 기존 문서 ${deletedForSource}건 삭제`);
       }
       
-      // 파일 단위로 먼저 중복 확인
-      const fileAlreadyProcessed = (options.fullRebuild || options.changedOnly)
+      // 파일 단위로 먼저 중복 확인 (missing_only 는 청크 hash 단위로 부분 복구하므로 파일 레벨 skip 우회)
+      const fileAlreadyProcessed = (options.fullRebuild || options.changedOnly || options.missingOnly)
         ? false
         : await isFileAlreadyProcessed(file, prevFileNames);
       if (fileAlreadyProcessed) {
