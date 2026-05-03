@@ -1,6 +1,14 @@
 // app/api/global-search/route.ts
 import { NextResponse } from 'next/server';
-import { supabase } from '@/utils/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+export const runtime = 'nodejs';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { persistSession: false } },
+);
 
 const splitSentences = (text: string): string[] =>
   text
@@ -72,5 +80,14 @@ export async function GET(req: Request) {
     });
   }
 
-  return NextResponse.json({ results });
+  return NextResponse.json(
+    { results },
+    {
+      headers: {
+        // 검색 결과도 본문 데이터에 종속이라 migrate 전까진 동일.
+        // query string 별로 CDN 키가 분리되므로 인기 검색어는 캐시 hit.
+        'Cache-Control': 'public, s-maxage=86400, stale-while-revalidate=604800',
+      },
+    },
+  );
 }

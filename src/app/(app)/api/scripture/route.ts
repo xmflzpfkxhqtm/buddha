@@ -40,11 +40,19 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }
 
-    return NextResponse.json({
-      content: data.content,
-      format: data.format,
-      sourceFile: data.filename,
-    });
+    return NextResponse.json(
+      {
+        content: data.content,
+        format: data.format,
+        sourceFile: data.filename,
+      },
+      {
+        headers: {
+          // 본문은 migrate 시점에만 바뀜. title 별 URL 이라 CDN이 자연스럽게 키 분리.
+          'Cache-Control': 'public, s-maxage=86400, stale-while-revalidate=604800',
+        },
+      },
+    );
   } catch (error) {
     console.error('scripture 조회 오류:', error);
     return NextResponse.json({ error: 'File not found' }, { status: 404 });
