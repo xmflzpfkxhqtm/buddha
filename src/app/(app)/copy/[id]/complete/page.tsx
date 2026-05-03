@@ -131,7 +131,10 @@ export default function CompletePage() {
   if (loading)   return <p className="text-center py-12">시트 불러오는 중…</p>;
 
   return (
-    <main className="p-6 max-w-[460px] my-4">
+    <main
+      className="p-6 max-w-[460px] mb-4"
+      style={{ marginTop: 'calc(env(safe-area-inset-top) + 16px)' }}
+    >
       <h1 className="font-bold text-red mb-4 text-2xl">
         {textObj.title} ({lang === 'han' ? '한문' : '한글'})
       </h1>
