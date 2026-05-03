@@ -26,8 +26,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#F5F1E6" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        {/* black-translucent: status bar 가 WebView 위에 오버레이되어 페이지 배경색이 그 영역까지 보임. */}
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        {/* default: 아이콘 색은 StatusBar.setStyle(Light/Dark) 로 페이지마다 제어.
+            black-translucent 로 두면 iOS 가 항상 흰 아이콘을 강제하여 흰 페이지에서 안 보임. */}
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="연등" />
         <link rel="apple-touch-icon" href="/icon.png" />
         <link rel="icon" href="/favicon.ico" />
