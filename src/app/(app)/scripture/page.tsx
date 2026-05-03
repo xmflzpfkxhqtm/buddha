@@ -34,11 +34,31 @@ type ReadUnit = {
   kind: 'heading' | 'quote' | 'paragraph';
 };
 
-const splitSentences = (text: string): string[] =>
-  text
+const EMPHASIS_PATTERN = /\*\*\*[^*]+?\*\*\*|\*\*[^*]+?\*\*|\*[^*]+?\*/g;
+const hasUnmatchedEmphasis = (s: string) => s.replace(EMPHASIS_PATTERN, '').includes('*');
+
+const splitSentences = (text: string): string[] => {
+  const raw = text
     .split(/(?<=[.!?]["”'’]?)\s+/)
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
+
+  if (raw.length <= 1) return raw;
+
+  // 문장 분할이 굵게/기울임 마커(`**`, `*`) 한가운데를 끊어 마커 짝이 깨지면
+  // 렌더러가 기호를 그대로 노출한다. 마커가 균형을 이룰 때까지 다음 문장과 병합.
+  const merged: string[] = [];
+  let buffer = '';
+  for (const sentence of raw) {
+    buffer = buffer ? `${buffer} ${sentence}` : sentence;
+    if (!hasUnmatchedEmphasis(buffer)) {
+      merged.push(buffer);
+      buffer = '';
+    }
+  }
+  if (buffer) merged.push(buffer);
+  return merged;
+};
 
 const parseMarkdownToBlocks = (
   content: string,
@@ -77,9 +97,16 @@ const parseMarkdownToBlocks = (
     quoteBuffer = [];
   };
 
+  // 다라니 메타데이터(`[다라니: … | 앱ID: …]`)는 추후 기능용으로 원문에 보존하되 UI/TTS 에선 숨김.
+  const DHARANI_META = /^>?\s*\*{0,3}\[\s*다라니[^\]]*\]\*{0,3}\s*$/;
+
   lines.forEach((rawLine) => {
     const line = rawLine.trimEnd();
     const trimmed = line.trim();
+
+    if (DHARANI_META.test(trimmed)) {
+      return;
+    }
 
     if (trimmed === '') {
       flushParagraph();
@@ -304,7 +331,7 @@ export default function ScripturePage() {
       setBookmarkPending({ title, index: index ?? 0 });
       setSelected(title);
     } else if (!title && !selected && list.length > 0) {
-      const defaultTitle = '금강반야바라밀경_1권';
+      const defaultTitle = '금강반야바라밀경_K0013_1권';
       const resolved = resolveActualTitle(defaultTitle, list);
       setSelected(resolved ?? list[0]);
     }
