@@ -7,6 +7,8 @@ import MarbleOverlay from '../../../../components/Overlay';
 import { useEffect, useState } from 'react';
 import { useBookmarkStore } from '@/stores/useBookmarkStore';
 import { supabase } from '@/lib/supabaseClient';
+import { Capacitor } from '@capacitor/core';
+import { StatusBar, Style } from '@capacitor/status-bar';
 
 interface UpdateNote {
   id: number;
@@ -34,6 +36,17 @@ export default function Home() {
       .replace(/_/g, ' ');                // _를 공백으로
   }
   
+  // 홈은 어두운 빨간 배경이라 status bar 아이콘을 흰색으로. 다른 페이지로 이동 시 어두운색으로 복원.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    StatusBar.setStyle({ style: Style.Light }).catch(() => {});
+    StatusBar.setBackgroundColor?.({ color: '#551102' }).catch(() => {});
+    return () => {
+      StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
+      StatusBar.setBackgroundColor?.({ color: '#f8f5ee' }).catch(() => {});
+    };
+  }, []);
+
   useEffect(() => {
     // 폰트 로딩 감지 (iOS WKWebView 등에서 resolve가 지연/누락되는 경우 대비 fallback)
     let done = false;
@@ -157,7 +170,8 @@ export default function Home() {
     <>
       <MarbleOverlay />
       <div className="absolute w-full bg-[#551102]">
-        <main className="min-h-screen w-full max-w-[460px] flex flex-col justify-start items-center mx-auto px-6 pt">
+        {/* iOS status bar 영역(safe-area-top)은 빨간 bg 가 그대로 채우고, 컨텐츠는 그 아래부터 시작. */}
+        <main className="min-h-screen w-full max-w-[460px] flex flex-col justify-start items-center mx-auto px-6 pt-[env(safe-area-inset-top)]">
           <ScrollHeader />
 
           {/* 업데이트 노트 토글 (Supabase update_notes 테이블에서 관리) */}
