@@ -611,9 +611,9 @@ export default function ScripturePage() {
       <div
         className="sticky top-0 z-50 bg-white"
         style={{
-          paddingTop: 'calc(env(safe-area-inset-top) + 8px)',
+          paddingTop: 'calc(max(44px, env(safe-area-inset-top)) + 8px)',
           paddingBottom: '8px',
-          height: 'calc(64px + env(safe-area-inset-top))',
+          height: 'calc(64px + max(44px, env(safe-area-inset-top)))',
         }}
       >
         <div className="flex items-center justify-between gap-2">

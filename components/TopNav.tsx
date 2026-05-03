@@ -67,8 +67,9 @@ export default function TopNav({ className }: TopNavProps) {
         className={`fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[460px]
                    bg-white z-40 select-none flex items-center border-b border-grey/50 ${className ?? ''}`}
         style={{
-          paddingTop: 'env(safe-area-inset-top)',
-          height: 'calc(48px + env(safe-area-inset-top))',
+          // 일부 iOS Capacitor WKWebView 가 env() 를 0 으로 평가하는 케이스 대비 max() fallback.
+          paddingTop: 'max(44px, env(safe-area-inset-top))',
+          height: 'calc(48px + max(44px, env(safe-area-inset-top)))',
         }}
       >
         {showBack && (
@@ -97,7 +98,7 @@ export default function TopNav({ className }: TopNavProps) {
       </header>
 
       {/* 본문을 아래로 밀어주는 스페이서 (헤더 높이 + safe-area top 만큼) */}
-      <div style={{ height: 'calc(48px + env(safe-area-inset-top))' }} />
+      <div style={{ height: 'calc(48px + max(44px, env(safe-area-inset-top)))' }} />
     </>
   );
 }
