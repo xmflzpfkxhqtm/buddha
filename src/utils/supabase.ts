@@ -54,7 +54,7 @@ export async function saveDocument(content: string, embedding: number[], metadat
       .from(TABLE_NAME)
       .insert({
         content,
-        embedding,
+        embedding_half: embedding,
         metadata,
       });
 
@@ -82,7 +82,7 @@ export async function saveDocumentBatch(documents: DocumentBatch[]) {
       .upsert(
         documents.map(doc => ({
           content: doc.content,
-          embedding: doc.embedding,
+          embedding_half: doc.embedding,
           metadata: doc.metadata,
         })),
         { onConflict: 'hash', ignoreDuplicates: true }

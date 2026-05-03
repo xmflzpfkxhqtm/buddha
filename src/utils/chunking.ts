@@ -51,17 +51,17 @@ function normalizeMarkdownForEmbedding(text: string): string {
  * 텍스트를 문장 단위로 청킹하는 함수
  * @param text 원본 텍스트
  * @param fileName 파일 이름
- * @param chunkSize 청크 최대 크기 (기본값: 500자)
+ * @param chunkSize 청크 최대 크기 (기본값: 2000자)
  * @param overlap 청크 간 겹치는 크기 (기본값: 50자)
- * @param maxChunkSize 최대 청크 크기 제한 (기본값: 1000자)
+ * @param maxChunkSize 최대 청크 크기 제한 (기본값: 4000자)
  * @returns 청킹된 텍스트 배열
  */
 export function chunkText(
-  text: string, 
-  fileName: string, 
-  chunkSize: number = 500, 
+  text: string,
+  fileName: string,
+  chunkSize: number = 2000,
   overlap: number = 50,
-  maxChunkSize: number = 1000
+  maxChunkSize: number = 4000
 ): { text: string, metadata: DocumentMetadata }[] {
   // 경전 이름: 평면 파일명 또는 `data/scripture/` 기준 상대경로(폴더/파일.md) → `_` 로 합친 키
   const relativePosix = fileName.replace(/\\/g, '/');

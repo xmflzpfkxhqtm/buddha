@@ -361,7 +361,7 @@ export async function POST(request: NextRequest) {
           // async 함수로 감싸서 Promise 반환
           return await supabase
             .from('temp_answers')
-            .insert([{ question, answer, parent_id: parentId }])
+            .insert([{ question, answer, parent_id: parentId, citation_hints: citationHints }])
             .select()
             .single();
         },

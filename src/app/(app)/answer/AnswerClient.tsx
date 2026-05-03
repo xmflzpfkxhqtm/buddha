@@ -255,10 +255,10 @@ export default function AnswerClient({ initialQuestionId = null }: { initialQues
     setCitationHintsMap({});
     citationIndexMapRef.current = {};
 
-    /* 질문 + 답변 로드 */
+    /* 질문 + 답변 + citation_hints 로드 */
     supabase
       .from('temp_answers')
-      .select('question, answer')
+      .select('question, answer, citation_hints')
       .eq('id', questionId)
       .single()
       .then(({ data, error }) => {
@@ -268,6 +268,15 @@ export default function AnswerClient({ initialQuestionId = null }: { initialQues
         } else {
           setQuestion(data.question);
           setFullAnswer(data.answer);
+          const hintsArr = Array.isArray(data.citation_hints) ? data.citation_hints : [];
+          const hintMap: Record<string, number> = {};
+          for (const h of hintsArr) {
+            const source = String((h as { source?: unknown })?.source ?? '').trim();
+            if (!source || source in hintMap) continue;
+            const raw = Number((h as { sentenceStart?: unknown })?.sentenceStart);
+            hintMap[source] = Number.isFinite(raw) ? Math.max(0, raw) : 0;
+          }
+          setCitationHintsMap(hintMap);
         }
         setIsAnswerLoaded(true);
         setDone(true);
@@ -293,43 +302,6 @@ export default function AnswerClient({ initialQuestionId = null }: { initialQues
       cancelled = true;
     };
   }, [questionId]);
-
-  useEffect(() => {
-    if (!question || question.trim().length === 0) return;
-    let cancelled = false;
-
-    const loadCitationHints = async () => {
-      try {
-        const res = await fetch('/api/search', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: question, limit: 10 }),
-        });
-        const json = await parseJsonSafe<{
-          results?: Array<{ metadata?: { source?: string; sentence_start?: number | string } }>;
-        }>(res, {});
-        const results = Array.isArray(json?.results) ? json.results : [];
-        const hints = new Map<string, number>();
-
-        for (const r of results) {
-          const source = String(r?.metadata?.source ?? '').trim();
-          if (!source || hints.has(source)) continue;
-          const raw = Number(r?.metadata?.sentence_start);
-          const sentenceStart = Number.isFinite(raw) ? Math.max(0, raw) : 0;
-          hints.set(source, sentenceStart);
-        }
-
-        if (!cancelled) {
-          setCitationHintsMap(Object.fromEntries(hints.entries()));
-        }
-      } catch {
-        if (!cancelled) setCitationHintsMap({});
-      }
-    };
-
-    loadCitationHints();
-    return () => { cancelled = true; };
-  }, [question]);
 
   /* -------------------------- URL 공유 ------------------------------ */
   const shareUrl = async () => {
