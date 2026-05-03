@@ -62,8 +62,10 @@ export default function TopNav({ className }: TopNavProps) {
   return (
     <>
       {/* ───── 고정 상단바 ───── */}
+      {/* iOS safe-area: bg 가 status bar 자리까지 채우도록 padding-top 으로 늘림. */}
       <header
-        className={`fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[460px] h-[48px]
+        className={`fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[460px]
+                   pt-[env(safe-area-inset-top)] h-[calc(48px+env(safe-area-inset-top))]
                    bg-white z-40 select-none flex items-center border-b border-grey/50 ${className ?? ''}`}
       >
         {showBack && (
@@ -91,8 +93,8 @@ export default function TopNav({ className }: TopNavProps) {
         </h1>
       </header>
 
-      {/* 본문을 아래로 밀어주는 스페이서 */}
-      <div className="h-[48px]" />
+      {/* 본문을 아래로 밀어주는 스페이서 (헤더 높이 + safe-area top 만큼) */}
+      <div className="h-[calc(48px+env(safe-area-inset-top))]" />
     </>
   );
 }
