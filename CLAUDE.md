@@ -49,7 +49,9 @@
 
 ## 데이터 및 콘텐츠
 
-- 경전 본문·목록은 주로 `data/` 및 API (`/api/scripture`, `/api/scripture/list`)를 통해 제공.
+- 경전 원문은 **`data/scripture/<경전별 폴더>/*.md`** 처럼 중첩 폴더에 둘 수 있다. DB/API의 `title` 키는 상대경로에서 슬래시를 `_`로 합친 값이다 (예: `금강/1권.md` → `금강_1권`). 평면 배치 `금강_1권.md`와 동일 키가 되도록 설계되어 기존 파일명과 호환된다.
+- `data/` 루트의 **평면** `.md`/`.txt`는 이전과 같이 지원한다. `scripts/migrate-scriptures.mjs`는 루트는 비재귀, `data/scripture/`만 재귀 스캔한다. `backup`, `.git` 디렉터리는 건너뛴다.
+- 경전 본문·목록은 Supabase `scriptures` 테이블과 API (`/api/scripture`, `/api/scripture/list`)를 통해 제공한다. 로컬 파일 변경 후에는 `node scripts/migrate-scriptures.mjs`로 upsert 한다.
 - 용어 팝업 등은 `dictionary/` CSV와 `/api/glossary`를 참고.
 - RAG/임베딩 파이프라인: `src/utils/chunking.ts`, `src/app/(app)/api/embed/route.ts`, `src/app/(app)/api/search/route.ts`, `src/app/(app)/api/ask/route.ts` 등이 연결됨.
 

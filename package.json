@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "normalize-scriptures:check": "npx tsx src/utils/normalizeSentenceSpacingInNewMd.ts --all-scripture",
+    "normalize-scriptures:write": "npx tsx src/utils/normalizeSentenceSpacingInNewMd.ts --all-scripture --write"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

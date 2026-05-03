@@ -1,25 +1,41 @@
 // app/api/scripture/list/route.ts
 import { NextResponse } from 'next/server';
-import { supabase } from '@/utils/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+export const runtime = 'nodejs';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { persistSession: false } },
+);
+
+const PAGE_SIZE = 1000;
 
 export async function GET() {
   try {
-    const { data, error } = await supabase
-      .from('scriptures')
-      .select('title')
-      .not('title', 'ilike', '%용어사전%');
+    const titles: string[] = [];
+    for (let from = 0; ; from += PAGE_SIZE) {
+      const { data, error } = await supabase
+        .from('scriptures')
+        .select('title')
+        .not('title', 'ilike', '%용어사전%')
+        .range(from, from + PAGE_SIZE - 1);
 
-    if (error) {
-      console.error('파일 목록 불러오기 실패:', error);
-      return NextResponse.json({ error: '불러오기 실패' }, { status: 500 });
+      if (error) {
+        console.error('파일 목록 불러오기 실패:', error);
+        return NextResponse.json({ error: '불러오기 실패' }, { status: 500 });
+      }
+      if (!data || data.length === 0) break;
+      for (const row of data) titles.push(row.title as string);
+      if (data.length < PAGE_SIZE) break;
     }
 
-    const titles = (data ?? [])
-      .map((row) => row.title as string)
+    const normalized = titles
       .map((title) => title.trim().replace(/﻿/g, '').replace(/\s/g, '').normalize('NFC'))
       .sort((a, b) => a.localeCompare(b, 'ko-KR', { numeric: true }));
 
-    return NextResponse.json({ titles });
+    return NextResponse.json({ titles: normalized });
   } catch (error) {
     console.error('파일 목록 불러오기 실패:', error);
     return NextResponse.json({ error: '불러오기 실패' }, { status: 500 });

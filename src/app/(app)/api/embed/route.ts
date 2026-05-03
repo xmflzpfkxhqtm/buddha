@@ -5,6 +5,7 @@ import { execSync } from 'child_process';
 import { generateEmbeddingBatch } from '@/utils/upstage';
 import { saveDocumentBatch, DocumentBatch, DocumentMetadata } from '@/utils/supabase';
 import { chunkText, cleanScriptureTitle } from '@/utils/chunking';
+import { scriptureTitleFromRelativePath } from '@/utils/scripturePaths';
 import { supabase } from '@/utils/supabase';
 
 // 배치 사이즈 (한 번에 처리할 최대 청크 수)
@@ -33,11 +34,55 @@ interface FileProcessResult {
 interface RebuildOptions {
   fullRebuild: boolean;
   changedOnly: boolean;
+  missingOnly: boolean;
 }
 
 const isScriptureDataFile = (fileName: string) =>
   (fileName.endsWith('.txt') || fileName.endsWith('.md')) &&
   !fileName.includes('용어사전');
+
+function shouldSkipScriptureWalkDir(name: string): boolean {
+  return name === 'backup' || name === '.git';
+}
+
+/** `data/scripture` 이하 모든 .md/.txt 상대경로(posix) */
+function listScriptureDataFilesRecursive(dirAbs: string): string[] {
+  const out: string[] = [];
+  function walk(abs: string, relPosix: string) {
+    if (!fs.existsSync(abs)) return;
+    for (const entry of fs.readdirSync(abs, { withFileTypes: true })) {
+      if (shouldSkipScriptureWalkDir(entry.name)) continue;
+      const nextRel = relPosix ? `${relPosix}/${entry.name}` : entry.name;
+      const absNext = path.join(abs, entry.name);
+      if (entry.isDirectory()) {
+        walk(absNext, nextRel);
+      } else if (entry.isFile() && isScriptureDataFile(entry.name)) {
+        out.push(nextRel);
+      }
+    }
+  }
+  walk(dirAbs, '');
+  return out;
+}
+
+/** 임베딩 스킵 판단용: `data/` 평면 + `data/scripture/**` 에 이미 있는 canonical 제목 키 */
+function buildCanonicalTitleKeysForEmbed(): Set<string> {
+  const set = new Set<string>();
+  const dataRoot = path.join(process.cwd(), 'data');
+  if (fs.existsSync(dataRoot)) {
+    for (const name of fs.readdirSync(dataRoot)) {
+      if (!isScriptureDataFile(name) || name.includes('용어사전')) continue;
+      set.add(cleanScriptureTitle(scriptureTitleFromRelativePath(name)));
+    }
+  }
+  const scriptureRoot = path.join(dataRoot, 'scripture');
+  if (fs.existsSync(scriptureRoot)) {
+    for (const rel of listScriptureDataFilesRecursive(scriptureRoot)) {
+      set.add(cleanScriptureTitle(scriptureTitleFromRelativePath(rel)));
+    }
+  }
+  return set;
+}
 
 /**
  * 배치를 처리하고 임베딩한 후 저장 (재시도 메커니즘 추가)
@@ -145,15 +190,13 @@ async function generateEmbeddingBatchWithRetry(texts: string[]): Promise<number[
  * 파일이 이미 처리되었는지 확인
  */
 async function isFileAlreadyProcessed(fileName: string, prevNames: Set<string>): Promise<boolean> {
-  // 파일명에서 확장자 제거 및 정리
-  const baseName = fileName.replace(/\.(txt|md)$/i, '');
-  const cleanedName = cleanScriptureTitle(baseName);
+  const cleanedName = cleanScriptureTitle(scriptureTitleFromRelativePath(fileName));
   
   console.log(`파일 중복 확인 중: ${fileName} (정리된 이름: ${cleanedName})`);
   
   // 이미 prevFileNames에서 확인한 경우 중복 확인
   if (prevNames.has(cleanedName)) {
-    console.log(`중복 확인: ${cleanedName} - 기존 데이터 폴더에 존재함`);
+    console.log(`중복 확인: ${cleanedName} - 기존 데이터 경로에 존재함`);
     return true;
   }
   
@@ -213,10 +256,33 @@ function getRebuildOptions(request: Request): RebuildOptions {
   const url = new URL(request.url);
   const mode = url.searchParams.get('mode')?.trim().toLowerCase();
   const changedOnly = isTruthy(url.searchParams.get('changed_only')) || mode === 'changed_only';
-  return {
-    fullRebuild: isTruthy(url.searchParams.get('full_rebuild')),
-    changedOnly,
-  };
+  const missingOnly = isTruthy(url.searchParams.get('missing_only')) || mode === 'missing_only';
+  // missing_only 우선: full_rebuild 의 truncate 동작을 자동으로 비활성화한다.
+  const fullRebuild = isTruthy(url.searchParams.get('full_rebuild')) && !missingOnly;
+  return { fullRebuild, changedOnly, missingOnly };
+}
+
+async function loadAllDocumentHashes(): Promise<Set<string>> {
+  const set = new Set<string>();
+  const pageSize = 1000;
+  let from = 0;
+  for (;;) {
+    const { data, error } = await supabase
+      .from(TABLE_NAME)
+      .select('hash')
+      .range(from, from + pageSize - 1);
+    if (error) {
+      console.error('hash 로드 실패:', error);
+      throw error;
+    }
+    if (!data || data.length === 0) break;
+    for (const row of data as Array<{ hash: string | null }>) {
+      if (row.hash) set.add(row.hash);
+    }
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
+  return set;
 }
 
 function isDeletedStatus(status: string): boolean {
@@ -248,13 +314,16 @@ function collectChangedScriptureFiles(dataDir: string): string[] {
     if (!filePath.startsWith('data/scripture/')) continue;
     if (!isScriptureDataFile(filePath)) continue;
 
-    const fileName = path.basename(filePath);
-    const source = cleanScriptureTitle(fileName.replace(/\.(txt|md)$/i, ''));
+    const relFromScripture = filePath.slice('data/scripture/'.length).replace(/\\/g, '/');
+    const source = cleanScriptureTitle(scriptureTitleFromRelativePath(relFromScripture));
     const existing = bySource.get(source);
     // 동일 source에서 md 우선
-    if (!existing || (fileName.endsWith('.md') && existing.endsWith('.txt'))) {
-      const fullPath = path.join(dataDir, fileName);
-      if (fs.existsSync(fullPath)) bySource.set(source, fileName);
+    if (
+      !existing ||
+      (relFromScripture.toLowerCase().endsWith('.md') && existing.toLowerCase().endsWith('.txt'))
+    ) {
+      const fullPath = path.join(dataDir, ...relFromScripture.split('/'));
+      if (fs.existsSync(fullPath)) bySource.set(source, relFromScripture);
     }
   }
   return Array.from(bySource.values());
@@ -340,25 +409,15 @@ export async function GET(request: Request) {
   try {
     console.log('========== 임베딩 처리 시작 ==========');
     const options = getRebuildOptions(request);
-    console.log(`옵션 - full_rebuild: ${options.fullRebuild}, changed_only: ${options.changedOnly}`);
-    
+    console.log(`옵션 - full_rebuild: ${options.fullRebuild}, changed_only: ${options.changedOnly}, missing_only: ${options.missingOnly}`);
+
     // 데이터 폴더의 경로 (scripture 폴더 사용)
     const dataDir = path.join(process.cwd(), 'data', 'scripture');
     console.log(`데이터 폴더: ${dataDir}`);
-    
+
     // 기존 처리된 데이터 폴더 (중복 확인용)
-    const prevDataDir = path.join(process.cwd(), 'data');
-    const prevFiles = fs.existsSync(prevDataDir) ? fs.readdirSync(prevDataDir) : [];
-    // 파일명에서 _GPT4.1번역 등을 제거한 파일명 세트 생성
-    const prevFileNames = new Set(prevFiles
-      .filter(file => file.endsWith('.txt') || file.endsWith('.md'))
-      .filter(file => !file.includes('용어사전'))
-      .map(file => {
-        // 접미사 제거 및 확장자 제외하고 기본 이름만 저장
-        const baseName = file.replace(/\.(txt|md)$/i, '');
-        return cleanScriptureTitle(baseName);
-      }));
-    console.log(`기존 처리된 파일 수: ${prevFileNames.size}개`);
+    const prevFileNames = buildCanonicalTitleKeysForEmbed();
+    console.log(`기존 데이터 기준 canonical 제목 키 수: ${prevFileNames.size}개`);
 
     let deletedRows = 0;
     if (options.fullRebuild) {
@@ -366,10 +425,18 @@ export async function GET(request: Request) {
       deletedRows = await clearDocumentsTable();
       console.log(`full_rebuild 모드: 기존 documents ${deletedRows}건 삭제 완료`);
     }
+
+    // missing_only: 시작 시 documents 의 모든 hash 를 메모리로 로드해
+    // 파일 청킹 결과 중 누락된 청크만 임베딩한다.
+    let existingHashes: Set<string> | null = null;
+    if (options.missingOnly) {
+      console.log('missing_only 모드: 기존 documents.hash 로드 시작');
+      existingHashes = await loadAllDocumentHashes();
+      console.log(`missing_only 모드: 기존 hash ${existingHashes.size}개 로드`);
+    }
     
-    // 데이터 폴더의 모든 파일 읽기
-    const files = fs.readdirSync(dataDir);
-    console.log(`총 파일 수: ${files.length}개`);
+    const files = listScriptureDataFilesRecursive(dataDir);
+    console.log(`총 파일 수(data/scripture 재귀): ${files.length}개`);
 
     // scripture 원문 파일(.txt/.md)만 필터링
     let textFiles = files.filter(isScriptureDataFile);
@@ -386,6 +453,7 @@ export async function GET(request: Request) {
         message: '처리할 변경 source가 없습니다.',
         fullRebuild: options.fullRebuild,
         changedOnly: options.changedOnly,
+        missingOnly: options.missingOnly,
         deletedRows,
         processedSources: [],
         files: [],
@@ -408,7 +476,7 @@ export async function GET(request: Request) {
     // 각 파일 처리
     for (const file of textFiles) {
       console.log(`\n===== 파일 처리 시작: ${file} =====`);
-      const sourceName = cleanScriptureTitle(file.replace(/\.(txt|md)$/i, ''));
+      const sourceName = cleanScriptureTitle(scriptureTitleFromRelativePath(file));
 
       if (options.changedOnly) {
         const deletedForSource = await clearSourceDocuments(sourceName);
@@ -418,8 +486,8 @@ export async function GET(request: Request) {
         console.log(`changed_only: source(${sourceName}) 기존 문서 ${deletedForSource}건 삭제`);
       }
       
-      // 파일 단위로 먼저 중복 확인
-      const fileAlreadyProcessed = (options.fullRebuild || options.changedOnly)
+      // 파일 단위로 먼저 중복 확인 (missing_only 는 청크 hash 단위로 부분 복구하므로 파일 레벨 skip 우회)
+      const fileAlreadyProcessed = (options.fullRebuild || options.changedOnly || options.missingOnly)
         ? false
         : await isFileAlreadyProcessed(file, prevFileNames);
       if (fileAlreadyProcessed) {
@@ -437,7 +505,7 @@ export async function GET(request: Request) {
         continue; // 다음 파일로 넘어감
       }
       
-      const filePath = path.join(dataDir, file);
+      const filePath = path.join(dataDir, ...file.split('/'));
       const content = fs.readFileSync(filePath, 'utf-8');
       const fileSize = fs.statSync(filePath).size;
       console.log(`파일 크기: ${Math.round(fileSize / 1024)}KB, 문자 수: ${content.length}`);
@@ -446,73 +514,103 @@ export async function GET(request: Request) {
       console.log('청크 분할 중...');
       const chunks = chunkText(content, file);
       console.log(`청크 분할 완료: ${chunks.length}개 생성됨`);
-      
+
       // 청크 길이 통계
       const chunkLengths = chunks.map(chunk => chunk.text.length);
       const avgChunkLength = chunkLengths.reduce((sum, length) => sum + length, 0) / chunkLengths.length;
       const minChunkLength = Math.min(...chunkLengths);
       const maxChunkLength = Math.max(...chunkLengths);
       console.log(`청크 길이 통계 - 평균: ${Math.round(avgChunkLength)}, 최소: ${minChunkLength}, 최대: ${maxChunkLength}`);
-      
+
+      // missing_only: 이미 documents.hash 에 존재하는 청크는 OpenAI 호출 자체를 생략
+      let chunksToProcess = chunks;
+      let preSkipped = 0;
+      if (options.missingOnly && existingHashes) {
+        const filtered: typeof chunks = [];
+        for (const c of chunks) {
+          if (c.metadata.hash && existingHashes.has(c.metadata.hash)) preSkipped++;
+          else filtered.push(c);
+        }
+        chunksToProcess = filtered;
+        if (chunksToProcess.length === 0) {
+          console.log(`missing_only: ${chunks.length}개 청크 모두 이미 적재됨 → 파일 skip`);
+          skippedFiles++;
+          totalChunks += chunks.length;
+          skippedChunks += preSkipped;
+          processedFiles.push({
+            fileName: file,
+            totalChunks: chunks.length,
+            processedChunks: 0,
+            skippedChunks: preSkipped,
+          });
+          continue;
+        }
+        console.log(`missing_only: ${chunksToProcess.length}/${chunks.length}개 청크 누락 → 임베딩 진행 (${preSkipped}개 hash 일치 skip)`);
+      }
+
       // 파일별 처리 상태
-      const fileSkippedChunks = 0;
       let fileProcessedChunks = 0;
-      
+
       // 배치 처리를 위한 배열
       let currentBatch: ProcessedChunk[] = [];
       let batchCount = 0;
-      
+
       // 배치 처리
-      for (let i = 0; i < chunks.length; i++) {
-        const chunk = chunks[i];
-        
+      for (let i = 0; i < chunksToProcess.length; i++) {
+        const chunk = chunksToProcess[i];
+
         // 해시가 없으면 건너뜀
         if (!chunk.metadata.hash) {
           console.warn(`해시가 없는 청크 발견: ${chunk.text.substring(0, 50)}...`);
           continue;
         }
-        
+
         // 이 파일 청크는 중복 검사를 건너뛰고 바로 처리 (파일 레벨에서 이미 중복 검사함)
-        // 현재 배치에 추가
-        currentBatch.push({ 
+        currentBatch.push({
           chunk: {
             text: chunk.text,
             metadata: {
               ...chunk.metadata,
               fileSize,
               processedAt: new Date().toISOString(),
-              chunkSize: chunk.text.length
-            }
-          }, 
-          exists: false  // 항상 false로 설정하여 모든 청크 처리
+              chunkSize: chunk.text.length,
+            },
+          },
+          exists: false,
         });
-        
+
         // 배치가 가득 찼거나 마지막 청크인 경우 처리
-        if (currentBatch.length >= BATCH_SIZE || i === chunks.length - 1) {
+        if (currentBatch.length >= BATCH_SIZE || i === chunksToProcess.length - 1) {
           batchCount++;
           console.log(`배치 #${batchCount} 처리 중 (${currentBatch.length}개 청크)`);
           const processed = await processBatch(currentBatch);
           fileProcessedChunks += processed;
           console.log(`배치 처리 완료: ${processed}개 처리됨, 누적 ${fileProcessedChunks}개`);
-          currentBatch = []; // 배치 초기화
+          // 새로 들어간 hash 를 existingHashes 에 반영해 다음 파일에서 cross-file 중복 자동 skip
+          if (existingHashes) {
+            for (const item of currentBatch) {
+              if (item.chunk.metadata.hash) existingHashes.add(item.chunk.metadata.hash as string);
+            }
+          }
+          currentBatch = [];
           await new Promise((resolve) => setTimeout(resolve, INTER_BATCH_DELAY_MS));
         }
       }
-      
+
       // 파일 처리 결과 기록
       totalChunks += chunks.length;
-      skippedChunks += fileSkippedChunks;
+      skippedChunks += preSkipped;
       processedChunks += fileProcessedChunks;
-      
+
       processedFiles.push({
         fileName: file,
         totalChunks: chunks.length,
         processedChunks: fileProcessedChunks,
-        skippedChunks: fileSkippedChunks
+        skippedChunks: preSkipped,
       });
-      
+
       console.log(`===== 파일 처리 완료: ${file} =====`);
-      console.log(`총 청크: ${chunks.length}개, 처리됨: ${fileProcessedChunks}개, 건너뜀: ${fileSkippedChunks}개`);
+      console.log(`총 청크: ${chunks.length}개, 처리됨: ${fileProcessedChunks}개, 건너뜀: ${preSkipped}개`);
     }
     
     console.log('\n========== 임베딩 처리 종료 ==========');
@@ -523,6 +621,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       message: `${processedFiles.length}개의 파일이 성공적으로 처리되었습니다. 총 ${totalChunks}개의 청크 중 ${processedChunks}개 생성, ${skippedChunks}개 중복 건너뜀. 건너뛴 전체 파일: ${skippedFiles}개`,
+      missingOnly: options.missingOnly,
       fullRebuild: options.fullRebuild,
       changedOnly: options.changedOnly,
       deletedRows,
