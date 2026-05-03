@@ -225,7 +225,10 @@ export default function ConfirmPage() {
 
   return (
     <>
-      <main className="relative min-h-screen w-full max-w-[460px] flex flex-col justify-start items-center bg-white px-6 py-6">
+      <main
+        className="relative min-h-screen w-full max-w-[460px] flex flex-col justify-start items-center bg-white px-6 pb-6"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}
+      >
         <div className="w-full z-1">
           <h2 className="text-3xl text-red font-semibold text-start mb-4">
             부처님께 여쭈기 전,

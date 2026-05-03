@@ -171,7 +171,10 @@ export default function Home() {
       <MarbleOverlay />
       <div className="absolute w-full bg-[#551102]">
         {/* iOS status bar 영역(safe-area-top)은 빨간 bg 가 그대로 채우고, 컨텐츠는 그 아래부터 시작. */}
-        <main className="min-h-screen w-full max-w-[460px] flex flex-col justify-start items-center mx-auto px-6 pt-[env(safe-area-inset-top)]">
+        <main
+          className="min-h-screen w-full max-w-[460px] flex flex-col justify-start items-center mx-auto px-6"
+          style={{ paddingTop: 'env(safe-area-inset-top)' }}
+        >
           <ScrollHeader />
 
           {/* 업데이트 노트 토글 (Supabase update_notes 테이블에서 관리) */}

@@ -606,9 +606,16 @@ export default function ScripturePage() {
 
   return (
     // JSX 구조 및 클래스명 원본 유지
-    <main className="px-4 pb-[120px] pt-[calc(16px+env(safe-area-inset-top))] max-w-[460px] mx-auto relative overflow-x-hidden [overflow-wrap:anywhere] bg-white min-h-screen">
-      {/* 상단 UI (원본 유지) */}
-      <div className="sticky top-0 z-50 bg-white h-16 py-2">
+    <main className="px-4 pb-[120px] max-w-[460px] mx-auto relative overflow-x-hidden [overflow-wrap:anywhere] bg-white min-h-screen">
+      {/* 상단 UI: sticky top-0 + safe-area top padding 으로 status bar 영역까지 흰 bg 가 채우고 컨텐츠는 아래에 */}
+      <div
+        className="sticky top-0 z-50 bg-white"
+        style={{
+          paddingTop: 'calc(env(safe-area-inset-top) + 8px)',
+          paddingBottom: '8px',
+          height: 'calc(64px + env(safe-area-inset-top))',
+        }}
+      >
         <div className="flex items-center justify-between gap-2">
           <div onClick={() => setShowModal(true)} className="cursor-pointer flex items-center max-w-[140px]">
             <span className="text-base font-semibold text-red-dark truncate">

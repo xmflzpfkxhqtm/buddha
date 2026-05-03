@@ -102,7 +102,10 @@ export default function LoginPage() {
 
   /* ---------- UI ---------- */
   return (
-    <main className="relative min-h-screen flex flex-col items-center justify-start bg-red py-4 px-6">
+    <main
+      className="relative min-h-screen flex flex-col items-center justify-start bg-red px-6 pb-4"
+      style={{ paddingTop: 'calc(env(safe-area-inset-top) + 16px)' }}
+    >
       <Image
         src="/bg_loading.png"
         alt="로딩 배경"
