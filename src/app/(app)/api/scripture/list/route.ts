@@ -35,7 +35,16 @@ export async function GET() {
       .map((title) => title.trim().replace(/﻿/g, '').replace(/\s/g, '').normalize('NFC'))
       .sort((a, b) => a.localeCompare(b, 'ko-KR', { numeric: true }));
 
-    return NextResponse.json({ titles: normalized });
+    return NextResponse.json(
+      { titles: normalized },
+      {
+        headers: {
+          // Vercel Edge Network: 24h 캐시, 그 후 7일까지 stale 응답하면서 백그라운드 재검증.
+          // 경전 목록은 migrate 시점에만 바뀌는 사실상 정적 데이터라 길게 잡음.
+          'Cache-Control': 'public, s-maxage=86400, stale-while-revalidate=604800',
+        },
+      },
+    );
   } catch (error) {
     console.error('파일 목록 불러오기 실패:', error);
     return NextResponse.json({ error: '불러오기 실패' }, { status: 500 });
