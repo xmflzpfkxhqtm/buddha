@@ -2,7 +2,7 @@ export const runtime = 'nodejs';
 export const maxDuration = 60; // Vercel 함수 타임아웃 60초 (Hobby 플랜 최대)
 
 import { NextRequest, NextResponse } from 'next/server';
-import { generateEmbeddingBatch } from '@/utils/upstage';
+import { generateEmbeddingBatch } from '@/utils/embedding';
 import { searchSimilarDocuments, searchSimilarDocumentsOptimized } from '@/utils/supabase';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import Anthropic from "@anthropic-ai/sdk";

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
-import { generateEmbeddingBatch } from '@/utils/upstage';
+import { generateEmbeddingBatch } from '@/utils/embedding';
 import { saveDocumentBatch, DocumentBatch, DocumentMetadata } from '@/utils/supabase';
 import { chunkText, cleanScriptureTitle } from '@/utils/chunking';
 import { scriptureTitleFromRelativePath } from '@/utils/scripturePaths';

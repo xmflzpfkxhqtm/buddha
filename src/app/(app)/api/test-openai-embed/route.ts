@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { generateEmbedding } from '@/utils/upstage';
+import { generateEmbedding } from '@/utils/embedding';
 import { saveDocument } from '@/utils/supabase';
 
 export async function GET() {

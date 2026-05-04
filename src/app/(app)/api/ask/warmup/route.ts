@@ -1,7 +1,7 @@
 export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { generateEmbeddingBatch } from '@/utils/upstage';
+import { generateEmbeddingBatch } from '@/utils/embedding';
 import { searchSimilarDocuments, searchSimilarDocumentsOptimized } from '@/utils/supabase';
 
 // 재시도 설정
