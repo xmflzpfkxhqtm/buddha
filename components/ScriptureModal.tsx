@@ -66,9 +66,18 @@ export default function ScriptureModal({
     }
   }, [modalTab, setSearch, isSearching]);
 
+  // 모달 열림 동안 배경(body) 스크롤 잠금. 백드롭 위 스크롤로 뒷페이지가 움직이는 동작 차단.
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
   return (
     <div onClick={onClose} className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[100] flex items-end justify-center">
-      <div onClick={(e) => e.stopPropagation()} className="bg-surface-elevated rounded-t-2xl p-4 h-[80vh] overflow-y-auto w-full max-w-md flex flex-col justify-between">
+      <div onClick={(e) => e.stopPropagation()} className="bg-surface-elevated rounded-t-2xl p-4 h-[80vh] overflow-y-auto overscroll-contain w-full max-w-md flex flex-col justify-between">
         <div>
           {/* 탭 메뉴 */}
           <div className="flex mb-4">
