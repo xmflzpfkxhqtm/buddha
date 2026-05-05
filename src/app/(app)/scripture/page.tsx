@@ -606,7 +606,7 @@ export default function ScripturePage() {
 
   return (
     // JSX 구조 및 클래스명 원본 유지
-    <main className="px-4 pb-[120px] max-w-[460px] mx-auto relative overflow-x-hidden [overflow-wrap:anywhere] bg-surface-elevated min-h-screen">
+    <main className="px-4 pb-[120px] max-w-[460px] mx-auto relative overflow-x-clip [overflow-wrap:anywhere] bg-surface-elevated min-h-screen">
       {/* 상단 UI: sticky top-0 + safe-area top padding 으로 status bar 영역까지 흰 bg 가 채우고 컨텐츠는 아래에 */}
       <div
         className="sticky top-0 z-50 bg-surface-elevated"
