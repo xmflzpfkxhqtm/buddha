@@ -434,7 +434,8 @@ export default function AnswerClient({ initialQuestionId = null }: { initialQues
   };
 
   if (!isAnswerLoaded || !isTitlesLoaded) {
-    return <Loading />;
+    // /ask/confirm 의 Loading 에서 이미 목탁이 울렸으므로 여기서는 silent.
+    return <Loading silent />;
   }
 
   return (

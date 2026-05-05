@@ -5,7 +5,7 @@ import Image from 'next/image';
 import MarbleOverlay from './Overlay';
 import { useSoundStore } from '@/stores/useSoundStore'; // ✅ 추가
 
-export default function Loading({ fadeOut = false }: { fadeOut?: boolean }) {
+export default function Loading({ fadeOut = false, silent = false }: { fadeOut?: boolean; silent?: boolean }) {
   const message = fadeOut
     ? '부처님께서 말씀을 내리시는 중입니다.'
     : '마음의 소리에 귀를 기울이는 중입니다.\n당신의 물음이 조용히 울리고 있습니다.';
@@ -13,6 +13,7 @@ export default function Loading({ fadeOut = false }: { fadeOut?: boolean }) {
   const { soundEnabled } = useSoundStore(); // ✅ 소리 설정 가져오기
 
   useEffect(() => {
+    if (silent) return;
     if (soundEnabled) {
       const audio = new Audio('/sounds/moktak.wav');
       audio.volume = 0.6;
@@ -20,7 +21,7 @@ export default function Loading({ fadeOut = false }: { fadeOut?: boolean }) {
         console.warn('목탁 소리 재생 실패:', e);
       });
     }
-  }, [soundEnabled]); // ✅ 상태 반영
+  }, [soundEnabled, silent]); // ✅ 상태 반영
 
   return (
     <div
