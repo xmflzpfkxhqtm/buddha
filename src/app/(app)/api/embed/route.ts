@@ -303,11 +303,9 @@ function collectChangedScriptureFiles(dataDir: string): string[] {
     let filePath = rec.slice(3);
 
     if ((status[0] === 'R' || status[0] === 'C') && i + 1 < records.length) {
-      const renamedTo = records[i + 1];
-      if (renamedTo) {
-        filePath = renamedTo;
-        i += 1;
-      }
+      // -z 형식은 새 경로를 먼저, 원본 경로를 다음 레코드로 출력한다.
+      // filePath 는 이미 새 경로이므로 원본 경로 레코드만 건너뛰면 된다.
+      i += 1;
     }
 
     if (isDeletedStatus(status)) continue;
