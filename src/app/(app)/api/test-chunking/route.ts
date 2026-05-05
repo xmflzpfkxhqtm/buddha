@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { chunkText } from '@/utils/chunking';
-import { generateEmbedding, generateEmbeddingBatch } from '@/utils/upstage';
+import { generateEmbedding, generateEmbeddingBatch } from '@/utils/embedding';
 
 export async function GET() {
   try {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateEmbeddingBatch } from '@/utils/upstage';
+import { generateEmbeddingBatch } from '@/utils/embedding';
 import { searchSimilarDocuments, DocumentResult } from '@/utils/supabase';
 
 export async function POST(request: NextRequest) {
