@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* next-themes 가 html 에 .dark 클래스를 토글하므로 Tailwind v4 의 dark: variant 를
+   prefers-color-scheme 이 아니라 .dark 클래스 기준으로 동작하도록 매핑.
+   대부분의 색은 :root / .dark 의 CSS var 스왑으로 자동 적응하지만, 라이트 brand bg
+   ↔ 다크 통일톤처럼 모드별로 다른 토큰을 쓰고 싶을 때 dark:foo 를 쓸 수 있게 해줌. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* 👉 불필요한 CDN import 제거됨
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 @import url('https://hangeul.pstatic.net/hangeul_static/css/maru-buri.css');
@@ -101,8 +107,8 @@ html { font-family: "YujiMai", serif; }
   --surface:                 #342D26;  /* 페이지 bg — 너무 검지 않은 따뜻한 다크 (Kindle-ish) */
   --surface-elevated:        #342D26;  /* 카드/리스트/내비 — 동일 톤 (시각 일관성 우선) */
   --surface-sunken:          #2A241E;  /* 인용/입력란 살짝 가라앉음 */
-  --surface-brand:           #401004;
-  --surface-brand-elevated:  #501308;
+  --surface-brand:           #3D1B16;  /* 다크 hero bg — 적갈 정체성: 적색 dominance + 따뜻한 갈색 undertone */
+  --surface-brand-elevated:  #532720;  /* 다크 hero 위 카드 — 페이지 대비 L+7% 살짝 elevated, 같은 적갈 패밀리 */
 
   --ink:                     #E0D5C2;
   --ink-muted:               #A89E8C;

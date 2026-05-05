@@ -5,6 +5,7 @@ import Image from 'next/image';
 import ScrollHeader from '../../../../components/ScrollHeader';
 import MarbleOverlay from '../../../../components/Overlay';
 import { useEffect, useState } from 'react';
+import { useTheme } from 'next-themes';
 import { useBookmarkStore } from '@/stores/useBookmarkStore';
 import { supabase } from '@/lib/supabaseClient';
 import { Capacitor } from '@capacitor/core';
@@ -17,9 +18,15 @@ interface UpdateNote {
   published_at: string;
 }
 
+const SPLASH_PHRASES = [
+  '자기를 바로 봅시다',
+  '스스로를 법의 등불로 삼아,\n법에 의지해 살아가라',
+];
+
 export default function Home() {
   const router = useRouter();
   const { setBookmark } = useBookmarkStore();
+  const { resolvedTheme } = useTheme();
 
   const [title, setTitle] = useState('');
   const [index, setIndex] = useState<number | null>(null);
@@ -29,23 +36,38 @@ export default function Home() {
   const [fontReady, setFontReady] = useState(false); // 폰트 로딩 상태
   const [updateNotes, setUpdateNotes] = useState<UpdateNote[]>([]);
   const [notesOpen, setNotesOpen] = useState(false);
+  const [themeMounted, setThemeMounted] = useState(false);
+  const [splashPhrase, setSplashPhrase] = useState(SPLASH_PHRASES[0]);
+
+  // 마운트 후 랜덤 선택. SSR/CSR hydration 미스매치 회피를 위해 첫 렌더는 [0] 으로 통일.
+  useEffect(() => {
+    setSplashPhrase(SPLASH_PHRASES[Math.floor(Math.random() * SPLASH_PHRASES.length)]);
+  }, []);
 
   function formatDisplayTitle(rawTitle: string): string {
     return rawTitle
       .replace(/_GPT\d+(\.\d+)?번역/, '') // GPT 번역 제거
       .replace(/_/g, ' ');                // _를 공백으로
   }
-  
-  // 홈은 어두운 빨간 배경이라 status bar 아이콘을 흰색으로. 다른 페이지로 이동 시 어두운색으로 복원.
+
+  useEffect(() => setThemeMounted(true), []);
+
+  // 진입: brand bg (라이트 #551102 / 다크 #3D1B16 = --surface-brand 의 var-swap 결과) + Light 아이콘.
+  // 떠날 때: 다음 페이지가 기대하는 색 (라이트 = cream + Dark icons, 다크 = warm dark + Light icons).
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
+    if (!themeMounted) return;
+    const isDark = resolvedTheme === 'dark';
+    const enterBg = isDark ? '#3D1B16' : '#551102';
     StatusBar.setStyle({ style: Style.Light }).catch(() => {});
-    StatusBar.setBackgroundColor?.({ color: '#551102' }).catch(() => {});
+    StatusBar.setBackgroundColor?.({ color: enterBg }).catch(() => {});
     return () => {
-      StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
-      StatusBar.setBackgroundColor?.({ color: '#f8f5ee' }).catch(() => {});
+      const leaveBg = isDark ? '#342D26' : '#f8f5ee';
+      const leaveStyle = isDark ? Style.Light : Style.Dark;
+      StatusBar.setStyle({ style: leaveStyle }).catch(() => {});
+      StatusBar.setBackgroundColor?.({ color: leaveBg }).catch(() => {});
     };
-  }, []);
+  }, [themeMounted, resolvedTheme]);
 
   useEffect(() => {
     // 폰트 로딩 감지 (iOS WKWebView 등에서 resolve가 지연/누락되는 경우 대비 fallback)
@@ -156,8 +178,8 @@ export default function Home() {
         />
   
         {/* 로딩 문구 */}
-        <p className="mt-6 text-on-brand text-lg font-maruburi animate-fade z-10">
-        마음을 바라봅니다
+        <p className="mt-6 text-on-brand text-lg font-maruburi animate-fade z-10 text-center whitespace-pre-line">
+          {splashPhrase}
         </p>
         <p className="mt-2 text-sm text-on-brand-muted font-maruburi animate-fade z-10">
         </p>
@@ -183,7 +205,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => setNotesOpen((v) => !v)}
-                className="w-full h-16 bg-surface-brand-elevated border border-accent-soft rounded-xl flex flex-row items-center pl-1 pr-3 justify-start cursor-pointer text-left"
+                className="w-full h-16 bg-surface-brand-elevated border border-accent-soft dark:border-transparent rounded-xl flex flex-row items-center pl-1 pr-3 justify-start cursor-pointer text-left"
                 aria-expanded={notesOpen}
               >
                 <Image
@@ -210,7 +232,7 @@ export default function Home() {
               </button>
 
               {notesOpen && (
-                <div className="w-full mt-2 bg-surface-brand-elevated border border-accent-soft rounded-xl p-4 space-y-4">
+                <div className="w-full mt-2 bg-surface-brand-elevated border border-accent-soft dark:border-transparent rounded-xl p-4 space-y-4">
                   {updateNotes.map((note) => (
                     <div key={note.id} className="space-y-1">
                       <p className="text-base font-semibold text-on-brand">{note.title}</p>
@@ -235,9 +257,9 @@ export default function Home() {
 
           {/* 어서오세요 문구 */}
           <div className="w-full rounded-xl flex flex-col items-start pl-1 justify-start">
-          <p className="font-semibold text-on-brand text-center mt-4">
+          <p className="font-semibold text-on-brand dark:text-accent text-center mt-4">
   어서오세요, {!!userName?.trim() ? `${userName}님` : '불자님'}
-</p>          
+</p>
 
           </div>
           
@@ -251,7 +273,7 @@ export default function Home() {
       setBookmark(title, index);
       router.push('/scripture');
     }}
-              className="w-full rounded-xl bg-surface-brand-elevated border border-accent-soft flex flex-row items-center pl-1 pr-4 py-2 mt-4 justify-start cursor-pointer"
+              className="w-full rounded-xl bg-surface-brand-elevated border border-accent-soft dark:border-transparent flex flex-row items-center pl-1 pr-4 py-2 mt-4 justify-start cursor-pointer"
             >
               <Image
                 src="/lotusbeige.png"
@@ -263,14 +285,14 @@ export default function Home() {
               
               <div className="flex flex-col">
                 <p className="mb-0 text-base font-semibold text-on-brand text-start">
-                  오늘의 법문 📖 
+                  오늘의 법문 📖
                 </p>
                 <p className="mb-0 text-base font-medium text-on-brand text-start">
                 &ldquo;{sentence}&rdquo;
                 </p>
 
                 <p className="mt-0 text-sm font-base text-on-brand-muted text-left">
-  {formatDisplayTitle(title) || '내용을 불러오는 중입니다.'} 
+  {formatDisplayTitle(title) || '내용을 불러오는 중입니다.'}
 </p>
               </div>
             </div>
@@ -278,7 +300,7 @@ export default function Home() {
 
           {/* 오늘의 수행 영역 */}
           <div className="w-full overflow-x-auto no-scrollbar rounded-xl mt-2 py-4">
-            <p className="font-semibold text-on-brand text-left">
+            <p className="font-semibold text-on-brand dark:text-accent text-left">
               오늘의 수행은 🪷
             </p>
             <div className="flex space-x-4 overflow-x-auto no-scrollbar mt-4 py-2 border-b border-accent-soft">
@@ -297,14 +319,14 @@ export default function Home() {
                   />
                 </div>
                 <div className="flex-1 px-3 py-2">
-                  <p className="text-base text-left text-on-brand font-medium">부처님께 여쭙기</p>
+                  <p className="text-base text-left text-on-brand dark:text-accent font-medium">부처님께 여쭙기</p>
                   <p className="text-base text-left text-on-brand-muted font-medium">
                     나의 고민에 대해 부처님이라면 어떤 말씀을 하실까요? <br></br>인공지능이 부처님의 지혜로 안내합니다
                   </p>
                 </div>
               </div>
               </div>
-              <div className="flex space-x-4 overflow-x-auto no-scrollbar mt-4 py-2">
+              <div className="flex space-x-4 overflow-x-auto no-scrollbar mt-4 py-2 border-b border-accent-soft">
 
               {/* 카드 2 */}
               <div
@@ -321,7 +343,7 @@ export default function Home() {
                   />
                 </div>
                 <div className="flex-1 px-3 py-2">
-                  <p className="text-base text-left text-on-brand font-medium">디지털 팔만대장경</p>
+                  <p className="text-base text-left text-on-brand dark:text-accent font-medium">디지털 팔만대장경</p>
                   <p className="text-base text-left text-on-brand-muted font-medium">
                   알기 쉬운 현대어로 풀어쓴 불경 모음<br></br> 방대한 경전의 모든 말씀을 쉽고 편안한 말로 담았습니다
                   </p>
@@ -345,7 +367,7 @@ export default function Home() {
     />
   </div>
   <div className="flex-1 px-3 py-2">
-    <p className="text-base text-left text-on-brand font-medium">사경하기</p>
+    <p className="text-base text-left text-on-brand dark:text-accent font-medium">사경하기</p>
     <p className="text-base text-left text-on-brand-muted font-medium">
     붓을 들고 호흡을 고르며 한 획 한 획 마음을 담아봅니다<br />
 지금 이 순간에만 머무는 깊은 집중을 경험하세요
