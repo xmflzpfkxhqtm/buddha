@@ -24,6 +24,10 @@ const CUSTOM_BACK_REGEX: { pattern: RegExp; to: string }[] = [
   { pattern: /^\/copy\/[^/]+\/complete$/, to: '/copy' }, // 사경 완료 → 사경 홈
 ];
 
+/* 4. 섹션 루트 – 라벨/헤더는 표시하되 돌아가기 버튼은 숨김.
+   페이지네이션을 BottomNav 로만 의도. 하위 레이어는 정상적으로 백 버튼 노출. */
+const NO_BACK_PATHS: string[] = ['/ask', '/copy', '/me'];
+
 interface TopNavProps {
   className?: string;
 }
@@ -57,7 +61,7 @@ export default function TopNav({ className }: TopNavProps) {
   const customRegex   = CUSTOM_BACK_REGEX.find((r) => r.pattern.test(pathname))?.to;
   const customTarget  = customExact || customRegex;
 
-  const showBack = pathname !== '/';
+  const showBack = pathname !== '/' && !NO_BACK_PATHS.includes(pathname);
 
   return (
     <>
