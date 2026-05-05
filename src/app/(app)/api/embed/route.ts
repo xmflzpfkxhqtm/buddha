@@ -300,7 +300,7 @@ function collectChangedScriptureFiles(dataDir: string): string[] {
     const rec = records[i];
     if (!rec) continue;
     const status = rec.slice(0, 2);
-    let filePath = rec.slice(3);
+    const filePath = rec.slice(3);
 
     if ((status[0] === 'R' || status[0] === 'C') && i + 1 < records.length) {
       // -z 형식은 새 경로를 먼저, 원본 경로를 다음 레코드로 출력한다.
