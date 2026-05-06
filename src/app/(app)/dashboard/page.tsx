@@ -20,7 +20,7 @@ interface UpdateNote {
 
 const SPLASH_PHRASES = [
   '자기를 바로 봅시다',
-  '스스로를 법의 등불로 삼아,\n법에 의지해 살아가라',
+  '스스로의 등불을 밝히고,\n법에 의지해 살아라.',
 ];
 
 export default function Home() {
