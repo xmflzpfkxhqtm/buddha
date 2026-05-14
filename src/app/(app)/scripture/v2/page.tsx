@@ -263,12 +263,15 @@ export default function ScriptureBrowsePage() {
 
   // 개인화 추천 (Phase 1B + 1C).
   // 초기값 결정 순서: in-memory cache → localStorage hydrate → null.
-  // null = 아직 확인 안 됨 (skeleton), [] = 확인했으나 cold-start/실패 (미렌더), [...] = 렌더.
+  // null = 아직 확인 안 됨 (skeleton), [] = 확인했으나 cold-start/실패/비로그인 (미렌더), [...] = 렌더.
   const [recommendations, setRecommendations] = useState<RecommendItem[] | null>(() => {
     if (typeof window === 'undefined') return null;
     const hydrated = scriptureCache.recommendations ?? hydrateRecommendationsFromLS();
     return hydrated?.items ?? null;
   });
+  // 인증 확인 완료 여부. false 면 섹션 자체 미렌더 (비로그인 사용자 flash 방지).
+  // 인증 확인된 후에만 recommendations 상태가 의미 있음.
+  const [authChecked, setAuthChecked] = useState(false);
 
   // 모달
   const [showModal, setShowModal] = useState(false);
@@ -348,27 +351,42 @@ export default function ScriptureBrowsePage() {
   }, []);
 
   // 개인화 추천 fetch.
-  // Background refresh 패턴: cache (memory/LS) 가 있어도 항상 백그라운드 fetch 로 fresh 갱신.
-  // 단, 같은 user_id 인 hydrated cache 가 있으면 사용자는 이미 보고 있으니 silent update.
-  // 비로그인 / cold-start / 실패 시 빈 배열로 LS 저장 — 다음 진입 skeleton 안 깜빡.
+  // 인증 확인 → 비로그인이면 [] 로 set + LS 정리 (잔존 캐시 flash 방지). authChecked=true.
+  // 로그인이면 cache 검증 후 background refresh.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         const { data } = await supabase.auth.getUser();
+        if (cancelled) return;
         const user = data.user;
-        if (!user || cancelled) return;
 
-        // 다른 user 의 LS cache 가 hydrate 됐을 수 있음 — discard
+        if (!user) {
+          // 비로그인 — 섹션 자체 미렌더. 잔존 LS cache (옛 user) 도 정리.
+          setRecommendations([]);
+          scriptureCache.recommendations = null;
+          if (typeof window !== 'undefined') {
+            try { window.localStorage.removeItem('scripture-recommendations-v1'); } catch {}
+          }
+          setAuthChecked(true);
+          return;
+        }
+
+        // 다른 user 의 LS cache 면 discard — skeleton 으로 돌아가 fetch 결과 대기
         if (scriptureCache.recommendations && scriptureCache.recommendations.userId !== user.id) {
           scriptureCache.recommendations = null;
           setRecommendations(null);
         }
+        setAuthChecked(true);
 
         const res = await fetch(
           `/api/scripture/recommendations?user_id=${encodeURIComponent(user.id)}&limit=10&explore=2`,
         );
-        if (!res.ok) return;
+        if (!res.ok || cancelled) {
+          // 첫 로드 fetch 실패 + 캐시 없음 → 섹션 hide
+          if (!cancelled && !scriptureCache.recommendations) setRecommendations([]);
+          return;
+        }
         const json: RecommendApiResponse = await res.json();
         if (cancelled) return;
         const combined = json.stats?.is_cold_start
@@ -377,7 +395,11 @@ export default function ScriptureBrowsePage() {
         persistRecommendationsToLS({ userId: user.id, items: combined });
         setRecommendations(combined);
       } catch {
-        // 추천 실패는 silent — 핵심 동선 영향 없음. cache 가 있으면 stale 데이터 유지.
+        // 실패 silent. 캐시 있으면 stale 유지, 없으면 [] 로 hide.
+        if (!cancelled) {
+          if (!scriptureCache.recommendations) setRecommendations([]);
+          setAuthChecked(true);
+        }
       }
     })();
     return () => {
@@ -517,11 +539,12 @@ export default function ScriptureBrowsePage() {
             </section>
           )}
 
-          {/* 개인화 추천 —
-              null: skeleton (캐시 없는 첫 진입)
-              [] : cold-start / 실패 → 섹션 자체 미렌더
-              [...] : 정상 렌더 */}
-          {recommendations === null ? (
+          {/* 개인화 추천 — 인증 확인 전에는 미렌더 (비로그인 사용자 flash 방지).
+              !authChecked : 미렌더
+              authChecked + null  : skeleton (로그인 + 캐시 miss + fetch 진행)
+              authChecked + []    : 미렌더 (비로그인 / cold-start / 실패)
+              authChecked + [...] : 정상 렌더 */}
+          {!authChecked ? null : recommendations === null ? (
             <section className="pt-5 px-4">
               <h2 className="text-base font-bold text-accent mb-2">당신을 위한 추천</h2>
               <RecommendSkeletonRow />
