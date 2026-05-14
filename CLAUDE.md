@@ -58,6 +58,7 @@
 - Highlight 진화 대응 (forward-only 재앵커링): `docs/highlights-versioning.md` 참고 — 본문 업데이트 시 cascade 로 highlight 위치 자동 매핑, orphan 보존.
 - 경전 텍스트 개선 작업 원칙 / 프레임워크: `docs/text-evolution.md` 참고 — 변경 등급 (L0~L4), dry-run, orphan rate 임계, LLM 협업 시 prompt 가이드, 시스템 invariants.
 - 경전 개념 시스템 (`[[term]]` 마크업 + 풍부한 sheet): `docs/concepts-system.md` 참고 — Sanskrit-grounded 설명, type/density 기반 반복 억제, ConceptEntry 데이터 모델.
+- `scripture-3layer` 브랜치 전체 변경 요약: `docs/scripture-3layer-overview.md` 참고 — 동료/리뷰어 5분 onboarding 용.
 
 ## 환경 변수
 
