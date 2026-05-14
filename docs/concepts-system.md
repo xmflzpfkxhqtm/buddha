@@ -153,12 +153,25 @@ Cache: `public, s-maxage=86400, stale-while-revalidate=604800` (정적 데이터
 - PR diff 가 entry 수정 단위 — 사람 검토 자연스러움
 - 빌드 시 DB sync (추후 — 현재는 file-based)
 
-## 현재 상태 (Phase 6 MVP 직후)
+## 현재 상태 (Phase 6 MVP + LLM 큐레이션 후, v1.2.1)
 
-- ✅ 246 entries (옛 glossary-v0.8.csv 마이그)
-- 모두 `type: concept`, `density: always`, `confidence: 0.3` (1차 자동, 사람 검증 X)
-- Sanskrit / 어원 / 관련 개념 — 빈 채로 (추후 curation)
-- 본문 `[[surface]]` 마커 중 entry 없는 것 (수보리 등) → plain text 자동 렌더 → **반복 마크 noise 즉시 해결**
+- ✅ **1,119 entries** (옛 246 마이그 + Phase 6E rich 50 + Coverage B simple 250 + Residual 660 + 1 placeholder)
+- ✅ **본문 [[]] 마커 100% 커버리지** — 1,193 unique surfaces 모두 entry 매칭, "등록 안 됨" 절대 안 나옴
+- ✅ Type 분포: concept 267 / proper_noun 276 / place 116 / sutra_name 309 / practice 88 / other 63
+- ✅ Density 분포: always 319 / first_per_volume 316 / first_per_scripture 483 / never 1
+- ✅ Top 50 (반야바라밀, 보살, 수보리 등) Sanskrit + 어원 + 풍부한 explanation 보유
+- 나머지는 simple entry — 추후 curation 으로 rich 업그레이드 가능
+- Confidence 0.3~0.5 (사람 검증 X). 검증 완료 entry 는 1.0 으로 상향.
+
+### LLM 생성 비용 (참고)
+
+| 단계 | 모델 | 비용 |
+|------|------|------|
+| Phase 6F (246 type 분류) | Sonnet 4.6 | $0.25 |
+| Phase 6E (50 rich) | Sonnet 4.6 | $0.86 |
+| Coverage B (250 simple) | Sonnet 4.6 | $2.26 |
+| Residual (660 simple) | Sonnet 4.6 | $4.42 |
+| **합계** | | **~$7.79** |
 
 ## 다음 단계 (Phase 6E+)
 
