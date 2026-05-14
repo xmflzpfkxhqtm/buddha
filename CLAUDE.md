@@ -54,6 +54,10 @@
 - 경전 본문·목록은 Supabase `scriptures` 테이블과 API (`/api/scripture`, `/api/scripture/list`)를 통해 제공한다. 로컬 파일 변경 후에는 `node scripts/migrate-scriptures.mjs`로 upsert 한다.
 - 용어 팝업 등은 `dictionary/` CSV와 `/api/glossary`를 참고.
 - RAG/임베딩 파이프라인: `src/utils/chunking.ts`, `src/app/(app)/api/embed/route.ts`, `src/app/(app)/api/search/route.ts`, `src/app/(app)/api/ask/route.ts` 등이 연결됨.
+- 개인화 추천 (`/scripture/v2` "당신을 위한 추천" 섹션): `docs/recommendations.md` 참고 — affinity 기반 v1.1, 가중치/튜닝 가이드 포함.
+- Highlight 진화 대응 (forward-only 재앵커링): `docs/highlights-versioning.md` 참고 — 본문 업데이트 시 cascade 로 highlight 위치 자동 매핑, orphan 보존.
+- 경전 텍스트 개선 작업 원칙 / 프레임워크: `docs/text-evolution.md` 참고 — 변경 등급 (L0~L4), dry-run, orphan rate 임계, LLM 협업 시 prompt 가이드, 시스템 invariants.
+- 경전 개념 시스템 (`[[term]]` 마크업 + 풍부한 sheet): `docs/concepts-system.md` 참고 — Sanskrit-grounded 설명, type/density 기반 반복 억제, ConceptEntry 데이터 모델.
 
 ## 환경 변수
 
