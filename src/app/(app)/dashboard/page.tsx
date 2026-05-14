@@ -6,7 +6,8 @@ import ScrollHeader from '../../../../components/ScrollHeader';
 import MarbleOverlay from '../../../../components/Overlay';
 import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
-import { useBookmarkStore } from '@/stores/useBookmarkStore';
+import { useHighlightStore } from '@/stores/useHighlightStore';
+import { titleToReaderPath } from '@/lib/scripturePath';
 import { supabase } from '@/lib/supabaseClient';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
@@ -25,7 +26,7 @@ const SPLASH_PHRASES = [
 
 export default function Home() {
   const router = useRouter();
-  const { setBookmark } = useBookmarkStore();
+  const { setHighlight } = useHighlightStore();
   const { resolvedTheme } = useTheme();
 
   const [title, setTitle] = useState('');
@@ -270,8 +271,8 @@ export default function Home() {
  !isNaN(index) && (
   <div
     onClick={() => {
-      setBookmark(title, index);
-      router.push('/scripture');
+      setHighlight(title, index);
+      router.push(titleToReaderPath(title));
     }}
               className="w-full rounded-xl bg-surface-brand-elevated border border-accent-soft dark:border-transparent flex flex-row items-center pl-1 pr-4 py-2 mt-4 justify-start cursor-pointer"
             >
@@ -330,7 +331,7 @@ export default function Home() {
 
               {/* 카드 2 */}
               <div
-                onClick={() => router.push('/scripture')}
+                onClick={() => router.push('/scripture/v2')}
                 className="min-w-[320px] h-[240px] rounded-2xl overflow-hidden flex flex-col cursor-pointer hover:shadow-lg transition"
               >
                 <div className="h-[280px] w-full relative rounded-2xl overflow-hidden">

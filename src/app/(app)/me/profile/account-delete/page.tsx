@@ -67,7 +67,6 @@ export default function AccountDeletePage() {
       <ScrollHeader />
 
       <div className="w-full max-w-sm bg-surface-elevated rounded-2xl border text-accent border-accent-soft p-8 text-center mt-12 space-y-6 z-10">
-        <h1 className="text-xl font-semibold">계정 삭제 요청</h1>
         <p>
           현재 로그인된 계정 (<span className="font-semibold">{user?.email}</span>)을 삭제하시겠습니까?
         </p>
@@ -89,7 +88,7 @@ export default function AccountDeletePage() {
           onClick={handleDelete}
           disabled={!confirmed}
           className={`w-full py-2 rounded-lg font-semibold text-on-brand ${
-            confirmed ? 'bg-accent-soft hover:bg-accent' : 'bg-gray-300 cursor-not-allowed'
+            confirmed ? 'bg-accent-soft hover:bg-accent' : 'bg-line-strong cursor-not-allowed'
           }`}
         >
           계정 삭제하기

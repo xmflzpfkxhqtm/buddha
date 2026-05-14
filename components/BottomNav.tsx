@@ -5,12 +5,19 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Mountain, Book, MessageCircle, User as UserIcon, Brush } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
+import { useChromeStore } from '@/stores/useChromeStore';
+import { useScriptureNavStore } from '@/stores/useScriptureNavStore';
+
+const SCRIPTURE_ROOT = '/scripture/v2';
 
 export default function BottomNav() {
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
   const [hide, setHide] = useState(false); // 👈 최초 접속 시 숨김용
+  const chromeVisible = useChromeStore((s) => s.visible); // Layer 3 reader chrome 동기화
+  const lastScripturePath = useScriptureNavStore((s) => s.lastPath);
+  const setLastScripturePath = useScriptureNavStore((s) => s.setLastPath);
 
   useEffect(() => {
     // 사용자 정보 가져오기
@@ -24,6 +31,14 @@ export default function BottomNav() {
 
     return () => listener.subscription.unsubscribe();
   }, []);
+
+  // /scripture/* 안에 있을 때마다 마지막 위치 저장 (search 쿼리 포함 — 옛 ?title= URL 호환)
+  useEffect(() => {
+    if (pathname && pathname.startsWith('/scripture')) {
+      const search = typeof window !== 'undefined' ? window.location.search : '';
+      setLastScripturePath(`${pathname}${search}`);
+    }
+  }, [pathname, setLastScripturePath]);
 
   // 👇 최초 접속 시 Home에서만 BottomNav 숨기기
   useEffect(() => {
@@ -42,9 +57,20 @@ export default function BottomNav() {
     }
   }, [pathname]);
 
+  // 불경 탭 동작:
+  //  - 다른 탭 → 불경: 마지막 본 scripture 화면으로 (없으면 Layer 1)
+  //  - 이미 /scripture/* 안: Layer 1 으로 reset (인스타·트위터 패턴)
+  const handleScriptureTap = () => {
+    if (pathname && pathname.startsWith('/scripture')) {
+      router.push(SCRIPTURE_ROOT);
+    } else {
+      router.push(lastScripturePath ?? SCRIPTURE_ROOT);
+    }
+  };
+
   const navItems = [
     { label: '홈', icon: Mountain, path: '/dashboard' },
-    { label: '불경', icon: Book, path: '/scripture' },
+    { label: '불경', icon: Book, path: SCRIPTURE_ROOT, action: handleScriptureTap },
     { label: '질문', icon: MessageCircle, path: '/ask' },
     { label: '사경', icon: Brush, path: '/copy' },
 
@@ -61,15 +87,29 @@ export default function BottomNav() {
   if (hide) return null;
 
   return (
-    <nav className="fixed bottom-0 left-1/2 select-none -translate-x-1/2 w-full max-w-[460px] h-[84px] bg-surface-elevated border-t border-accent-soft flex justify-around items-center z-30">
+    <nav
+      // chrome hide 시 화면 밖으로 (e-book 표준). 첫 tap = chrome show, 둘째 tap = navigate.
+      // opacity 0 + click 받기 패턴은 "안 보이는데 navigate" 가 버그처럼 느껴진다는 사용자 feedback 반영.
+      className={`fixed bottom-0 left-1/2 select-none w-full max-w-[460px] h-[84px] bg-surface-elevated border-t border-accent-soft flex justify-around items-center z-30 transition-transform duration-200 ${
+        chromeVisible ? '-translate-x-1/2' : '-translate-x-1/2 translate-y-full'
+      }`}
+    >
       {navItems.map((item) => {
-        const isActive = pathname === item.path;
+        const isActive =
+          item.label === '불경'
+            ? pathname?.startsWith('/scripture') ?? false
+            : pathname === item.path;
         const Icon = item.icon;
 
         return (
           <button
             key={item.label}
-            onClick={() => (item.action ? item.action() : router.push(item.path))}
+            onClick={(e) => {
+              // navigate 후 main 의 chrome tap-toggle 까지 bubble 되지 않게 차단
+              e.stopPropagation();
+              if (item.action) item.action();
+              else router.push(item.path);
+            }}
             className={`flex flex-col items-center text-sm transition duration-200 hover:scale-110 ${
               isActive ? 'text-accent-soft font-semibold' : 'text-accent'
             }`}

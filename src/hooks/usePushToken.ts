@@ -5,6 +5,7 @@ import { PushNotifications, PermissionStatus } from '@capacitor/push-notificatio
 import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/lib/supabaseClient';
 import { getPlatform } from '@/lib/platform';
+import { titleToReaderPath } from '@/lib/scripturePath';
 
 type SetBookmarkFunction = (title: string, index: number) => void;
 
@@ -72,13 +73,13 @@ export function usePushToken() {
           const { title, index } = notification.data ?? {};
           if (title && index !== undefined) {
             // 예시: 북마크 → /scripture
-            const setBookmark = (window as unknown as { __NEXT_DATA__?: { props?: { pageProps?: { setBookmark?: SetBookmarkFunction } } } }).__NEXT_DATA__?.props?.pageProps?.setBookmark;
+            const setHighlight = (window as unknown as { __NEXT_DATA__?: { props?: { pageProps?: { setHighlight?: SetBookmarkFunction } } } }).__NEXT_DATA__?.props?.pageProps?.setHighlight;
             try {
-              setBookmark?.(title, Number(index));
+              setHighlight?.(title, Number(index));
             } catch {
-              console.warn('setBookmark 를 찾을 수 없습니다');
+              console.warn('setHighlight 를 찾을 수 없습니다');
             }
-            location.href = '/scripture';
+            location.href = titleToReaderPath(String(title));
           }
         }
       );

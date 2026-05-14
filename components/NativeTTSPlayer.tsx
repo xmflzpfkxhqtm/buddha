@@ -16,6 +16,8 @@ interface NativeTTSPlayerProps {
   setCurrentIndex: (index: number) => void;
   smoothCenter: (index: number, instant?: boolean) => void;
   onPlaybackStateChange: (isSpeaking: boolean) => void;
+  className?: string;
+  bottomOffset?: string;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -26,6 +28,8 @@ export default function NativeTTSPlayer({
   setCurrentIndex,
   smoothCenter,
   onPlaybackStateChange,
+  className,
+  bottomOffset,
 }: NativeTTSPlayerProps) {
   /* ------------------------------ state / refs --------------------------- */
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -231,6 +235,8 @@ export default function NativeTTSPlayer({
       isBackwardDisabled={internalIndex.current <= 0 || sentences.length === 0}
       isForwardDisabled={internalIndex.current >= sentences.length - 1 || sentences.length === 0}
       isPlayPauseDisabled={sentences.length === 0}
+      className={className}
+      bottomOffset={bottomOffset}
     />
   );
 }

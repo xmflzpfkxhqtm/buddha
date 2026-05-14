@@ -22,7 +22,6 @@ export default function FeedbackPage() {
 
   return (
     <main className="min-h-screen flex flex-col items-center max-w-[430px] mx-auto bg-surface px-4 py-10">
-      <h1 className="text-xl text-left w-full font-bold text-accent mb-4">💬 피드백 보내기</h1>
       {submitted ? (
         <p className="text-green-600">소중한 피드백 감사합니다!</p>
       ) : (

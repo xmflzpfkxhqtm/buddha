@@ -126,19 +126,19 @@ export default function LoginPage() {
           {/* 구글 */}
           <button
             onClick={handleGoogleLogin}
-            className="w-full flex items-center justify-center gap-2 border bg-surface-elevated border-line rounded-lg py-2 hover:bg-gray-100 transition"
+            className="w-full flex items-center justify-center gap-2 border bg-surface-elevated border-line rounded-lg py-2 hover:bg-surface-sunken transition"
           >
             <FcGoogle size={20} />
             <span className="font-medium">Google로 로그인</span>
           </button>
 
-          {/* 카카오 */}
+          {/* 카카오 — 브랜드 가이드라인 (#FEE500 배경 + 어두운 텍스트) 다크 모드 무관 고정 */}
           <button
             onClick={handleKakaoLogin}
-            className="w-full flex items-center justify-center gap-2 border bg-yellow-400 border-yellow-300 rounded-lg py-2 hover:bg-yellow-300 transition"
+            className="w-full flex items-center justify-center gap-2 bg-[#FEE500] rounded-lg py-2 hover:opacity-90 active:opacity-80 transition-opacity"
           >
-            <SiKakaotalk size={20} color="#381E1F" />
-            <span className="font-medium text-ink">카카오톡으로 로그인</span>
+            <SiKakaotalk size={20} color="#191919" />
+            <span className="font-medium text-[#191919]">카카오톡으로 로그인</span>
           </button>
 
           {/* Apple – iOSㆍAndroid 네이티브 모두 표시 */}

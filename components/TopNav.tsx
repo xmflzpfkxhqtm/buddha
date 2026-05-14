@@ -8,7 +8,8 @@ import { useEffect, useState } from 'react';
 const HIDDEN_PATHS: (string | RegExp)[] = [
   '/login',
   '/dashboard',                    // 홈
-  '/scripture',           // 경전 메인
+  '/scripture',           // 경전 메인 (옛)
+  /^\/scripture\//,        // scripture 하위 모든 path (Layer 1 v2 / Layer 2 [group] / Layer 3 [group]/[volume])
   '/fullscreen',          // 전체화면 뷰
   '/ask/confirm',         // 질문 확인 페이지
   /^\/copy\/[^/]+\/complete$/, // copy/[id]/complete ← 정규식(동적 라우트)
@@ -45,6 +46,14 @@ export default function TopNav({ className }: TopNavProps) {
       '/ask': '부처님께 여쭙기',
       '/copy': '사경하기',
       '/me': '내 정보',
+      '/me/profile': '프로필 관리',
+      '/me/profile/account-delete': '계정 삭제',
+      '/me/highlights': '하이라이트',
+      '/me/favorites': '즐겨찾기',
+      '/me/answers': '내가 저장한 말씀들',
+      '/me/copies': '나의 사경노트',
+      '/me/feedback': '제안 및 문의',
+      '/me/settings': '설정',
       '/answer': '답변',
     };
     setLabel(map[pathname] ?? '');
@@ -65,40 +74,42 @@ export default function TopNav({ className }: TopNavProps) {
 
   return (
     <>
-      {/* ───── 고정 상단바 ───── */}
-      {/* iOS safe-area: bg 가 status bar 자리까지 채우도록 padding-top 으로 늘림. */}
+      {/* ───── 고정 상단바 ─ scripture 컨벤션과 통일 (백버튼 = 아이콘만, 라벨 = 백버튼 옆) ───── */}
       <header
         className={`fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[460px]
-                   bg-surface-elevated z-40 select-none flex items-center border-b border-line-strong/50 ${className ?? ''}`}
+                   bg-surface-elevated z-40 select-none border-b border-line-strong/50 ${className ?? ''}`}
         style={{
           // 일부 iOS Capacitor WKWebView 가 env() 를 0 으로 평가하는 케이스 대비 max() fallback.
           paddingTop: 'max(44px, env(safe-area-inset-top))',
           height: 'calc(48px + max(44px, env(safe-area-inset-top)))',
         }}
       >
-        {showBack && (
-          <button
-            className="absolute left-4 flex items-center gap-1 font-semibold text-accent
-                       active:scale-95 h-10"
-            onClick={() => {
-              if (customTarget) {
-                router.replace(customTarget);      // 예외 경로
-              } else if (history.length > 1) {
-                router.back();                     // 일반 한 칸 뒤로
-              } else {
-                router.push('/');                  // 스택 없으면 홈
-              }
-            }}
-          >
-            <ChevronLeft size={24} />
-            돌아가기
-          </button>
-        )}
-
-        {/* 라벨 – 중앙 고정 */}
-        <h1 className="absolute left-1/2 -translate-x-1/2 text-base font-semibold text-accent">
-          {label}
-        </h1>
+        {/* grid 3-column — 좌(백버튼) / 가운데(라벨, truncate) / 우(균형용 placeholder).
+            라벨이 정확히 중앙에 오도록 보장. */}
+        <div className="grid grid-cols-[40px_1fr_40px] items-center gap-1 h-12 px-2">
+          {showBack ? (
+            <button
+              type="button"
+              aria-label="뒤로"
+              className="w-10 h-10 flex items-center justify-center rounded-lg text-accent hover:bg-accent/5 active:bg-accent/10 transition-colors"
+              onClick={() => {
+                if (customTarget) {
+                  router.replace(customTarget);
+                } else if (history.length > 1) {
+                  router.back();
+                } else {
+                  router.push('/');
+                }
+              }}
+            >
+              <ChevronLeft size={24} />
+            </button>
+          ) : (
+            <div aria-hidden />
+          )}
+          <h1 className="text-center text-base font-semibold text-accent truncate">{label}</h1>
+          <div aria-hidden />
+        </div>
       </header>
 
       {/* 본문을 아래로 밀어주는 스페이서 (헤더 높이 + safe-area top 만큼) */}

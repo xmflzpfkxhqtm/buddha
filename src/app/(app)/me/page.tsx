@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { ChevronRight } from 'lucide-react';
+import { useScriptureFavoritesStore } from '@/stores/useScriptureFavoritesStore';
 
 export default function MePage() {
   const router = useRouter();
@@ -12,6 +13,8 @@ export default function MePage() {
   const [copyCount,     setCopyCount]     = useState(0);   // ← 추가
 
   const [userName, setUserName] = useState<string | null>(null);
+  const favoriteCount = useScriptureFavoritesStore((s) => s.groups.length);
+  const loadFavorites = useScriptureFavoritesStore((s) => s.load);
 
   useEffect(() => {
     const checkAuthAndFetchData = async () => {
@@ -23,6 +26,8 @@ export default function MePage() {
         return;
       }
 
+      loadFavorites(user.id);
+
       // ✅ 이름 추출
       const { data: profile } = await supabase
       .from('users')
@@ -33,7 +38,7 @@ export default function MePage() {
     setUserName(profile?.username ?? user.user_metadata?.full_name ?? null);
     
       const { data: bookmarks } = await supabase
-        .from('bookmarks')
+        .from('highlights')
         .select('id')
         .eq('user_id', user.id);
         const { count: savedAnswerCount } = await supabase
@@ -54,7 +59,7 @@ export default function MePage() {
     };
 
     checkAuthAndFetchData();
-  }, [router]);
+  }, [router, loadFavorites]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -80,12 +85,25 @@ export default function MePage() {
         </li>
 
         <li
-          onClick={() => router.push('/me/bookmarks')}
+          onClick={() => router.push('/me/favorites')}
           className="cursor-pointer px-4 py-4 flex items-center justify-between hover:bg-surface"
         >
           <div>
-            <p className="font-semibold text-accent">저장한 책갈피</p>
-            <p className="text-sm text-ink-muted">경전의 구절을 저장한 목록입니다.</p>
+            <p className="font-semibold text-accent">즐겨찾기</p>
+            <p className="text-sm text-ink-muted">즐겨찾기한 경전 목록입니다.</p>
+          </div>
+          <div className="flex items-center gap-2 text-ink-subtle text-sm">
+            {favoriteCount}개 <ChevronRight size={16} />
+          </div>
+        </li>
+
+        <li
+          onClick={() => router.push('/me/highlights')}
+          className="cursor-pointer px-4 py-4 flex items-center justify-between hover:bg-surface"
+        >
+          <div>
+            <p className="font-semibold text-accent">하이라이트</p>
+            <p className="text-sm text-ink-muted">경전에서 표시한 구절과 메모를 모아 봅니다.</p>
           </div>
           <div className="flex items-center gap-2 text-ink-subtle text-sm">
             {bookmarkCount}개 <ChevronRight size={16} />
@@ -145,7 +163,7 @@ export default function MePage() {
 
         <li
           onClick={handleLogout}
-          className="cursor-pointer px-4 py-4 flex items-center justify-between hover:bg-gray-50"
+          className="cursor-pointer px-4 py-4 flex items-center justify-between hover:bg-surface-sunken"
         >
           <div>
             <p className="font-semibold text-accent-soft">로그아웃</p>
