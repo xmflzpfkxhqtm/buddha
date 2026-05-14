@@ -148,13 +148,15 @@ export default function ConfirmPage() {
     try {
       const minimumTimePromise = new Promise((resolve) => setTimeout(resolve, 3000));
 
+      // user_id 를 server 에 함께 보냄 — temp_answers.user_id 채워야 /me/answers 에서 fetch 가능.
+      const { data: { user } } = await supabase.auth.getUser();
       // 재시도 로직 적용한 fetch 사용
       const response = await fetchWithRetry(
         '/api/ask',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question, parentId, length: selectedLength }),
+          body: JSON.stringify({ question, parentId, length: selectedLength, userId: user?.id ?? null }),
         },
         3,  // 최대 3회 재시도
         2000 // 2초 간격

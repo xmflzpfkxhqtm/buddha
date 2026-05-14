@@ -3,8 +3,22 @@
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useAskStore } from '../../../stores/askStore';
+import { useAskCitationStore, type AskCitation } from '@/stores/useAskCitationStore';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { X } from 'lucide-react';
+
+function formatCitationTitle(title: string): string {
+  return title.replace(/_K\d{4}/, '').replace(/_/g, ' ');
+}
+
+function buildCitedQuestion(citation: AskCitation, userQuestion: string): string {
+  const titleClean = formatCitationTitle(citation.scriptureTitle);
+  const userPart = userQuestion.trim()
+    ? `질문:\n${userQuestion.trim()}`
+    : '이 구절의 의미를 자세히 알려주세요.';
+  return `다음 경전 구절에 대해 여쭙습니다.\n\n[${titleClean}]\n"${citation.text}"\n\n${userPart}`;
+}
 
 // const models = [
 //   { id: 'gpt4.1', name: 'GPT-4.1', description: '가장 강력한 추론 능력' },
@@ -50,6 +64,14 @@ export default function AskPage() {
   } = useAskStore();
   const [showExamples, setShowExamples] = useState(false);
 
+  // 경전 selection 에서 넘어온 인용 컨텍스트 — mount 시 한 번 consume.
+  const consumeCitation = useAskCitationStore((s) => s.consume);
+  const [citation, setCitation] = useState<AskCitation | null>(null);
+  useEffect(() => {
+    const c = consumeCitation();
+    if (c) setCitation(c);
+  }, [consumeCitation]);
+
   const [previousQA, setPreviousQA] = useState<{ question: string; answer: string } | null>(null);
   const [confirmCancelModal, setConfirmCancelModal] = useState(false);
   const [showGuideModal, setShowGuideModal] = useState(false);
@@ -93,7 +115,11 @@ export default function AskPage() {
   }, [parentId]);
 
   const handleNext = () => {
-    if (!question.trim()) return;
+    // citation 만 있어도 submit 허용 (자동 prompt 추가)
+    if (!question.trim() && !citation) return;
+    if (citation) {
+      setQuestion(buildCitedQuestion(citation, question));
+    }
     router.push('/ask/confirm');
   };
 
@@ -184,6 +210,26 @@ export default function AskPage() {
 )}
 </div>
 
+        {citation && (
+          <div className="w-full bg-surface-sunken border border-accent-soft/30 p-4 mt-4 rounded-xl text-sm relative">
+            <button
+              type="button"
+              onClick={() => setCitation(null)}
+              aria-label="인용 제거"
+              className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-md text-ink-subtle hover:bg-surface-elevated transition-colors"
+            >
+              <X size={16} />
+            </button>
+            <p className="text-ink-subtle font-medium mb-1">📖 경전 인용</p>
+            <p className="text-xs text-ink-subtle mb-2 truncate pr-8">
+              {formatCitationTitle(citation.scriptureTitle)}
+            </p>
+            <p className="text-ink whitespace-pre-wrap leading-relaxed max-h-32 overflow-y-auto">
+              {citation.text}
+            </p>
+          </div>
+        )}
+
         <div className="max-w-md w-full z-1 mt-2">
           <textarea
             className="w-full h-40 p-4 text-ink rounded-xl border border-accent-soft bg-surface-elevated text-base resize-none focus:outline-none focus:ring-2 focus:ring-red"
@@ -200,7 +246,11 @@ export default function AskPage() {
                 setQuestion(currentValue);
               }
             }}
-            placeholder="마음을 담아 부처님께 여쭈고 싶은 이야기를 적어보세요"
+            placeholder={
+              citation
+                ? '이 구절에 대해 더 묻고 싶은 점을 적어보세요. (비워두면 자동으로 의미를 여쭙습니다.)'
+                : '마음을 담아 부처님께 여쭈고 싶은 이야기를 적어보세요'
+            }
           />
           <button
             onClick={() => setQuestion('')}
@@ -245,7 +295,7 @@ export default function AskPage() {
                     <p className="text-sm font-semibold text-accent mb-1">📜 나의 질문</p>
                     <p className="text-sm text-ink line-clamp-2 mb-2">{item.question}</p>
                     <p className="text-sm font-semibold text-accent mb-1">🪷 부처님 말씀</p>
-                    <p className="text-sm text-gray-900 line-clamp-4">{item.answer}</p>
+                    <p className="text-sm text-ink line-clamp-4">{item.answer}</p>
                   </div>
                 ))
               ) : (
@@ -298,7 +348,7 @@ export default function AskPage() {
               「{selectedItem.question}」
             </p>
             <p className="text-base font-semibold text-accent mb-1">🪷 부처님 말씀</p>
-            <p className="text-base text-gray-900 whitespace-pre-line">
+            <p className="text-base text-ink whitespace-pre-line">
               {selectedItem.answer}
             </p>
             <button
