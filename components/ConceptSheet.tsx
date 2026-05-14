@@ -176,12 +176,6 @@ export default function ConceptSheet({
               </div>
             )}
 
-            {/* confidence 가 낮으면 작은 안내 */}
-            {typeof entry.confidence === 'number' && entry.confidence < 0.5 && (
-              <p className="mt-5 text-xs text-ink-subtle italic">
-                * 이 설명은 1차 자동 생성본입니다. 추후 보완될 예정입니다.
-              </p>
-            )}
           </>
         )}
 
