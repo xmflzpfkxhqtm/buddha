@@ -204,6 +204,24 @@ export default function ScriptureReaderPage() {
   // 현재 native selection 상태 — FloatingActionBar 표시용
   const [selection, setSelection] = useState<SelectionRange | null>(null);
   const [selectionRect, setSelectionRect] = useState<DOMRect | null>(null);
+  // Custom selection overlay rects — native selection 을 비운 뒤에도 사용자에게 선택 영역을
+  // 시각적으로 보여주기 위해 range.getClientRects() 결과를 contentRef 기준 좌표로 저장.
+  // OS native action menu (iOS UIEditMenu / Android ActionMode) 가 우리 FAB 위에 떠서 가리는
+  // 문제 해결용 — native selection 을 비우면 OS menu 도 dismiss 되므로 우리가 직접 시각화.
+  const [customSelectionRects, setCustomSelectionRects] = useState<{ top: number; left: number; width: number; height: number }[]>([]);
+  // capture 시점의 선택 텍스트 — confirmed 상태에서 window.getSelection().toString() 이 비어
+  // makeSheetTarget / handleSelectionAsk 에서 인용 텍스트가 빈 문자열이 되는 회귀 방지.
+  const [selectionText, setSelectionText] = useState('');
+  // Selection 상태 머신 — idle (아무것도 없음) / selecting (사용자 touch 중, native selection 라이브)
+  // / confirmed (touchend 후 우리가 native selection 비웠음, custom overlay 표시 중).
+  // confirmed 상태에서 발생하는 selectionchange 는 우리의 clear 가 trigger 한 것이므로 무시.
+  // ref + state 병행 — handler 안 동기 비교는 ref, FAB 가시성 토글은 state.
+  const selectionStateRef = useRef<'idle' | 'selecting' | 'confirmed'>('idle');
+  const [selectionMode, setSelectionMode] = useState<'idle' | 'selecting' | 'confirmed'>('idle');
+  const setSelMode = useCallback((m: 'idle' | 'selecting' | 'confirmed') => {
+    selectionStateRef.current = m;
+    setSelectionMode(m);
+  }, []);
   // sheet target — selection range + 기존 highlight (메모 모드)
   const [sheetTarget, setSheetTarget] = useState<HighlightSheetTarget | null>(null);
   // 본문 컨테이너 ref — selection 이 본문 안인지 검증용
@@ -691,15 +709,16 @@ export default function ScriptureReaderPage() {
   };
 
   // ──────── selection → sheet target 변환 ────────
-  // previewText 는 trim — block-level sentence 사이 newline 이 selection 에 포함되어
-  // 인용 박스 첫줄/끝줄이 비는 케이스 방지.
+  // previewText 는 capture 시점에 저장한 selectionText 사용 (confirmed 상태에서는 native selection 이
+  // 비어 있어 window.getSelection().toString() 이 빈 문자열이므로). idle 시 fallback.
   const makeSheetTarget = (sel: SelectionRange): HighlightSheetTarget => ({
     startSentence: sel.startSentence,
     startOffset: sel.startOffset,
     endSentence: sel.endSentence,
     endOffset: sel.endOffset,
     previewText:
-      typeof window !== 'undefined' ? (window.getSelection()?.toString() ?? '').trim() : '',
+      selectionText ||
+      (typeof window !== 'undefined' ? (window.getSelection()?.toString() ?? '').trim() : ''),
     anchorStartText: sel.startSentenceText,
     anchorEndText: sel.endSentenceText,
     existing: null,
@@ -756,8 +775,11 @@ export default function ScriptureReaderPage() {
       }
       setHighlights((prev) => [...prev, data as StoredHighlight]);
       clearBrowserSelection();
+      setSelMode('idle');
       setSelection(null);
       setSelectionRect(null);
+      setCustomSelectionRects([]);
+      setSelectionText('');
     },
     [userId, resolvedTitle],
   );
@@ -804,20 +826,90 @@ export default function ScriptureReaderPage() {
     });
   };
 
-  // ──────── selection 추적 (native browser selection) ────────
+  // ──────── selection 추적 (native browser selection) + custom overlay 캡처 ────────
+  // confirmed 상태 (우리가 native selection 을 비운 직후) 의 selectionchange 는 모두 무시 —
+  // 1회 ref flag 보다 견고 (브라우저가 clear 후 selectionchange 를 다회 발화하는 케이스 대응).
+  // selecting → confirmed 전환은 touchend handler 가 담당.
   useEffect(() => {
     const handler = () => {
+      if (selectionStateRef.current === 'confirmed') return;
       const sel = getSelectionRange(contentRef.current);
       if (!sel) {
         setSelection(null);
         setSelectionRect(null);
+        setCustomSelectionRects([]);
+        setSelectionText('');
+        setSelMode('idle');
         return;
       }
       setSelection(sel);
       setSelectionRect(getSelectionRect());
+      // range.getClientRects() — 멀티라인 선택의 시각 line 별 rect. contentRef 기준 좌표로 변환
+      // (overlay 가 contentRef 안 absolute 자식이므로 page scroll 따라 자동 이동).
+      const winSel = window.getSelection();
+      if (winSel && winSel.rangeCount > 0 && contentRef.current) {
+        const range = winSel.getRangeAt(0);
+        const containerRect = contentRef.current.getBoundingClientRect();
+        const rects = Array.from(range.getClientRects())
+          .filter((r) => r.width > 0 && r.height > 0)
+          .map((r) => ({
+            top: r.top - containerRect.top,
+            left: r.left - containerRect.left,
+            width: r.width,
+            height: r.height,
+          }));
+        setCustomSelectionRects(rects);
+        setSelectionText((winSel.toString() ?? '').trim());
+      }
+      setSelMode('selecting');
     };
     document.addEventListener('selectionchange', handler);
     return () => document.removeEventListener('selectionchange', handler);
+  }, []);
+
+  // ──────── touchend → native selection 비움 + confirmed 진입 ────────
+  // OS action menu (Copy/공유) 는 live selection 에 묶여 있어 비우면 dismiss 됨. 우리 custom
+  // overlay 는 이미 캡처된 customSelectionRects 로 표시되어 사용자가 선택 영역을 계속 봄.
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    const onTouchEnd = () => {
+      if (selectionStateRef.current !== 'selecting') return;
+      // 30ms — 브라우저가 release 시점에 selection 을 finalize 할 시간. 너무 짧으면 race.
+      setTimeout(() => {
+        if (selectionStateRef.current !== 'selecting') return;
+        const sel = window.getSelection();
+        if (!sel || sel.isCollapsed) {
+          setSelMode('idle');
+          return;
+        }
+        setSelMode('confirmed');
+        sel.removeAllRanges();
+      }, 30);
+    };
+    el.addEventListener('touchend', onTouchEnd);
+    return () => el.removeEventListener('touchend', onTouchEnd);
+  }, []);
+
+  // ──────── confirmed 상태에서 외부 tap → 정리 ────────
+  // FAB 안 tap 은 그대로 두고 (FAB action handler 가 정리), 그 외 위치는 dismiss.
+  useEffect(() => {
+    const onTouchStart = (e: TouchEvent) => {
+      if (selectionStateRef.current !== 'confirmed') return;
+      const target = e.target as Node;
+      // FAB 안 tap — FAB 의 action handler 가 정리할 것
+      const fab = document.querySelector('[role="toolbar"][aria-label="선택한 구절 액션"]');
+      if (fab && fab.contains(target)) return;
+      // 본문 안 tap — 새 선택을 시작하려는 의도일 수 있으므로 즉시 정리 (selectionchange 가
+      // 새 selection 캡처할 수 있도록 'idle' 로)
+      setSelMode('idle');
+      setSelection(null);
+      setSelectionRect(null);
+      setCustomSelectionRects([]);
+      setSelectionText('');
+    };
+    document.addEventListener('touchstart', onTouchStart, { passive: true });
+    return () => document.removeEventListener('touchstart', onTouchStart);
   }, []);
 
   // FloatingActionBar 액션
@@ -829,9 +921,12 @@ export default function ScriptureReaderPage() {
   const handleSelectionMemo = () => {
     if (!selection) return;
     setSheetTarget(makeSheetTarget(selection));
-    // sheet 열렸으니 popover 는 숨김 (selection 은 그대로)
+    // sheet 열렸으니 popover 는 숨김 + custom overlay 정리, state machine idle 복귀
+    setSelMode('idle');
     setSelection(null);
     setSelectionRect(null);
+    setCustomSelectionRects([]);
+    setSelectionText('');
   };
 
   // 묻기 → reader 안 모달. 페이지 이동 없음.
@@ -856,9 +951,10 @@ export default function ScriptureReaderPage() {
 
   const handleSelectionAsk = () => {
     if (!selection) return;
-    // trim — block-level sentence 사이 newline 으로 인한 인용 첫줄/끝줄 빈 줄 방지
+    // capture 시점의 selectionText 우선 (confirmed 상태에서 window.getSelection() 비어있음)
     const text =
-      typeof window !== 'undefined' ? (window.getSelection()?.toString() ?? '').trim() : '';
+      selectionText ||
+      (typeof window !== 'undefined' ? (window.getSelection()?.toString() ?? '').trim() : '');
     setAskModalCitation({
       text,
       titleClean: formatCitationTitle(resolvedTitle),
@@ -866,8 +962,11 @@ export default function ScriptureReaderPage() {
     });
     setAskModalOpen(true);
     clearBrowserSelection();
+    setSelMode('idle');
     setSelection(null);
     setSelectionRect(null);
+    setCustomSelectionRects([]);
+    setSelectionText('');
   };
 
   // 기존 highlight 의 정확한 텍스트 추출 — highlight_text 우선, 없으면 displayTexts 에서 offset 으로 조립.
@@ -1135,9 +1234,29 @@ export default function ScriptureReaderPage() {
       {/* 본문 — native text selection 활성 (e-book 패턴). iOS callout 차단 + selectionchange 로 우리 popover 만 표시. */}
       <div
         ref={contentRef}
-        className={`whitespace-pre-wrap break-keep font-maruburi bg-surface-elevated rounded-xl ${fontSizeClass} leading-relaxed pt-4`}
+        className={`relative whitespace-pre-wrap break-keep font-maruburi bg-surface-elevated rounded-xl ${fontSizeClass} leading-relaxed pt-4`}
         style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'text', userSelect: 'text' }}
       >
+        {/* Custom selection overlay — confirmed 상태 (native selection 을 우리가 비운 직후) 에만
+            표시. selecting 단계에는 native 의 blue 가 이미 보이므로 중복 렌더 시 색이 짙어짐.
+            contentRef 내부 absolute 자식이라 page scroll 시 자연스럽게 함께 이동.
+            pointer-events: none 으로 본문 인터랙션 방해 안 함. */}
+        {(selectionMode === 'confirmed' ? customSelectionRects : []).map((r, i) => (
+          <div
+            key={`sel-overlay-${i}`}
+            aria-hidden
+            style={{
+              position: 'absolute',
+              top: r.top,
+              left: r.left,
+              width: r.width,
+              height: r.height,
+              background: 'rgba(99, 165, 255, 0.28)',
+              borderRadius: 2,
+              pointerEvents: 'none',
+            }}
+          />
+        ))}
         {(() => {
           let readCursor = 0;
           // Density state — 한 paint 당 1회 생성. 권 단위 누적 (first_per_volume) /
@@ -1283,9 +1402,10 @@ export default function ScriptureReaderPage() {
         />
       )}
 
-      {/* Floating popover — native selection 위/아래 */}
+      {/* Floating popover — confirmed 상태 (touchend 후 native selection 비워진 시점) 에만 표시.
+          selecting 단계에 띄우면 OS native menu 와 화면에서 겹쳐 가려짐. */}
       <FloatingActionBar
-        visible={!!selection}
+        visible={selectionMode === 'confirmed' && !!selection}
         rect={selectionRect}
         onHighlight={handleSelectionHighlight}
         onMemo={handleSelectionMemo}
