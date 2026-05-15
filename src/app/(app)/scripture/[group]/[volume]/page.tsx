@@ -208,10 +208,6 @@ export default function ScriptureReaderPage() {
   const [sheetTarget, setSheetTarget] = useState<HighlightSheetTarget | null>(null);
   // 본문 컨테이너 ref — selection 이 본문 안인지 검증용
   const contentRef = useRef<HTMLDivElement>(null);
-  // selection clear 후 발생하는 selectionchange 1회 무시 — native action menu 차단용
-  // (WebView 의 Copy/공유 popover 는 live selection 에 묶여 있어 selection 을 비우면 사라짐.
-  //  단, 그 비움 행위가 selectionchange 를 트리거 → FAB 가 같이 dismiss 되는 걸 막아야 함.)
-  const ignoreNextSelectionChangeRef = useRef(false);
   // highlight 클릭 시 떠 있는 액션 popup (X 제거 + 메모, 메모 있으면 본문 미리보기)
   const [highlightPopup, setHighlightPopup] = useState<{
     highlightId: string;
@@ -811,10 +807,6 @@ export default function ScriptureReaderPage() {
   // ──────── selection 추적 (native browser selection) ────────
   useEffect(() => {
     const handler = () => {
-      if (ignoreNextSelectionChangeRef.current) {
-        ignoreNextSelectionChangeRef.current = false;
-        return;
-      }
       const sel = getSelectionRange(contentRef.current);
       if (!sel) {
         setSelection(null);
@@ -826,30 +818,6 @@ export default function ScriptureReaderPage() {
     };
     document.addEventListener('selectionchange', handler);
     return () => document.removeEventListener('selectionchange', handler);
-  }, []);
-
-  // ──────── selection 완료 후 native action menu 차단 ────────
-  // 터치 release 시점에 현재 selection 을 비워 native Copy/공유 popover (iOS WKWebView,
-  // Android Chromium WebView 모두) 가 뜨지 않게 한다. 우리 FloatingActionBar 는 selection state
-  // 로 이미 표시되어 있으므로 native selection 자체는 더 이상 필요 없음. 데스크톱은 native menu
-  // 이슈가 없으므로 mouse 인터랙션은 건드리지 않는다 (Ctrl+C 등 보존).
-  useEffect(() => {
-    const el = contentRef.current;
-    if (!el) return;
-    const onTouchEnd = () => {
-      // 다음 frame — release 시점에 selection 이 확정된 직후 비움
-      requestAnimationFrame(() => {
-        const sel = window.getSelection();
-        if (sel && !sel.isCollapsed && sel.rangeCount > 0) {
-          ignoreNextSelectionChangeRef.current = true;
-          sel.removeAllRanges();
-        }
-      });
-    };
-    el.addEventListener('touchend', onTouchEnd);
-    return () => {
-      el.removeEventListener('touchend', onTouchEnd);
-    };
   }, []);
 
   // FloatingActionBar 액션
