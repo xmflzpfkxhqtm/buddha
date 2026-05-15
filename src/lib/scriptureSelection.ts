@@ -91,8 +91,32 @@ export function getSelectionRange(containerEl: HTMLElement | null): SelectionRan
     endSentenceText = startEl.textContent ?? '';
   }
 
+  // Boundary normalization — 브라우저가 block 경계 hit-test 를 이전 inline 끝에 anchor 하는
+  // 케이스 대응. 사용자가 시각적으로 "다음 줄의 처음"을 클릭했어도 range.startContainer 가
+  // 이전 sentence 의 끝 (trailing whitespace 직전) 에 anchor 되어, 이전 줄 끝 공백 1~2자가
+  // 같이 강조되는 버그. content 있는 영역은 건드리지 않음 (slice 가 whitespace-only 일 때만).
+  if (startSentence < endSentence && containerEl) {
+    if (!startSentenceText.slice(startOffset).trim()) {
+      const nextEl = containerEl.querySelector(`[data-index="${startSentence + 1}"]`);
+      if (nextEl) {
+        startSentence = startSentence + 1;
+        startOffset = 0;
+        startSentenceText = (nextEl as HTMLElement).textContent ?? '';
+      }
+    }
+    if (startSentence < endSentence && !endSentenceText.slice(0, endOffset).trim()) {
+      const prevEl = containerEl.querySelector(`[data-index="${endSentence - 1}"]`);
+      if (prevEl) {
+        endSentence = endSentence - 1;
+        endSentenceText = (prevEl as HTMLElement).textContent ?? '';
+        endOffset = endSentenceText.length;
+      }
+    }
+  }
+
   // 같은 sentence 안에서 collapsed 처럼 (start === end) 이면 무효
-  if (startSentence === endSentence && startOffset === endOffset) return null;
+  if (startSentence > endSentence) return null;
+  if (startSentence === endSentence && startOffset >= endOffset) return null;
 
   return {
     startSentence,
