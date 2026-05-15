@@ -28,7 +28,7 @@ interface ScriptureModalProps {
   usedInitials: Set<string>;
   initialFilter: string;
   setInitialFilter: (s: string) => void;
-  setBookmarkPending: (pending: { title: string; index: number } | null) => void;  // ✅ 추가
+  setBookmarkPending: (pending: { title: string; index: number; sentence: string | null } | null) => void;  // ✅ 추가
   expandedBase: string | null;
   setExpandedBase: (s: string | null) => void;
   formatDisplayTitle: (title: string) => string;
@@ -283,7 +283,7 @@ export default function ScriptureModal({
 onClick={() => {
   setSelected(title);
   onClose();
-  setBookmarkPending({ title, index });  // ✅ 여기다 임시로 저장
+  setBookmarkPending({ title, index, sentence: null });  // ✅ 여기다 임시로 저장
 }}
                       className="w-full text-left px-4 py-4 hover:bg-accent-soft/20 hover:text-on-brand text-sm"
                       disabled={isSearching}

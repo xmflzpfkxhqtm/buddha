@@ -2,21 +2,21 @@
 
 export const todayTeaching = [
     {
-      title: '금강반야바라밀경_1권',
+      title: '금강반야바라밀경_K0013_1권',
       index: 201, // 불경읽기창에서 표시되는 줄 번호에서 1을 뺀 값이 index임!!!!!!!!!!!!
       sentence: `
       보살마하살은 모든 생각을 버리고 무상보리를 향해 마음을 내야 하며
       `.trim().replaceAll('\n', ' '),
     },
     {
-      title: '금강반야바라밀경_1권',
+      title: '금강반야바라밀경_K0013_1권',
       index: 345,
       sentence: `
       미진만한 법도 여래가 버린 바가 없고, 얻은 바가 없으므로, 아뇩다라삼먁삼보리는 평등하다.
       `.trim().replaceAll('\n', ' '),
     },
     {
-      title: '금강반야바라밀경_1권',
+      title: '금강반야바라밀경_K0013_1권',
       index: 347,
       sentence: `
       수보리야, 이 법은 평등하여 높고 낮음이 없으므로, 아뇩다라삼먁삼보리라 한다.
@@ -44,7 +44,7 @@ export const todayTeaching = [
       `.trim().replaceAll('\n', ' '),
     },
     {
-      title: '대반열반경_27권',
+      title: '대반열반경_K0105_27권',
       index: 136,
       sentence: `
       모든 중생이 십이인연을 보지 못하므로 윤회한다.

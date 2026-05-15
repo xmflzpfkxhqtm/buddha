@@ -22,6 +22,7 @@ import HighlightSheet, { type HighlightSheetTarget } from '../../../../../../com
 import FloatingActionBar from '../../../../../../components/FloatingActionBar';
 import { scriptureCache, type ScriptureGroupDetailResponse } from '@/lib/scriptureCache';
 import { titleToReaderPath } from '@/lib/scripturePath';
+import { findBestMatchIndex } from '@/lib/sentenceMatch';
 import {
   getSelectionRange,
   getSelectionRect,
@@ -230,7 +231,7 @@ export default function ScriptureReaderPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [showMessage, setShowMessage] = useState(false);
-  const [bookmarkPending, setBookmarkPending] = useState<{ title: string; index: number } | null>(null);
+  const [bookmarkPending, setBookmarkPending] = useState<{ title: string; index: number; sentence: string | null } | null>(null);
   const [initialFilter, setInitialFilter] = useState('전체');
   const sentenceRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -254,7 +255,7 @@ export default function ScriptureReaderPage() {
   const [chromeVisible, setChromeVisible] = useState(true);
   const lastScrollY = useRef(0);
 
-  const { title: pendingTitle, index: pendingIndex, clearHighlight: clearBookmark } = useHighlightStore();
+  const { title: pendingTitle, index: pendingIndex, sentence: pendingSentence, clearHighlight: clearBookmark } = useHighlightStore();
 
   const clampIndex = useCallback(
     (idx: number) => {
@@ -502,11 +503,11 @@ export default function ScriptureReaderPage() {
     if (!pendingTitle) return;
     if (!resolvedTitle) return; // 아직 resolved 안 됨, 다음 effect run 기다림
     if (pendingTitle === resolvedTitle) {
-      setBookmarkPending({ title: pendingTitle, index: pendingIndex ?? 0 });
+      setBookmarkPending({ title: pendingTitle, index: pendingIndex ?? 0, sentence: pendingSentence });
     } else {
       clearBookmark();
     }
-  }, [pendingTitle, pendingIndex, resolvedTitle, clearBookmark]);
+  }, [pendingTitle, pendingIndex, pendingSentence, resolvedTitle, clearBookmark]);
 
   // bookmarkPending 처리 (본문 로딩 완료 후) — sentenceRefs 가 attach 될 때까지 polling.
   // 첫 setTimeout 은 본문 로드의 setCurrentIndex(0) + scrollTo top race 를 우회 (그게 먼저 발화).
@@ -523,16 +524,22 @@ export default function ScriptureReaderPage() {
 
     const tryScroll = () => {
       if (cancelled) return;
-      const clamped = clampIndex(bookmarkPending.index);
-      const ref = sentenceRefs.current[clamped];
+      // Anchor sentence text 가 함께 들어왔으면 (예: todayTeaching 의 신역 이전 문장)
+      // displayTexts 안에서 가장 유사한 sentence 의 index 로 재정렬 — hardcoded index drift 대응.
+      let target = clampIndex(bookmarkPending.index);
+      if (bookmarkPending.sentence && displayTexts.length > 0) {
+        const best = findBestMatchIndex(bookmarkPending.sentence, displayTexts);
+        if (best >= 0) target = best;
+      }
+      const ref = sentenceRefs.current[target];
       if (!ref) {
         if (attempt++ < maxAttempts) {
           setTimeout(tryScroll, 50);
         }
         return;
       }
-      setCurrentIndex(clamped);
-      smoothCenter(clamped, true);
+      setCurrentIndex(target);
+      smoothCenter(target, true);
       clearBookmark();
       setBookmarkPending(null);
     };
@@ -543,7 +550,7 @@ export default function ScriptureReaderPage() {
       cancelled = true;
       clearTimeout(t);
     };
-  }, [bookmarkPending, resolvedTitle, ttsSentences.length, clampIndex, smoothCenter, clearBookmark]);
+  }, [bookmarkPending, resolvedTitle, ttsSentences.length, displayTexts, clampIndex, smoothCenter, clearBookmark]);
 
   // 스크롤 동기화 + 끝 도달 감지로 읽음 상태 기록
   useEffect(() => {

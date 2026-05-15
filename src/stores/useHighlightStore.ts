@@ -10,13 +10,17 @@ import { create } from 'zustand';
 type HighlightStoreState = {
   title: string | null;
   index: number | null;
-  setHighlight: (title: string, index: number) => void;
+  /** 옵션. 본문 신역으로 index drift 발생한 entry (예: todayTeaching) 가
+   *  reader 도착 시 displayTexts 안에서 유사도 최고 match 로 재정렬할 anchor text. */
+  sentence: string | null;
+  setHighlight: (title: string, index: number, sentence?: string | null) => void;
   clearHighlight: () => void;
 };
 
 export const useHighlightStore = create<HighlightStoreState>((set) => ({
   title: null,
   index: null,
-  setHighlight: (title, index) => set({ title, index }),
-  clearHighlight: () => set({ title: null, index: null }),
+  sentence: null,
+  setHighlight: (title, index, sentence = null) => set({ title, index, sentence }),
+  clearHighlight: () => set({ title: null, index: null, sentence: null }),
 }));

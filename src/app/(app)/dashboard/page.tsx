@@ -271,7 +271,7 @@ export default function Home() {
  !isNaN(index) && (
   <div
     onClick={() => {
-      setHighlight(title, index);
+      setHighlight(title, index, sentence);
       router.push(titleToReaderPath(title));
     }}
               className="w-full rounded-xl bg-surface-brand-elevated border border-accent-soft dark:border-transparent flex flex-row items-center pl-1 pr-4 py-2 mt-4 justify-start cursor-pointer"
