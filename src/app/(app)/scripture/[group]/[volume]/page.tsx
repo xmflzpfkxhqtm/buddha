@@ -204,6 +204,10 @@ export default function ScriptureReaderPage() {
   // 현재 native selection 상태 — FloatingActionBar 표시용
   const [selection, setSelection] = useState<SelectionRange | null>(null);
   const [selectionRect, setSelectionRect] = useState<DOMRect | null>(null);
+  // selectionchange 시점에 캡처된 선택 텍스트. FAB tap 순간 iOS 가 native selection 을
+  // 자동 dismiss (FAB 가 selection 영역 밖이라) 하면 window.getSelection().toString() 이
+  // 빈 문자열이 되어 메모 인용·묻기 인용이 비는 회귀 방지.
+  const [selectionText, setSelectionText] = useState('');
   // sheet target — selection range + 기존 highlight (메모 모드)
   const [sheetTarget, setSheetTarget] = useState<HighlightSheetTarget | null>(null);
   // 본문 컨테이너 ref — selection 이 본문 안인지 검증용
@@ -691,15 +695,16 @@ export default function ScriptureReaderPage() {
   };
 
   // ──────── selection → sheet target 변환 ────────
-  // previewText 는 trim — block-level sentence 사이 newline 이 selection 에 포함되어
-  // 인용 박스 첫줄/끝줄이 비는 케이스 방지.
+  // previewText 는 selectionchange 시점에 캡처한 selectionText 우선 (FAB tap 직후
+  // native selection 이 비워졌어도 보존). idle 시 fallback 으로 live selection 도 시도.
   const makeSheetTarget = (sel: SelectionRange): HighlightSheetTarget => ({
     startSentence: sel.startSentence,
     startOffset: sel.startOffset,
     endSentence: sel.endSentence,
     endOffset: sel.endOffset,
     previewText:
-      typeof window !== 'undefined' ? (window.getSelection()?.toString() ?? '').trim() : '',
+      selectionText ||
+      (typeof window !== 'undefined' ? (window.getSelection()?.toString() ?? '').trim() : ''),
     anchorStartText: sel.startSentenceText,
     anchorEndText: sel.endSentenceText,
     existing: null,
@@ -758,6 +763,7 @@ export default function ScriptureReaderPage() {
       clearBrowserSelection();
       setSelection(null);
       setSelectionRect(null);
+      setSelectionText('');
     },
     [userId, resolvedTitle],
   );
@@ -811,10 +817,15 @@ export default function ScriptureReaderPage() {
       if (!sel) {
         setSelection(null);
         setSelectionRect(null);
+        setSelectionText('');
         return;
       }
       setSelection(sel);
       setSelectionRect(getSelectionRect());
+      // 선택 텍스트도 state 로 캡처 — FAB tap 시 native selection 자동 dismiss 되어
+      // window.getSelection().toString() 이 비어도 인용 텍스트 보존.
+      const winSel = typeof window !== 'undefined' ? window.getSelection() : null;
+      setSelectionText((winSel?.toString() ?? '').trim());
     };
     document.addEventListener('selectionchange', handler);
     return () => document.removeEventListener('selectionchange', handler);
@@ -829,9 +840,11 @@ export default function ScriptureReaderPage() {
   const handleSelectionMemo = () => {
     if (!selection) return;
     setSheetTarget(makeSheetTarget(selection));
-    // sheet 열렸으니 popover 는 숨김 (selection 은 그대로)
+    // sheet 열렸으니 popover 는 숨김 (selection 은 그대로). selectionText 는 sheet 가
+    // 이미 makeSheetTarget 으로 받아갔으므로 비워도 OK.
     setSelection(null);
     setSelectionRect(null);
+    setSelectionText('');
   };
 
   // 묻기 → reader 안 모달. 페이지 이동 없음.
@@ -856,9 +869,10 @@ export default function ScriptureReaderPage() {
 
   const handleSelectionAsk = () => {
     if (!selection) return;
-    // trim — block-level sentence 사이 newline 으로 인한 인용 첫줄/끝줄 빈 줄 방지
+    // 캡처된 selectionText 우선 — FAB tap 시 native selection 이 비워졌어도 보존
     const text =
-      typeof window !== 'undefined' ? (window.getSelection()?.toString() ?? '').trim() : '';
+      selectionText ||
+      (typeof window !== 'undefined' ? (window.getSelection()?.toString() ?? '').trim() : '');
     setAskModalCitation({
       text,
       titleClean: formatCitationTitle(resolvedTitle),
@@ -866,6 +880,7 @@ export default function ScriptureReaderPage() {
     });
     setAskModalOpen(true);
     clearBrowserSelection();
+    setSelectionText('');
     setSelection(null);
     setSelectionRect(null);
   };
