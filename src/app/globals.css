@@ -181,6 +181,16 @@ html { font-family: "YujiMai", serif; }
   will-change: transform;
 }
 
+/* iOS auto-zoom 차단 — input/textarea font-size 16px 미만이면 focus 시 강제 zoom 발동,
+   maximum-scale=1.0 viewport 도 무시함. zoom 후 키보드 내려도 viewport 원복 안 되어
+   화면이 잘림. 전역 최소 16px 보장으로 한 번에 차단. !important 로 Tailwind text-sm 등
+   유틸리티 클래스 override (디자인 의도는 작아 보여야 하지만 iOS 안정성 우선). */
+input,
+textarea,
+select {
+  font-size: max(16px, 1rem) !important;
+}
+
 @layer utilities {
 
   .carousel-x {
