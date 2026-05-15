@@ -14,7 +14,7 @@ interface ReaderSettingsState {
 }
 
 export const useReaderSettingsStore = create<ReaderSettingsState>((set) => ({
-  lineHighlight: true, // SSR / 첫 render default
+  lineHighlight: false, // SSR / 첫 render default
   setLineHighlight: (v) => {
     if (typeof window !== 'undefined') {
       try {
@@ -29,7 +29,7 @@ export const useReaderSettingsStore = create<ReaderSettingsState>((set) => ({
     if (typeof window === 'undefined') return;
     try {
       const v = window.localStorage.getItem(LINE_HIGHLIGHT_KEY);
-      if (v === null) return; // default 유지 (ON)
+      if (v === null) return; // default 유지 (OFF)
       set({ lineHighlight: v === '1' });
     } catch {
       /* noop */
