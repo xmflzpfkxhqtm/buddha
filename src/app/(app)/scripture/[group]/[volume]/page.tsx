@@ -1239,9 +1239,10 @@ export default function ScriptureReaderPage() {
         </div>
       )}
 
-      {/* Sub info — TTS 컨트롤 (130) 과 BottomNav (~70) 사이. BottomNav 위 ~20 gap */}
+      {/* Sub info — TTS 컨트롤 (130) 과 BottomNav (~70) 사이. BottomNav 위 ~20 gap.
+          selection 활성 시에는 FAB 가 같은 위치에 떠야 하므로 숨김. */}
       <div
-        className={`fixed inset-x-0 z-30 pointer-events-none flex justify-center transition-all duration-200 ${showChrome ? 'opacity-100' : 'opacity-0 translate-y-full'}`}
+        className={`fixed inset-x-0 z-30 pointer-events-none flex justify-center transition-all duration-200 ${showChrome && !selection ? 'opacity-100' : 'opacity-0 translate-y-full'}`}
         style={{ bottom: 'calc(env(safe-area-inset-bottom) + 90px)' }}
       >
         <div className="bg-surface-elevated/85 backdrop-blur-sm rounded-full px-3 py-1 text-xs text-ink-muted/80 max-w-[80%] truncate">

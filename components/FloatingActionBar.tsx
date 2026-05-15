@@ -1,51 +1,35 @@
-// Native text selection 위에 떠 있는 floating popover.
-// Selection 영역의 boundingRect 기준으로 위 (공간 부족하면 아래) 에 위치.
+// 텍스트 선택 시 화면 하단에 고정 표시되는 액션 bar.
 // 액션: "하이라이트" (즉시 저장) / "메모" (HighlightSheet 열기) / "묻기" (ask 페이지 인용 prefill).
+//
+// 이전 버전은 selection rect 기준 위/아래 popover 였으나 OS native menu (iOS UIEditMenu /
+// Android ActionMode) 와 같은 공간에서 그려져 가려지는 문제가 있어 하단 고정으로 분리.
+// 공간이 분리되므로 OS menu 와 우리 FAB 가 동시 표시되어도 서로 가리지 않음.
 
 'use client';
-import { useEffect, useState } from 'react';
 import { Highlighter, MessageSquarePlus, MessageCircleQuestion } from 'lucide-react';
-
-const POPOVER_HEIGHT = 44;
-const POPOVER_GAP = 8;
 
 export default function FloatingActionBar({
   visible,
-  rect,
   onHighlight,
   onMemo,
   onAsk,
 }: {
   visible: boolean;
-  rect: DOMRect | null;
+  /** 호환성을 위해 prop 은 유지하지만 사용하지 않음. 하단 고정 bar 라 selection rect 불필요. */
+  rect?: DOMRect | null;
   onHighlight: () => void;
   onMemo: () => void;
   onAsk: () => void;
 }) {
-  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
-
-  useEffect(() => {
-    if (!visible || !rect) {
-      setPos(null);
-      return;
-    }
-    const above = rect.top - POPOVER_GAP - POPOVER_HEIGHT;
-    const top = above > 12
-      ? above
-      : rect.bottom + POPOVER_GAP;
-    const centerX = rect.left + rect.width / 2;
-    setPos({ top, left: centerX });
-  }, [visible, rect]);
-
-  if (!visible || !pos) return null;
+  if (!visible) return null;
 
   return (
     <div
       role="toolbar"
       aria-label="선택한 구절 액션"
       onClick={(e) => e.stopPropagation()}
-      className="fixed z-[60] -translate-x-1/2 flex items-center gap-1 rounded-full bg-ink shadow-lg px-1.5 py-1 animate-fade-opacity"
-      style={{ top: pos.top, left: pos.left, height: POPOVER_HEIGHT }}
+      className="fixed left-1/2 -translate-x-1/2 z-[60] flex items-center gap-1 rounded-full bg-ink shadow-lg px-1.5 py-1 animate-fade-opacity"
+      style={{ bottom: 'calc(env(safe-area-inset-bottom) + 90px)', height: 44 }}
     >
       <button
         type="button"
