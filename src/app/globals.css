@@ -93,7 +93,12 @@ html { font-family: "YujiMai", serif; }
   --line:                    #E0DBCF;  /* 흐린 구분선 */
   --line-strong:             #C1C1C1;  /* 기본 테두리 */
 
-  --highlight:               #FDE68A;  /* 현재 문장 하이라이터 — 따뜻한 amber */
+  --highlight:               #FDE68A;  /* TTS 현재 문장 하이라이터 — 따뜻한 amber */
+
+  /* 사용자 highlight (영구) — TTS bg 와 같은 amber 패밀리지만 농도 차이로 분리.
+     반투명 tint + 얇은 underline 보조. brand 적갈/크림 시스템 안에서 자연스럽게 어울리는 골든 amber. */
+  --user-highlight:          rgba(252, 188, 90, 0.32);
+  --user-highlight-line:     rgba(180, 105, 30, 0.50);
 }
 
 /* 다크 모드 — next-themes 가 html.dark 클래스를 토글.
@@ -123,6 +128,10 @@ html { font-family: "YujiMai", serif; }
   --line-strong:             #3D332B;
 
   --highlight:               #5A2D1C;  /* 다크: 따뜻한 적갈 — 크림 텍스트와 대비 + 적갈 브랜드 와 조화 */
+
+  /* 사용자 highlight 다크 — 더 살짝 (다크 배경에선 강한 alpha 가 너무 도드라짐) */
+  --user-highlight:          rgba(252, 188, 90, 0.18);
+  --user-highlight-line:     rgba(252, 188, 90, 0.40);
 }
 
 /* 애니메이션 */
@@ -150,6 +159,26 @@ html { font-family: "YujiMai", serif; }
 }
 .animate-fade {
   animation: fade 0.6s ease-out;
+}
+
+/* opacity-only fade — transform 을 안 건드려서 inline transform (translate-X/Y) 과 충돌 없음.
+   popup / floating UI 등에서 사용. */
+@keyframes opacityFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-fade-opacity {
+  animation: opacityFadeIn 180ms ease-out;
+}
+
+/* Ken Burns: 5초 사이클로 천천히 줌 + 미세 pan. Hero carousel 슬라이드 마다 재시작. */
+@keyframes kenBurns {
+  0%   { transform: scale(1)    translate(0%, 0%); }
+  100% { transform: scale(1.08) translate(-1.5%, -1.2%); }
+}
+.animate-ken-burns {
+  animation: kenBurns 5s ease-out forwards;
+  will-change: transform;
 }
 
 @layer utilities {

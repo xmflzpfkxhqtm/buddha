@@ -2,7 +2,7 @@
 
 'use client';
 import { ReactNode, useEffect, useRef, useState, useCallback } from 'react';
-import { useBookmarkStore } from '../../../stores/useBookmarkStore';
+import { useHighlightStore } from '../../../stores/useHighlightStore';
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -221,7 +221,7 @@ export default function ScripturePage() {
   // === 플랫폼 감지 상태 추가 ===
   const [platformInfo, setPlatformInfo] = useState<{ platform: string | null; isNative: boolean }>({ platform: null, isNative: false });
 
-  const { title, index, clearBookmark } = useBookmarkStore(); // 원본 변수명 사용
+  const { title, index, clearHighlight: clearBookmark } = useHighlightStore(); // 옛 reader 코드 호환용 alias
   const clampIndex = useCallback((idx: number) => {
     if (ttsSentences.length === 0) return 0;
     return Math.min(Math.max(idx, 0), ttsSentences.length - 1);
@@ -307,17 +307,20 @@ export default function ScripturePage() {
       });
   }, []);
 
-  // 북마크 로딩 (원본 유지)
+  // 북마크 로딩 — highlights 테이블에서 단일 sentence highlight 만 표시 (start == end).
   useEffect(() => {
     if (!userId || !selected) return;
     const fetchBookmarks = async () => {
       const { data, error } = await supabase
-        .from('bookmarks')
-        .select('index')
+        .from('highlights')
+        .select('start_sentence, end_sentence')
         .eq('user_id', userId)
         .eq('title', selected);
       if (!error && data) {
-        setBookmarkedIndexes(data.map((d) => d.index));
+        const single = data
+          .filter((d) => d.start_sentence === d.end_sentence)
+          .map((d) => d.start_sentence);
+        setBookmarkedIndexes(single);
       }
     };
     fetchBookmarks();
@@ -463,12 +466,28 @@ export default function ScripturePage() {
     if (!userId) {
       setMessage('로그인 정보를 불러올 수 없습니다.'); setShowMessage(true); return;
     }
-    if (isBookmarked) { /* 삭제 로직 */
-      const { error } = await supabase.from('bookmarks').delete().eq('user_id', userId).eq('title', selected).eq('index', currentIndex);
+    if (isBookmarked) { /* 삭제 — 단일 sentence highlight (start == end) */
+      const { error } = await supabase
+        .from('highlights')
+        .delete()
+        .eq('user_id', userId)
+        .eq('title', selected)
+        .eq('start_sentence', currentIndex)
+        .eq('end_sentence', currentIndex);
       if (!error) setBookmarkedIndexes((prev) => prev.filter(i => i !== currentIndex));
       setMessage(error ? '삭제 실패' : '❌ 책갈피가 삭제되었습니다.');
-    } else { /* 추가 로직 */
-      const { error } = await supabase.from('bookmarks').insert({ user_id: userId, title: selected, index: currentIndex });
+    } else { /* 추가 — anchor_*_text 는 normalize 후 fuzzy 복구용 */
+      const anchor = (ttsSentences[currentIndex] ?? '').slice(0, 50);
+      const { error } = await supabase
+        .from('highlights')
+        .insert({
+          user_id: userId,
+          title: selected,
+          start_sentence: currentIndex,
+          end_sentence: currentIndex,
+          anchor_start_text: anchor,
+          anchor_end_text: anchor,
+        });
       if (!error) setBookmarkedIndexes((prev) => [...prev, currentIndex]);
       setMessage(error ? '저장 실패' : '✅ 책갈피가 저장되었습니다.');
     }

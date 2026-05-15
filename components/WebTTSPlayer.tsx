@@ -10,6 +10,8 @@ interface TTSPlayerProps {
   setCurrentIndex: (idx: number) => void;
   onPlaybackStateChange?: (playing: boolean) => void;
   smoothCenter: (idx: number) => void;
+  className?: string;
+  bottomOffset?: string;
 }
 
 const waitUntilVoicesReady = (): Promise<void> => {
@@ -30,6 +32,8 @@ const WebTTSPlayer: React.FC<TTSPlayerProps> = ({
   setCurrentIndex,
   onPlaybackStateChange,
   smoothCenter,
+  className,
+  bottomOffset,
 }) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const synth = useRef<SpeechSynthesis | null>(null);
@@ -248,6 +252,8 @@ const WebTTSPlayer: React.FC<TTSPlayerProps> = ({
       isBackwardDisabled={internalIndex.current <= 0 || sentences.length === 0}
       isForwardDisabled={internalIndex.current >= sentences.length - 1 || sentences.length === 0}
       isPlayPauseDisabled={sentences.length === 0}
+      className={className}
+      bottomOffset={bottomOffset}
     />
   );
 };

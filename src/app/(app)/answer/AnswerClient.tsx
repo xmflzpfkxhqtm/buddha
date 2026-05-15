@@ -18,7 +18,8 @@ import { Share }     from '@capacitor/share';
 import { supabase }                from '@/lib/supabaseClient';
 import type { User }               from '@supabase/supabase-js';
 import { useAskStore }             from '@/stores/askStore';
-import { useBookmarkStore }        from '@/stores/useBookmarkStore';
+import { useHighlightStore }       from '@/stores/useHighlightStore';
+import { titleToReaderPath }       from '@/lib/scripturePath';
 
 /* -------------------- 문자열 유사도 + 경전 제목 매칭 ----------------------- */
 function levenshtein(a: string, b: string) {
@@ -212,7 +213,7 @@ export default function AnswerClient({ initialQuestionId = null }: { initialQues
 
   /* ------- Global State ------------------------------------------------ */
   const { setParentId } = useAskStore();
-  const { setBookmark } = useBookmarkStore();
+  const { setHighlight } = useHighlightStore();
 
   /* ------- Local State ------------------------------------------------- */
   const [question        , setQuestion]        = useState('');
@@ -372,9 +373,8 @@ export default function AnswerClient({ initialQuestionId = null }: { initialQues
     citationIndexMapRef.current = citationIndexMap;
   }, [citationIndexMap]);
 
-  useEffect(() => {
-    router.prefetch('/scripture');
-  }, [router]);
+  // Layer 3 는 dynamic [group]/[volume] 라우트라 인용 경전이 정해지기 전에는 prefetch 가 의미 없음.
+  // 클릭 시 router.push 로 즉시 이동.
 
   const getHintIndexForTitle = useCallback((scriptureTitle: string): number | undefined => {
     const direct = citationHintsMap[scriptureTitle];
@@ -429,8 +429,8 @@ export default function AnswerClient({ initialQuestionId = null }: { initialQues
       : hintedIdx !== undefined
         ? hintedIdx
         : await findCitationIndex(scriptureTitle, fullAnswer);
-    setBookmark(scriptureTitle, targetIndex);
-    router.push('/scripture');
+    setHighlight(scriptureTitle, targetIndex);
+    router.push(titleToReaderPath(scriptureTitle));
   };
 
   if (!isAnswerLoaded || !isTitlesLoaded) {

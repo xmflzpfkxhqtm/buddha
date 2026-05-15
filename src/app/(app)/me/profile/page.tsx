@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
+import BirthDateWheel from './BirthDateWheel';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -13,7 +14,7 @@ export default function ProfilePage() {
   const [notification, setNotification] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [formError, setFormError] = useState('');
-  const [saveMessage, setSaveMessage] = useState('');
+  const [toast, setToast] = useState('');
   const [provider, setProvider] = useState<string | null>(null);
 
   useEffect(() => {
@@ -24,14 +25,12 @@ export default function ProfilePage() {
       if (!authData.user) return;
       setUser(authData.user);
 
-      // users 테이블에서 정보 불러오기
       const { data: profile } = await supabase
         .from('users')
         .select('username, birth_date, notification')
         .eq('id', authData.user.id)
         .single();
 
-      // ✅ username이 없으면 auth metadata fallback
       setUsername(profile?.username || authData.user.user_metadata?.full_name || '');
       setBirthDate(profile?.birth_date || '');
       setNotification(profile?.notification ?? true);
@@ -46,6 +45,13 @@ export default function ProfilePage() {
     fetchUser();
   }, []);
 
+  // 토스트 자동 닫힘
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(''), 1800);
+    return () => clearTimeout(t);
+  }, [toast]);
+
   const handleSave = async () => {
     if (!user) return;
 
@@ -53,17 +59,14 @@ export default function ProfilePage() {
       setFormError('이름을 입력해주세요.');
       return;
     }
-
     if (!birthDate) {
       setFormError('생년월일을 입력해주세요.');
       return;
     }
 
     setFormError('');
-    setSaveMessage('');
     setIsSaving(true);
 
-    // ✅ users 테이블 업데이트 (auth는 건드리지 않음)
     const { error: tableError } = await supabase.from('users').upsert({
       id: user.id,
       username: username.trim(),
@@ -72,108 +75,125 @@ export default function ProfilePage() {
       email: user.email,
     });
 
+    setIsSaving(false);
+
     if (tableError) {
-      setSaveMessage('❌ 사용자 정보 저장 중 오류가 발생했습니다.');
-      setIsSaving(false);
+      setToast('저장 중 오류가 발생했습니다.');
       return;
     }
 
-    setSaveMessage('✅ 저장되었습니다.');
-    setTimeout(() => {
-      router.push('/me');
-    }, 500);
+    setToast('저장되었습니다.');
+    setTimeout(() => router.push('/me'), 600);
   };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일 가입`;
+    return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
   };
 
   return (
-    <main className="min-h-screen max-w-[430px] mx-auto bg-surface px-6 py-10 flex flex-col gap-6">
-      <div className="bg-surface-elevated shadow border rounded-xl p-6">
-        <h2 className="text-lg font-bold mb-4">👤 프로필 관리</h2>
+    <main className="min-h-screen max-w-[430px] mx-auto bg-surface-elevated px-6 py-8">
+      {/* 계정 정보 — 읽기 전용 */}
+      {user && (
+        <section className="pb-6 border-b border-line">
+          <dl className="text-sm">
+            <div className="flex items-center justify-between py-2">
+              <dt className="text-ink-muted">로그인 방식</dt>
+              <dd className="text-ink font-medium capitalize">{provider}</dd>
+            </div>
+            <div className="flex items-center justify-between py-2 gap-3">
+              <dt className="text-ink-muted shrink-0">이메일</dt>
+              <dd className="text-ink font-medium truncate">{user.email}</dd>
+            </div>
+            <div className="flex items-center justify-between py-2">
+              <dt className="text-ink-muted">가입일</dt>
+              <dd className="text-ink font-medium">{formatDate(user.created_at)}</dd>
+            </div>
+          </dl>
+        </section>
+      )}
 
-        {user && (
-          <div className="mb-6 text-sm text-ink-muted space-y-1">
-            <p>🔑 로그인 방식: <strong>{provider}</strong></p>
-            <p>📧 로그인 이메일: <strong>{user.email}</strong></p>
-            <p>🗓️ 가입일: <strong>{formatDate(user.created_at)}</strong></p>
-          </div>
-        )}
-
+      {/* 편집 폼 */}
+      <section className="pt-6 space-y-5">
         {formError && (
-          <p className="text-sm text-red-600 font-medium mb-4">{formError}</p>
+          <p className="text-sm text-accent font-medium">{formError}</p>
         )}
 
-        {/* 이름 (username) */}
-        <div className="mb-4">
-          <label className="block text-sm font-semibold text-ink-muted mb-1">이름</label>
+        <div>
+          <label htmlFor="username" className="block text-sm font-semibold text-ink-muted mb-2">
+            이름
+          </label>
           <input
+            id="username"
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="w-full border border-line rounded-lg px-3 py-2 text-sm"
             placeholder="이름을 입력하세요"
+            className="w-full h-12 px-4 rounded-lg border border-line bg-surface-elevated text-base text-ink placeholder:text-ink-subtle focus:border-accent focus:outline-none transition-colors"
           />
         </div>
 
-        {/* 생년월일 */}
-        <div className="mb-4">
-          <label className="block text-sm font-semibold text-ink-muted mb-1">생년월일</label>
-          <input
-            type="date"
-            value={birthDate}
-            onChange={(e) => setBirthDate(e.target.value)}
-            className="w-full border border-line rounded-lg px-3 py-2 text-sm"
-          />
+        {/* 생년월일 — iOS 스타일 휠 picker (연/월/일 각각 세로 스크롤) */}
+        <div>
+          <span id="birth-date-label" className="block text-sm font-semibold text-ink-muted mb-2">
+            생년월일
+          </span>
+          <div role="group" aria-labelledby="birth-date-label">
+            <BirthDateWheel value={birthDate} onChange={setBirthDate} />
+          </div>
         </div>
 
-        {/* 알림 설정 */}
-        <div className="mb-4 flex items-center">
+        <label className="flex items-center gap-3 py-2 cursor-pointer select-none">
           <input
             type="checkbox"
-            id="notification"
             checked={notification}
             onChange={(e) => setNotification(e.target.checked)}
-            className="mr-2"
+            className="w-5 h-5 accent-accent rounded"
           />
-          <label htmlFor="notification" className="text-sm text-ink-muted">
-            공지사항 및 알림 수신에 동의합니다
-          </label>
-        </div>
+          <span className="text-sm text-ink">공지사항 및 알림 수신에 동의합니다</span>
+        </label>
 
         <button
+          type="button"
           onClick={handleSave}
           disabled={isSaving}
-          className="w-full mt-2 bg-accent-soft hover:bg-accent text-on-brand py-2 px-4 rounded-lg text-sm font-semibold"
+          className="w-full h-12 rounded-lg bg-accent text-on-brand text-base font-semibold hover:bg-accent-soft active:bg-accent-soft transition-colors disabled:bg-line-strong disabled:cursor-not-allowed"
         >
           {isSaving ? '저장 중...' : '저장하기'}
         </button>
+      </section>
 
-        {saveMessage && (
-          <p className="text-sm text-center mt-3 text-ink-muted">{saveMessage}</p>
-        )}
+      {/* 안내 문구 */}
+      <p className="text-xs text-center text-ink-subtle mt-8 leading-relaxed">
+        입력하신 개인정보는 서비스 이용을 위한 본인 식별 및 통계 분석 목적으로만 사용되며,
+        동의 없이 외부에 제공되지 않습니다.
+        <br />
+        자세한 내용은{' '}
+        <a href="/privacy" className="underline hover:text-accent">
+          개인정보 처리방침
+        </a>
+        을 확인해주세요.
+      </p>
 
-<p className="text-xs text-center text-ink-subtle mt-4">
-  입력하신 개인정보는 서비스 이용을 위한 본인 식별 및 통계 분석 목적으로만 사용되며,
-  동의 없이 외부에 제공되지 않습니다.
-</p>
-<p className="text-xs text-center text-ink-subtle">
-  자세한 내용은 <a href="/privacy" className="underline hover:text-accent">개인정보 처리방침</a>을 확인해주세요.
-</p>
-<p className="text-xs text-center text-ink-subtle mt-2">
-  <button
-    onClick={() => router.push('/me/profile/account-delete')}
-    className="underline hover:text-accent"
-  >
-    계정 삭제 요청하기
-  </button>
-</p>
-
+      <div className="mt-6 text-center">
+        <button
+          type="button"
+          onClick={() => router.push('/me/profile/account-delete')}
+          className="text-xs text-ink-subtle underline hover:text-accent"
+        >
+          계정 삭제 요청하기
+        </button>
       </div>
-  
 
+      {/* Toast */}
+      {toast && (
+        <div
+          role="status"
+          className="fixed left-1/2 -translate-x-1/2 bottom-24 z-[60] px-4 py-2 rounded-full bg-ink text-surface-elevated text-sm shadow-lg animate-fade-opacity"
+        >
+          {toast}
+        </div>
+      )}
     </main>
   );
 }

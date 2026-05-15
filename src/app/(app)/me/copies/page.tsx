@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 
 interface CopyNote {
   id: string;
@@ -13,7 +15,6 @@ interface CopyNote {
   created_at: string;
 }
 
-// 페이지당 아이템 수를 5개로 변경 (1x5 그리드를 반영)
 const ITEMS_PER_PAGE = 5;
 
 export default function MyCopyNotesPage() {
@@ -22,31 +23,27 @@ export default function MyCopyNotesPage() {
   const [selected, setSelected] = useState<CopyNote | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const router = useRouter();
+  useBodyScrollLock(!!selected || !!deleteId);
 
-  const totalPages = Math.ceil(notes.length / ITEMS_PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(notes.length / ITEMS_PER_PAGE));
   const paginated = notes.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+    currentPage * ITEMS_PER_PAGE,
   );
 
-  /* ---------- 데이터 로딩 ---------- */
   useEffect(() => {
     (async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        router.push('/login'); // 로그인 필요
+        router.push('/login');
         return;
       }
-
       const { data, error } = await supabase
         .from('copy_notes')
         .select('*')
         .eq('user_id', user.id)
-        .eq('completed', true)        // 완료본만
+        .eq('completed', true)
         .order('updated_at', { ascending: false });
-
       if (error) {
         console.error(error);
         return;
@@ -55,143 +52,155 @@ export default function MyCopyNotesPage() {
     })();
   }, [router]);
 
-  /* ---------- 페이지 이동 ---------- */
   const goPage = (p: number) => {
     if (p >= 1 && p <= totalPages) setCurrentPage(p);
   };
 
-  /* ---------- 렌더 ---------- */
-  return (
-    <main className="min-h-screen max-w-[460px] mx-auto bg-surface-elevated px-4 py-10">
-      <h1 className="text-xl font-bold text-accent mb-4">🖼 나의 사경노트</h1>
+  const confirmDelete = async () => {
+    if (!deleteId) return;
+    const { error } = await supabase.from('copy_notes').delete().eq('id', deleteId);
+    if (error) {
+      alert('삭제에 실패했습니다.');
+      return;
+    }
+    setNotes((prev) => prev.filter((n) => n.id !== deleteId));
+    setDeleteId(null);
+  };
 
+  return (
+    <main className="px-4 pb-20 max-w-[460px] mx-auto bg-surface-elevated min-h-screen [overflow-wrap:anywhere]">
       {notes.length === 0 ? (
-        <p className="text-sm text-ink-subtle">아직 저장된 사경노트가 없습니다.</p>
+        <div className="pt-10 text-center text-ink-muted">
+          <p>아직 저장된 사경노트가 없습니다.</p>
+          <p className="mt-1 text-sm">사경 탭에서 경전을 따라 적고 노트를 저장해보세요.</p>
+        </div>
       ) : (
-        <>
-          {/* --- ▼▼▼ 여기를 수정 ▼▼▼ --- */}
-          {/* grid-cols-2 를 grid-cols-1 로 변경하여 1열로 만듭니다. */}
-          <ul className="grid grid-cols-1 gap-4 mb-6">
-          {/* --- ▲▲▲ 여기까지 수정 ▲▲▲ --- */}
+        <section className="pt-3 pb-10">
+          <p className="text-sm text-ink-muted mb-2">총 {notes.length}개 사경노트</p>
+          <ul className="divide-y divide-line border-y border-line">
             {paginated.map((n) => (
-              <li
-                key={n.id}
-                onClick={() => setSelected(n)}
-                // 한 줄에 하나씩 표시되므로 높이를 조절하거나 제거할 수 있습니다 (선택 사항)
-                // 예: className="relative h-[200px] rounded-xl shadow border bg-surface-elevated overflow-hidden cursor-pointer flex flex-col"
-                // 또는 높이 제거: className="relative rounded-xl shadow border bg-surface-elevated overflow-hidden cursor-pointer flex flex-col"
-                className="relative h-[300px] rounded-xl shadow border bg-surface-elevated overflow-hidden cursor-pointer flex flex-col" // 기존 높이 유지
-              >
-                {/* 상단 바: 제목 + 삭제 */}
-                <div className="flex justify-between items-center px-3 py-2 text-sm text-accent font-semibold">
-                  <span className="truncate">{n.title}</span>
+              <li key={n.id} className="py-4">
+                <button
+                  type="button"
+                  onClick={() => setSelected(n)}
+                  className="w-full text-left flex items-start gap-3 hover:opacity-80 active:opacity-60 transition-opacity"
+                >
+                  {/* 썸네일 */}
+                  <div className="shrink-0 w-16 h-16 rounded-lg bg-surface-sunken overflow-hidden flex items-center justify-center">
+                    {n.thumb_url ? (
+                      <Image
+                        src={n.thumb_url}
+                        alt={n.title}
+                        width={64}
+                        height={64}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-xs text-ink-subtle">없음</span>
+                    )}
+                  </div>
+                  {/* 메타 */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-3 mb-1">
+                      <p className="font-semibold text-accent text-base flex-1 min-w-0 truncate">
+                        {n.title}
+                      </p>
+                      <span className="text-xs text-ink-subtle whitespace-nowrap shrink-0 mt-1">
+                        {new Date(n.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                    {n.memo && (
+                      <p className="text-sm text-ink-muted line-clamp-2 leading-relaxed">
+                        {n.memo}
+                      </p>
+                    )}
+                  </div>
+                </button>
+                {/* 삭제 액션 */}
+                <div className="flex justify-end mt-2 text-sm">
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDeleteId(n.id);
-                    }}
-                    className="text-accent hover:underline ml-2"
+                    type="button"
+                    onClick={() => setDeleteId(n.id)}
+                    className="text-accent-soft hover:text-accent transition-colors"
                   >
                     삭제
                   </button>
-                </div>
-
-                {/* 썸네일 */}
-                <div className="flex-1 flex items-center justify-center">
-                  {n.thumb_url ? (
-                    <Image
-                      src={n.thumb_url}
-                      alt={n.title}
-                      width={200}
-                      height={200}
-                      className="w-full h-auto rounded-lg"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center w-full h-full bg-surface-elevated text-ink-subtle">
-                      NO IMAGE
-                    </div>
-                  )}
-                </div>
-
-                {/* 하단: 날짜 */}
-                <div className="px-3 py-2 text-xs text-ink-subtle">
-                  {new Date(n.created_at).toLocaleDateString()}
                 </div>
               </li>
             ))}
           </ul>
 
-          {/* 페이지네이션 */}
-          <div className="flex justify-center items-center space-x-2">
-            <button
-              onClick={() => goPage(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="text-sm px-2 py-1 rounded border bg-surface-elevated disabled:text-gray-300"
-            >
-              ◀
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center gap-4 mt-6">
               <button
-                key={p}
-                onClick={() => goPage(p)}
-                className={`text-base px-3 py-1 rounded border ${
-                  p === currentPage ? 'bg-accent text-on-brand' : 'bg-surface-elevated text-ink-muted'
-                }`}
+                type="button"
+                onClick={() => goPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                aria-label="이전 페이지"
+                className="w-10 h-10 flex items-center justify-center rounded-lg text-accent hover:bg-accent/5 active:bg-accent/10 transition-colors disabled:text-ink-subtle disabled:hover:bg-transparent"
               >
-                {p}
+                <ChevronLeft size={20} />
               </button>
-            ))}
-            <button
-              onClick={() => goPage(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="text-base px-2 py-1 rounded border bg-surface-elevated disabled:text-gray-300"
-            >
-              ▶
-            </button>
-          </div>
-        </>
+              <span className="text-sm text-ink-muted tabular-nums">
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => goPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                aria-label="다음 페이지"
+                className="w-10 h-10 flex items-center justify-center rounded-lg text-accent hover:bg-accent/5 active:bg-accent/10 transition-colors disabled:text-ink-subtle disabled:hover:bg-transparent"
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+          )}
+        </section>
       )}
 
       {/* 상세 모달 */}
       {selected && (
         <div
           onClick={() => setSelected(null)}
-          className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center px-4"
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center px-4"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-surface-elevated rounded-2xl shadow-xl max-w-md w-full max-h-[80vh] overflow-y-auto p-4 relative"
+            className="bg-surface-elevated rounded-2xl shadow-xl w-full max-w-[400px] max-h-[80vh] overflow-y-auto p-5 relative"
           >
             <button
+              type="button"
               onClick={() => setSelected(null)}
-              className="absolute top-2 right-3 text-ink-subtle hover:text-ink text-xl"
+              aria-label="닫기"
+              className="absolute top-3 right-3 w-9 h-9 flex items-center justify-center rounded-lg text-ink-subtle hover:bg-surface-sunken hover:text-ink transition-colors"
             >
-              ×
+              <X size={20} />
             </button>
 
-            <p className="text-sm text-ink-subtle text-right mb-2">
+            <p className="text-xs text-ink-subtle mb-1 pr-9">
               {new Date(selected.created_at).toLocaleDateString()}
             </p>
-
-            <h2 className="text-lg font-semibold text-accent mb-2">{selected.title}</h2>
+            <h2 className="text-lg font-semibold text-accent mb-3 pr-9">{selected.title}</h2>
 
             {selected.thumb_url ? (
               <Image
                 src={selected.thumb_url}
                 alt={selected.title}
-                width={200}
-                height={200}
-                className="w-full rounded mb-4"
+                width={400}
+                height={400}
+                className="w-full h-auto rounded-lg mb-4"
               />
             ) : (
-              <p className="text-center text-ink-subtle mb-4">이미지가 없습니다</p>
+              <p className="text-center text-ink-subtle py-10">이미지가 없습니다</p>
             )}
 
             {selected.memo && (
-              <>
-                <p className="text-base font-semibold text-accent mb-1">메모</p>
-                <p className="whitespace-pre-wrap text-ink">{selected.memo}</p>
-              </>
+              <div className="mt-2">
+                <p className="text-sm font-semibold text-ink-muted mb-1">메모</p>
+                <p className="whitespace-pre-wrap text-ink text-sm leading-relaxed">
+                  {selected.memo}
+                </p>
+              </div>
             )}
           </div>
         </div>
@@ -201,38 +210,27 @@ export default function MyCopyNotesPage() {
       {deleteId && (
         <div
           onClick={() => setDeleteId(null)}
-          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center"
+          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center px-4"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-surface-elevated rounded-xl p-6 w-[90%] max-w-[360px] text-center shadow-xl"
+            className="bg-surface-elevated rounded-xl p-6 w-full max-w-[360px] text-center shadow-xl"
           >
-            <p className="text-lg font-semibold text-accent mb-4">
-              정말 삭제하시겠습니까?
-            </p>
-            <div className="flex justify-center gap-4 mt-4">
+            <p className="text-base font-semibold text-ink mb-5">정말 사경노트를 삭제할까요?</p>
+            <div className="flex justify-center gap-3">
               <button
+                type="button"
                 onClick={() => setDeleteId(null)}
-                className="px-4 py-2 border rounded-lg text-sm text-ink-muted"
+                className="flex-1 h-11 rounded-lg border border-line text-sm text-ink-muted hover:bg-surface-sunken transition-colors"
               >
-                아니오
+                취소
               </button>
               <button
-                onClick={async () => {
-                  const { error } = await supabase
-                    .from('copy_notes')
-                    .delete()
-                    .eq('id', deleteId);
-                  if (!error) {
-                    setNotes((prev) => prev.filter((n) => n.id !== deleteId));
-                    setDeleteId(null);
-                  } else {
-                    alert('삭제에 실패했습니다.');
-                  }
-                }}
-                className="px-4 py-2 bg-accent-soft text-on-brand rounded-lg text-sm"
+                type="button"
+                onClick={confirmDelete}
+                className="flex-1 h-11 rounded-lg bg-accent text-on-brand text-sm font-semibold hover:bg-accent-soft transition-colors"
               >
-                예, 삭제합니다
+                삭제
               </button>
             </div>
           </div>

@@ -167,6 +167,7 @@ type AskRequestBody = {
   model?: string;
   length?: 'short' | 'long';
   parentId?: string | null;
+  userId?: string | null;
 };
 
 type CitationHint = {
@@ -185,7 +186,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: '요청 본문이 비어있거나 잘못되었습니다.' }, { status: 400 });
     }
 
-    const { question, model = 'gpt4.1-mini', length = 'long', parentId = null } = body;
+    const { question, model = 'gpt4.1-mini', length = 'long', parentId = null, userId = null } = body;
 
     if (!question || typeof question !== 'string') {
       return NextResponse.json({ success: false, message: '질문이 유효하지 않습니다.' }, { status: 400 });
@@ -361,7 +362,7 @@ export async function POST(request: NextRequest) {
           // async 함수로 감싸서 Promise 반환
           return await supabase
             .from('temp_answers')
-            .insert([{ question, answer, parent_id: parentId, citation_hints: citationHints }])
+            .insert([{ question, answer, parent_id: parentId, citation_hints: citationHints, user_id: userId }])
             .select()
             .single();
         },
