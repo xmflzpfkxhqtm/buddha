@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Mountain, Book, MessageCircle, User as UserIcon, Brush } from 'lucide-react';
+import { Mountain, Book, MessageCircle, User as UserIcon, Flower2 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 import { useChromeStore } from '@/stores/useChromeStore';
@@ -72,7 +72,7 @@ export default function BottomNav() {
     { label: '홈', icon: Mountain, path: '/dashboard' },
     { label: '불경', icon: Book, path: SCRIPTURE_ROOT, action: handleScriptureTap },
     { label: '질문', icon: MessageCircle, path: '/ask' },
-    { label: '사경', icon: Brush, path: '/copy' },
+    { label: '수행', icon: Flower2, path: '/practice' },
 
     {
       label: user ? '내정보' : '로그인',
@@ -98,6 +98,8 @@ export default function BottomNav() {
         const isActive =
           item.label === '불경'
             ? pathname?.startsWith('/scripture') ?? false
+            : item.label === '수행'
+            ? (pathname?.startsWith('/practice') || pathname?.startsWith('/copy')) ?? false
             : pathname === item.path;
         const Icon = item.icon;
 

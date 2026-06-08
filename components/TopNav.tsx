@@ -12,7 +12,8 @@ const HIDDEN_PATHS: (string | RegExp)[] = [
   /^\/scripture\//,        // scripture 하위 모든 path (Layer 1 v2 / Layer 2 [group] / Layer 3 [group]/[volume])
   '/fullscreen',          // 전체화면 뷰
   '/ask/confirm',         // 질문 확인 페이지
-  /^\/copy\/[^/]+\/complete$/, // copy/[id]/complete ← 정규식(동적 라우트)
+  /^\/copy\/[^/]+\/complete$/,          // copy/[id]/complete ← 정규식(동적 라우트)
+  /^\/practice\/copy\/[^/]+\/complete$/, // practice/copy/[id]/complete
 ];
 
 /* 2. "돌아가기" 예외 – 정확 매칭 */
@@ -22,12 +23,13 @@ const CUSTOM_BACK: Record<string, string> = {
 
 /* 3. "돌아가기" 예외 – 정규식 매칭 */
 const CUSTOM_BACK_REGEX: { pattern: RegExp; to: string }[] = [
-  { pattern: /^\/copy\/[^/]+\/complete$/, to: '/copy' }, // 사경 완료 → 사경 홈
+  { pattern: /^\/copy\/[^/]+\/complete$/,          to: '/practice/copy' }, // 사경 완료 → 사경 홈
+  { pattern: /^\/practice\/copy\/[^/]+\/complete$/, to: '/practice/copy' }, // practice 사경 완료 → 사경 홈
 ];
 
 /* 4. 섹션 루트 – 라벨/헤더는 표시하되 돌아가기 버튼은 숨김.
    페이지네이션을 BottomNav 로만 의도. 하위 레이어는 정상적으로 백 버튼 노출. */
-const NO_BACK_PATHS: string[] = ['/ask', '/copy', '/me'];
+const NO_BACK_PATHS: string[] = ['/ask', '/copy', '/me', '/practice'];
 
 interface TopNavProps {
   className?: string;
@@ -55,8 +57,14 @@ export default function TopNav({ className }: TopNavProps) {
       '/me/feedback': '제안 및 문의',
       '/me/settings': '설정',
       '/answer': '답변',
+      '/practice': '수행하기',
+      '/practice/meditation': '명상 타이머',
+      '/practice/yunsang': '목륜상 점보기',
+      '/practice/copy': '사경',
     };
-    setLabel(map[pathname] ?? '');
+    const dynamicLabel =
+      /^\/practice\/copy\/[^/]+$/.test(pathname) ? '사경' : '';
+    setLabel(map[pathname] ?? dynamicLabel);
   }, [pathname]);
 
   /* ── TopNav 숨김 여부 ── */
