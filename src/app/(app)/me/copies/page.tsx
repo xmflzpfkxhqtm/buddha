@@ -2,10 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { useAuthUser } from '@/hooks/useAuthUser';
+import { useListWithPagination } from '@/hooks/useListWithPagination';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
+import PaginationControls from '../../../../../components/PaginationControls';
+import DeleteConfirmModal from '../../../../../components/DeleteConfirmModal';
 
 interface CopyNote {
   id: string;
@@ -15,46 +19,29 @@ interface CopyNote {
   created_at: string;
 }
 
-const ITEMS_PER_PAGE = 5;
-
 export default function MyCopyNotesPage() {
   const [notes, setNotes] = useState<CopyNote[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
   const [selected, setSelected] = useState<CopyNote | null>(null);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
   const router = useRouter();
+  const userId = useAuthUser();
+
+  const { currentPage, totalPages, paginated, handlePageChange, deleteTargetId: deleteId, setDeleteTargetId: setDeleteId } = useListWithPagination(notes);
   useBodyScrollLock(!!selected || !!deleteId);
 
-  const totalPages = Math.max(1, Math.ceil(notes.length / ITEMS_PER_PAGE));
-  const paginated = notes.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE,
-  );
-
   useEffect(() => {
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push('/login');
-        return;
-      }
-      const { data, error } = await supabase
-        .from('copy_notes')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('completed', true)
-        .order('updated_at', { ascending: false });
-      if (error) {
-        console.error(error);
-        return;
-      }
-      setNotes(data as CopyNote[]);
-    })();
-  }, [router]);
-
-  const goPage = (p: number) => {
-    if (p >= 1 && p <= totalPages) setCurrentPage(p);
-  };
+    if (userId === undefined) return;
+    if (userId === null) { router.push('/login'); return; }
+    supabase
+      .from('copy_notes')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('completed', true)
+      .order('updated_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (error) { console.error(error); return; }
+        setNotes(data as CopyNote[]);
+      });
+  }, [userId, router]);
 
   const confirmDelete = async () => {
     if (!deleteId) return;
@@ -130,31 +117,11 @@ export default function MyCopyNotesPage() {
             ))}
           </ul>
 
-          {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-4 mt-6">
-              <button
-                type="button"
-                onClick={() => goPage(currentPage - 1)}
-                disabled={currentPage === 1}
-                aria-label="이전 페이지"
-                className="w-10 h-10 flex items-center justify-center rounded-lg text-accent hover:bg-accent/5 active:bg-accent/10 transition-colors disabled:text-ink-subtle disabled:hover:bg-transparent"
-              >
-                <ChevronLeft size={20} />
-              </button>
-              <span className="text-sm text-ink-muted tabular-nums">
-                {currentPage} / {totalPages}
-              </span>
-              <button
-                type="button"
-                onClick={() => goPage(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                aria-label="다음 페이지"
-                className="w-10 h-10 flex items-center justify-center rounded-lg text-accent hover:bg-accent/5 active:bg-accent/10 transition-colors disabled:text-ink-subtle disabled:hover:bg-transparent"
-              >
-                <ChevronRight size={20} />
-              </button>
-            </div>
-          )}
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
         </section>
       )}
 
@@ -206,36 +173,12 @@ export default function MyCopyNotesPage() {
         </div>
       )}
 
-      {/* 삭제 확인 모달 */}
-      {deleteId && (
-        <div
-          onClick={() => setDeleteId(null)}
-          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center px-4"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-surface-elevated rounded-xl p-6 w-full max-w-[360px] text-center shadow-xl"
-          >
-            <p className="text-base font-semibold text-ink mb-5">정말 사경노트를 삭제할까요?</p>
-            <div className="flex justify-center gap-3">
-              <button
-                type="button"
-                onClick={() => setDeleteId(null)}
-                className="flex-1 h-11 rounded-lg border border-line text-sm text-ink-muted hover:bg-surface-sunken transition-colors"
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                onClick={confirmDelete}
-                className="flex-1 h-11 rounded-lg bg-accent text-on-brand text-sm font-semibold hover:bg-accent-soft transition-colors"
-              >
-                삭제
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteConfirmModal
+        isOpen={!!deleteId}
+        message="정말 사경노트를 삭제할까요?"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteId(null)}
+      />
     </main>
   );
 }

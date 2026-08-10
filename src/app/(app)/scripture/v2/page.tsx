@@ -12,6 +12,7 @@ import { scriptureCache, hydrateRecommendationsFromLS, persistRecommendationsToL
 import HeroCarousel from './HeroCarousel';
 import { titleToReaderPath } from '@/lib/scripturePath';
 import { supabase } from '@/lib/supabaseClient';
+import { formatDisplayTitle } from '@/lib/titleFormatting';
 
 type GroupSummary = {
   group_key: string;
@@ -83,10 +84,6 @@ function getChosung(char: string): string {
   return labels[cho] || char;
 }
 
-function formatDisplayTitle(rawTitle: string): string {
-  if (!rawTitle) return '';
-  return rawTitle.replace(/_GPT\d+(\.\d+)?번역/, '').replace(/_/g, ' ');
-}
 
 function shuffleInPlace<T>(arr: T[]): T[] {
   for (let i = arr.length - 1; i > 0; i--) {

@@ -7,18 +7,7 @@ import { TextToSpeech } from '@capacitor-community/text-to-speech';
 import { KeepAwake } from '@capacitor-community/keep-awake';
 // import { MusicControls, PluginListenerHandle } from './path/to/musicControls'; // 필요 시 MusicControls 관련 import
 import PlayerControlsUI from './PlayerControlsUI'; // 경로 수정 필요
-
-/* -------------------------------------------------------------------------- */
-/* Props (WebTTSPlayer와 동일하게 유지) ------------------------------------ */
-interface NativeTTSPlayerProps {
-  sentences: string[];
-  currentIndex: number;
-  setCurrentIndex: (index: number) => void;
-  smoothCenter: (index: number, instant?: boolean) => void;
-  onPlaybackStateChange: (isSpeaking: boolean) => void;
-  className?: string;
-  bottomOffset?: string;
-}
+import type { TTSPlayerProps } from '@/types/tts';
 
 /* -------------------------------------------------------------------------- */
 /* Component ---------------------------------------------------------------- */
@@ -30,7 +19,7 @@ export default function NativeTTSPlayer({
   onPlaybackStateChange,
   className,
   bottomOffset,
-}: NativeTTSPlayerProps) {
+}: TTSPlayerProps) {
   /* ------------------------------ state / refs --------------------------- */
   const [isSpeaking, setIsSpeaking] = useState(false);
   const stopRequested = useRef(false);

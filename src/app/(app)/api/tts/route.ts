@@ -3,7 +3,7 @@ export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin as supabase } from '@/lib/supabaseAdmin';
 import crypto from 'crypto';
 
 interface TTSRequest {
@@ -13,10 +13,6 @@ interface TTSRequest {
   voice?:      string;
 }
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 function makeKey({ scripture_id, line_index, voice = 'ko-KR-Wavenet-C' }: TTSRequest) {
   return crypto
@@ -52,16 +48,11 @@ export async function POST(req: NextRequest) {
   const body: TTSRequest = await req.json();
   const key = makeKey(body);
 
-  console.log(`[API /tts] Received request for key: ${key}`);
-
   /* 1) 스토리지에서 직접 확인 (가장 빠른 캐시 히트) */
   const storageUrl = await getSignedUrl(key);
   if (storageUrl) {
-    console.log(`[API /tts] Cache HIT (Storage): ${key}`);
     return NextResponse.json({ url: storageUrl });
   }
-
-  console.log(`[API /tts] Cache MISS (Storage): ${key}. Checking queue...`);
 
   /* 2) 큐 테이블 확인 */
   const { data: job, error: dbError } = await supabase
@@ -78,8 +69,6 @@ export async function POST(req: NextRequest) {
   if (job) {
     // --- 작업이 큐에 있음 ---
     if (job.ready) {
-      // Case A: 작업 완료됨 -> Storage URL 다시 생성해서 반환
-      console.log(`[API /tts] Cache HIT (Queue Ready): ${key}`);
       const finalUrl = await getSignedUrl(key);
       if (finalUrl) {
         return NextResponse.json({ url: finalUrl });
@@ -93,14 +82,9 @@ export async function POST(req: NextRequest) {
          return NextResponse.json({ status: 'processing' }, { status: 200 }); // 다시 처리 중 상태 반환
       }
     } else {
-      // Case B: 작업 진행 중 -> 'processing' 상태 반환
-      console.log(`[API /tts] Job PENDING (In Queue): ${key}`);
-      return NextResponse.json({ status: 'processing' }, { status: 200 }); // 200 OK + 상태 정보
+      return NextResponse.json({ status: 'processing' }, { status: 200 });
     }
   } else {
-    // --- 작업이 큐에 없음 ---
-    // Case C: 새 작업 -> 큐에 넣고 워커 호출, 'pending' 상태 반환
-    console.log(`[API /tts] Job NEW: ${key}. Adding to queue and triggering worker.`);
     const { error: upsertError } = await supabase.from('tts_queue').upsert({
       key,
       ready: false,

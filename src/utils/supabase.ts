@@ -123,45 +123,31 @@ export async function checkDocumentExists(contentHash: string): Promise<boolean>
 }
 
 /**
- * 임베딩 벡터를 사용하여 유사한 문서 검색
+ * 임베딩 벡터를 사용하여 유사한 문서 검색.
+ * optimized=true 시 HNSW 인덱스(halfvec) 활용 RPC 사용.
  */
-export async function searchSimilarDocuments(embedding: number[], limit: number = 5): Promise<DocumentResult[]> {
+export async function searchSimilarDocuments(
+  embedding: number[],
+  limit: number = 5,
+  optimized: boolean = false,
+): Promise<DocumentResult[]> {
+  const rpc = optimized ? 'match_documents_optimized' : 'match_documents';
   try {
-    const { data, error } = await supabase
-      .rpc('match_documents', {
-        query_embedding: embedding,
-        match_count: limit
-      });
-
+    const { data, error } = await supabase.rpc(rpc, {
+      query_embedding: embedding,
+      match_count: limit,
+    });
     if (error) {
-      console.error('문서 검색 오류 상세:', error);
+      console.error(`문서 검색 오류 (${rpc}):`, error);
       throw error;
     }
     return data || [];
   } catch (error) {
-    console.error('문서 검색 오류 상세:', error);
+    console.error(`문서 검색 오류 (${rpc}):`, error);
     throw new Error('문서 검색 중 오류가 발생했습니다.');
   }
 }
 
-/**
- * halfvec 인덱스를 사용하여 유사한 문서 검색 (최적화 버전)
- */
-export async function searchSimilarDocumentsOptimized(embedding: number[], limit: number = 5): Promise<DocumentResult[]> {
-  try {
-    // 벡터를 halfvec으로 변환하기 위해 직접 SQL 쿼리 실행
-    const { data, error } = await supabase.rpc('match_documents_optimized', {
-      query_embedding: embedding,
-      match_count: limit
-    });
-
-    if (error) {
-      console.error('최적화 문서 검색 오류 상세:', error);
-      throw error;
-    }
-    return data || [];
-  } catch (error) {
-    console.error('최적화 문서 검색 오류 상세:', error);
-    throw new Error('최적화 문서 검색 중 오류가 발생했습니다.');
-  }
-} 
+/** @deprecated searchSimilarDocuments(embedding, limit, true) 를 사용하세요 */
+export const searchSimilarDocumentsOptimized = (embedding: number[], limit: number = 5) =>
+  searchSimilarDocuments(embedding, limit, true); 

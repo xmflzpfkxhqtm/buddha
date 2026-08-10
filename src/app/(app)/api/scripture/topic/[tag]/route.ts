@@ -2,30 +2,14 @@
 // Topic Layer 용. 특정 태그 (school 또는 topic) 가 포함된 모든 그룹.
 // 기존 API 동결, 이 라우트는 순수 additive.
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin as supabase } from '@/lib/supabaseAdmin';
+import { type ScriptureGroupRow } from '@/types/scripture';
 
 export const runtime = 'nodejs';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { persistSession: false } },
-);
-
 const PAGE_SIZE = 1000;
 
-type GroupRow = {
-  group_key: string;
-  display_name: string | null;
-  chinese_title: string | null;
-  translator: string | null;
-  intro: string | null;
-  school_tags: string[] | null;
-  topic_tags: string[] | null;
-  is_featured: boolean | null;
-  volume_total: number | null;
-  k_code: string | null;
-};
+type GroupRow = ScriptureGroupRow;
 
 const SELECT_COLS =
   'group_key, display_name, chinese_title, translator, intro, school_tags, topic_tags, is_featured, volume_total, k_code';

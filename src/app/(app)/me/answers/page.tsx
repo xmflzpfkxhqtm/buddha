@@ -2,25 +2,18 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { useAuthUser } from '@/hooks/useAuthUser';
+import { useListWithPagination } from '@/hooks/useListWithPagination';
 import { useAskStore } from '@/stores/askStore';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
-
-interface TempAnswer {
-  id: string;
-  question: string;
-  answer: string;
-  scripture_title: string | null;
-  created_at: string;
-}
+import PaginationControls from '../../../../../components/PaginationControls';
+import DeleteConfirmModal from '../../../../../components/DeleteConfirmModal';
+import { type TempAnswer } from '@/types/answers';
+import { formatScriptureTitle } from '@/lib/titleFormatting';
 
 type Tab = 'general' | 'scripture';
-const ITEMS_PER_PAGE = 5;
-
-function formatScriptureTitle(title: string): string {
-  return title.replace(/_K\d{4}/, '').replace(/_/g, ' ');
-}
 
 /** 인용 prefix 가 들어간 question 에서 실제 사용자 질문 부분만 추출 (preview 용). */
 function extractUserQuestion(question: string): string {
@@ -49,49 +42,30 @@ function simplifyScriptureCitations(answer: string): string {
 export default function AnswerPage() {
   const [answers, setAnswers] = useState<TempAnswer[]>([]);
   const [tab, setTab] = useState<Tab>('general');
-  const [currentPage, setCurrentPage] = useState(1);
   const [selectedItem, setSelectedItem] = useState<TempAnswer | null>(null);
-  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const { setParentId } = useAskStore();
   const router = useRouter();
+  const userId = useAuthUser();
+
+  const generalAnswers = useMemo(() => answers.filter((a) => !a.scripture_title), [answers]);
+  const scriptureAnswers = useMemo(() => answers.filter((a) => !!a.scripture_title), [answers]);
+  const visible = tab === 'general' ? generalAnswers : scriptureAnswers;
+
+  const { currentPage, setCurrentPage, totalPages, paginated, handlePageChange, deleteTargetId, setDeleteTargetId } = useListWithPagination(visible);
   useBodyScrollLock(!!selectedItem || !!deleteTargetId);
 
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data }) => {
-      const user = data.user;
-      if (!user) return;
-      const { data: rows } = await supabase
-        .from('temp_answers')
-        .select('id, question, answer, scripture_title, created_at')
-        .eq('user_id', user.id)
-        .eq('is_saved', true)
-        .order('saved_at', { ascending: false });
-      if (rows) setAnswers(rows as TempAnswer[]);
-    });
-  }, []);
+    if (!userId) return;
+    supabase
+      .from('temp_answers')
+      .select('id, question, answer, scripture_title, created_at')
+      .eq('user_id', userId)
+      .eq('is_saved', true)
+      .order('saved_at', { ascending: false })
+      .then(({ data: rows }) => { if (rows) setAnswers(rows as TempAnswer[]); });
+  }, [userId]);
 
-  // 탭 전환 시 페이지 reset
-  useEffect(() => setCurrentPage(1), [tab]);
-
-  const generalAnswers = useMemo(
-    () => answers.filter((a) => !a.scripture_title),
-    [answers],
-  );
-  const scriptureAnswers = useMemo(
-    () => answers.filter((a) => !!a.scripture_title),
-    [answers],
-  );
-  const visible = tab === 'general' ? generalAnswers : scriptureAnswers;
-
-  const totalPages = Math.max(1, Math.ceil(visible.length / ITEMS_PER_PAGE));
-  const paginated = visible.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE,
-  );
-
-  const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= totalPages) setCurrentPage(page);
-  };
+  useEffect(() => setCurrentPage(1), [tab, setCurrentPage]);
 
   const confirmDelete = async () => {
     if (!deleteTargetId) return;
@@ -189,31 +163,11 @@ export default function AnswerPage() {
             })}
           </ul>
 
-          {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-4 mt-6">
-              <button
-                type="button"
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                aria-label="이전 페이지"
-                className="w-10 h-10 flex items-center justify-center rounded-lg text-accent hover:bg-accent/5 active:bg-accent/10 transition-colors disabled:text-ink-subtle disabled:hover:bg-transparent"
-              >
-                <ChevronLeft size={20} />
-              </button>
-              <span className="text-sm text-ink-muted tabular-nums">
-                {currentPage} / {totalPages}
-              </span>
-              <button
-                type="button"
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                aria-label="다음 페이지"
-                className="w-10 h-10 flex items-center justify-center rounded-lg text-accent hover:bg-accent/5 active:bg-accent/10 transition-colors disabled:text-ink-subtle disabled:hover:bg-transparent"
-              >
-                <ChevronRight size={20} />
-              </button>
-            </div>
-          )}
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
         </section>
       )}
 
@@ -277,36 +231,11 @@ export default function AnswerPage() {
         </div>
       )}
 
-      {/* 삭제 확인 */}
-      {deleteTargetId && (
-        <div
-          onClick={() => setDeleteTargetId(null)}
-          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center px-4"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-surface-elevated rounded-xl p-6 w-full max-w-[360px] text-center shadow-xl"
-          >
-            <p className="text-base font-semibold text-ink mb-5">정말 삭제할까요?</p>
-            <div className="flex justify-center gap-3">
-              <button
-                type="button"
-                onClick={() => setDeleteTargetId(null)}
-                className="flex-1 h-11 rounded-lg border border-line text-sm text-ink-muted hover:bg-surface-sunken transition-colors"
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                onClick={confirmDelete}
-                className="flex-1 h-11 rounded-lg bg-accent text-on-brand text-sm font-semibold hover:bg-accent-soft transition-colors"
-              >
-                삭제
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteConfirmModal
+        isOpen={!!deleteTargetId}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTargetId(null)}
+      />
     </main>
   );
 }

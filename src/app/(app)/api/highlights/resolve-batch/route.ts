@@ -18,37 +18,14 @@
 // Output: { highlights: [{ id, start_sentence, ..., anchor_status, resolved_version }] }
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin as supabase } from '@/lib/supabaseAdmin';
 import { parseMarkdownToBlocks } from '@/lib/scriptureContent';
+import { type HighlightDbRow } from '@/types/highlights';
 
 export const runtime = 'nodejs';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { persistSession: false } },
-);
-
-type HighlightRow = {
-  id: string;
-  user_id: string;
-  title: string;
-  start_sentence: number;
-  end_sentence: number;
-  start_char_offset: number | null;
-  end_char_offset: number | null;
-  anchor_start_text: string | null;
-  anchor_end_text: string | null;
-  highlight_text: string | null;
-  memo: string | null;
-  anchor_status: string;
-  resolved_version: number;
-  created_at: string;
-};
-
-type ResolvedHighlight = HighlightRow & {
-  // 응답에는 anchor_status / resolved_version 갱신본 포함
-};
+type HighlightRow = HighlightDbRow;
+type ResolvedHighlight = HighlightRow;
 
 type ResolveStats = {
   total: number;

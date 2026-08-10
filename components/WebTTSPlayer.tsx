@@ -2,17 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import PlayerControlsUI from './PlayerControlsUI'; // 경로 수정 필요
-
-interface TTSPlayerProps {
-  sentences: string[];
-  scriptureName: string;
-  currentIndex: number;
-  setCurrentIndex: (idx: number) => void;
-  onPlaybackStateChange?: (playing: boolean) => void;
-  smoothCenter: (idx: number) => void;
-  className?: string;
-  bottomOffset?: string;
-}
+import type { TTSPlayerProps } from '@/types/tts';
 
 const waitUntilVoicesReady = (): Promise<void> => {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return Promise.resolve();

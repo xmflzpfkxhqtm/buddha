@@ -4,29 +4,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { useHighlightStore } from '@/stores/useHighlightStore';
 import { titleToReaderPath } from '@/lib/scripturePath';
 import { supabase } from '@/lib/supabaseClient';
+import { useAuthUser } from '@/hooks/useAuthUser';
+import { useListWithPagination } from '@/hooks/useListWithPagination';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
+import PaginationControls from '../../../../../components/PaginationControls';
+import DeleteConfirmModal from '../../../../../components/DeleteConfirmModal';
+import { formatDisplayTitle } from '@/lib/titleFormatting';
+import { type DisplayHighlight as Highlight } from '@/types/highlights';
 
-interface Highlight {
-  id: string;
-  user_id: string;
-  title: string;
-  start_sentence: number;
-  end_sentence: number;
-  start_char_offset: number | null;
-  end_char_offset: number | null;
-  anchor_start_text: string | null;
-  highlight_text: string | null;
-  created_at: string;
-  memo?: string;
-}
-
-const ITEMS_PER_PAGE = 5;
-
-function formatDisplayTitle(rawTitle: string): string {
-  return rawTitle.replace(/_GPT\d+(\.\d+)?번역/, '').replace(/_/g, ' ');
-}
 
 /** 미리보기 텍스트 우선순위:
  *   highlight_text (정확히 선택한 텍스트) > anchor_start_text (sentence 첫 50자, 옛 row) > '내용 없음' */
@@ -41,17 +27,12 @@ type Tab = 'all' | 'memo';
 export default function HighlightsPage() {
   const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [tab, setTab] = useState<Tab>('all');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [memoTarget, setMemoTarget] = useState<Highlight | null>(null);
   const [memoInput, setMemoInput] = useState('');
 
   const { setHighlight } = useHighlightStore();
   const router = useRouter();
-  useBodyScrollLock(!!deleteTargetId || !!memoTarget);
-
-  // 탭 전환 시 페이지 reset
-  useEffect(() => setCurrentPage(1), [tab]);
+  const userId = useAuthUser();
 
   const memoHighlights = useMemo(
     () => highlights.filter((h) => h.memo && h.memo.trim()),
@@ -59,34 +40,24 @@ export default function HighlightsPage() {
   );
   const visible = tab === 'all' ? highlights : memoHighlights;
 
-  const totalPages = Math.max(1, Math.ceil(visible.length / ITEMS_PER_PAGE));
-  const paginated = visible.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE,
-  );
+  const { currentPage, setCurrentPage, totalPages, paginated, handlePageChange, deleteTargetId, setDeleteTargetId } = useListWithPagination(visible);
+  useBodyScrollLock(!!deleteTargetId || !!memoTarget);
 
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data }) => {
-      const user = data.user;
-      if (!user) return;
-      const { data: rows } = await supabase
-        .from('highlights')
-        .select(
-          'id, user_id, title, start_sentence, end_sentence, start_char_offset, end_char_offset, anchor_start_text, highlight_text, memo, created_at',
-        )
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-      if (rows) setHighlights(rows);
-    });
-  }, []);
+    if (!userId) return;
+    supabase
+      .from('highlights')
+      .select('id, user_id, title, start_sentence, end_sentence, start_char_offset, end_char_offset, anchor_start_text, highlight_text, memo, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .then(({ data: rows }) => { if (rows) setHighlights(rows); });
+  }, [userId]);
+
+  useEffect(() => setCurrentPage(1), [tab, setCurrentPage]);
 
   const goToReader = (title: string, index: number) => {
     setHighlight(title, index);
     router.push(titleToReaderPath(title));
-  };
-
-  const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= totalPages) setCurrentPage(page);
   };
 
   const openMemoModal = (h: Highlight) => {
@@ -227,63 +198,20 @@ export default function HighlightsPage() {
             ))}
           </ul>
 
-          {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-4 mt-6">
-              <button
-                type="button"
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                aria-label="이전 페이지"
-                className="w-10 h-10 flex items-center justify-center rounded-lg text-accent hover:bg-accent/5 active:bg-accent/10 transition-colors disabled:text-ink-subtle disabled:hover:bg-transparent"
-              >
-                <ChevronLeft size={20} />
-              </button>
-              <span className="text-sm text-ink-muted tabular-nums">
-                {currentPage} / {totalPages}
-              </span>
-              <button
-                type="button"
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                aria-label="다음 페이지"
-                className="w-10 h-10 flex items-center justify-center rounded-lg text-accent hover:bg-accent/5 active:bg-accent/10 transition-colors disabled:text-ink-subtle disabled:hover:bg-transparent"
-              >
-                <ChevronRight size={20} />
-              </button>
-            </div>
-          )}
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
         </section>
       )}
 
-      {deleteTargetId && (
-        <div
-          onClick={() => setDeleteTargetId(null)}
-          className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center px-4"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-surface-elevated rounded-xl p-6 w-full max-w-[360px] text-center shadow-xl"
-          >
-            <p className="text-base font-semibold text-ink mb-5">정말 하이라이트를 삭제할까요?</p>
-            <div className="flex justify-center gap-3">
-              <button
-                type="button"
-                onClick={() => setDeleteTargetId(null)}
-                className="flex-1 h-11 rounded-lg border border-line text-sm text-ink-muted hover:bg-surface-sunken transition-colors"
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                onClick={confirmDelete}
-                className="flex-1 h-11 rounded-lg bg-accent text-on-brand text-sm font-semibold hover:bg-accent-soft transition-colors"
-              >
-                삭제
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteConfirmModal
+        isOpen={!!deleteTargetId}
+        message="정말 하이라이트를 삭제할까요?"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTargetId(null)}
+      />
 
       {memoTarget && (
         <div

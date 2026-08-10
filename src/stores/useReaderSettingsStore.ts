@@ -3,8 +3,9 @@
 //   OFF 라도 TTS 재생 중일 때는 Layer 3 가 자체적으로 강제 표시 (재생 위치 시각 sync).
 
 import { create } from 'zustand';
+import { lsGet, lsSet } from '@/lib/localStorage';
 
-const LINE_HIGHLIGHT_KEY = 'reader-line-highlight';
+const KEY = 'reader-line-highlight';
 
 interface ReaderSettingsState {
   lineHighlight: boolean;
@@ -16,23 +17,11 @@ interface ReaderSettingsState {
 export const useReaderSettingsStore = create<ReaderSettingsState>((set) => ({
   lineHighlight: false, // SSR / 첫 render default
   setLineHighlight: (v) => {
-    if (typeof window !== 'undefined') {
-      try {
-        window.localStorage.setItem(LINE_HIGHLIGHT_KEY, v ? '1' : '0');
-      } catch {
-        /* quota / 미가용 무시 */
-      }
-    }
+    lsSet(KEY, v ? '1' : '0');
     set({ lineHighlight: v });
   },
   hydrate: () => {
-    if (typeof window === 'undefined') return;
-    try {
-      const v = window.localStorage.getItem(LINE_HIGHLIGHT_KEY);
-      if (v === null) return; // default 유지 (OFF)
-      set({ lineHighlight: v === '1' });
-    } catch {
-      /* noop */
-    }
+    const v = lsGet(KEY);
+    if (v !== null) set({ lineHighlight: v === '1' });
   },
 }));

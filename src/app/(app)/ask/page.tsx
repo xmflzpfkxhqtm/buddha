@@ -7,18 +7,9 @@ import { useAskCitationStore, type AskCitation } from '@/stores/useAskCitationSt
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { X } from 'lucide-react';
-
-function formatCitationTitle(title: string): string {
-  return title.replace(/_K\d{4}/, '').replace(/_/g, ' ');
-}
-
-function buildCitedQuestion(citation: AskCitation, userQuestion: string): string {
-  const titleClean = formatCitationTitle(citation.scriptureTitle);
-  const userPart = userQuestion.trim()
-    ? `질문:\n${userQuestion.trim()}`
-    : '이 구절의 의미를 자세히 알려주세요.';
-  return `다음 경전 구절에 대해 여쭙습니다.\n\n[${titleClean}]\n"${citation.text}"\n\n${userPart}`;
-}
+import { buildCitedQuestion } from '@/lib/askBuddha';
+import { type TempAnswer } from '@/types/answers';
+import { formatScriptureTitle } from '@/lib/titleFormatting';
 
 // const models = [
 //   { id: 'gpt4.1', name: 'GPT-4.1', description: '가장 강력한 추론 능력' },
@@ -42,13 +33,6 @@ const lengths = [
   { id: 'short', name: '짧은 답변', description: '간결하지만 깊은 통찰이 담긴 가르침을 빠르게 받아보세요.' },
   { id: 'long', name: '긴 답변', description: '깊이 있는 가르침이 마음 속에 함께 긴 여운을 남깁니다.' },
 ];
-
-type TempAnswer = {
-  id: string;
-  question: string;
-  answer: string;
-  created_at: string;
-};
 
 export default function AskPage() {
   const router = useRouter();
@@ -118,7 +102,7 @@ export default function AskPage() {
     // citation 만 있어도 submit 허용 (자동 prompt 추가)
     if (!question.trim() && !citation) return;
     if (citation) {
-      setQuestion(buildCitedQuestion(citation, question));
+      setQuestion(buildCitedQuestion({ text: citation.text, titleClean: formatScriptureTitle(citation.scriptureTitle) }, question));
     }
     router.push('/ask/confirm');
   };
@@ -222,7 +206,7 @@ export default function AskPage() {
             </button>
             <p className="text-ink-subtle font-medium mb-1">📖 경전 인용</p>
             <p className="text-xs text-ink-subtle mb-2 truncate pr-8">
-              {formatCitationTitle(citation.scriptureTitle)}
+              {formatScriptureTitle(citation.scriptureTitle)}
             </p>
             <p className="text-ink whitespace-pre-wrap leading-relaxed max-h-32 overflow-y-auto">
               {citation.text}
@@ -371,11 +355,6 @@ export default function AskPage() {
           </div>
         </div>
       )}
-
-
-
-
-
           {/* <div className="mt-8 mb-6">
             <p className="font-bold text-base mb-2">부처님의 지혜를 빌려올 원천을 선택하세요(QA용)</p>
             <div className="grid grid-cols-2 gap-2">

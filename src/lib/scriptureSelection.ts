@@ -163,8 +163,6 @@ export type SentenceHighlightPiece = {
   hasMemo: boolean;
 };
 
-export type StoredHighlight2 = StoredHighlight; // alias 유지용 (외부 import 호환)
-
 /**
  * highlights → sentence index → 그 sentence 안 character ranges 목록.
  * NULL offset (옛 형식) 은 sentence 전체로 간주.

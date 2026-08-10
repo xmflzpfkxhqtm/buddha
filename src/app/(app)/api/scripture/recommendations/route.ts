@@ -13,68 +13,24 @@
 //   탐험 슬롯           = 마지막 2개 (school overlap = 0 + featured)
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin as supabase } from '@/lib/supabaseAdmin';
+import {
+  type GroupRow,
+  type Candidate,
+  type Reason,
+  type RecommendedItem,
+  type AffinityRow,
+  shuffleInPlace,
+  shuffleTies,
+  computeAffinityFallback,
+} from '@/lib/recommendations';
 
 export const runtime = 'nodejs';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { persistSession: false } },
-);
 
 const COLD_START_THRESHOLD = 3;
 const DEFAULT_LIMIT = 10;
 const DEFAULT_EXPLORE = 2;
 const MAX_PER_SCHOOL_SIGNATURE = 2;
-
-type GroupRow = {
-  group_key: string;
-  display_name: string | null;
-  chinese_title: string | null;
-  school_tags: string[] | null;
-  topic_tags: string[] | null;
-  is_featured: boolean | null;
-  volume_total: number | null;
-  k_code: string | null;
-};
-
-type Candidate = GroupRow & {
-  raw_score: number;
-  school_score: number;
-  topic_score: number;
-  user_school_overlap: number;
-};
-
-type Reason =
-  | { kind: 'similar'; anchor_group: string }   // personalized — 가장 가까운 사용자 affinity group
-  | { kind: 'topic'; anchor_tag: string }       // personalized — fallback (anchor group 식별 어려울 때)
-  | { kind: 'explore'; anchor_tag: string };    // explore — affinity 없는 school
-
-type RecommendedItem = GroupRow & { raw_score: number; reason: Reason };
-
-function shuffleInPlace<T>(arr: T[]): T[] {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-
-// 같은 score 묶음만 셔플 (점수 desc 정렬 유지)
-function shuffleTies<T extends { raw_score: number }>(rows: T[]): T[] {
-  rows.sort((a, b) => b.raw_score - a.raw_score);
-  let i = 0;
-  while (i < rows.length) {
-    let j = i + 1;
-    while (j < rows.length && rows[j].raw_score === rows[i].raw_score) j++;
-    const slice = rows.slice(i, j);
-    shuffleInPlace(slice);
-    for (let k = 0; k < slice.length; k++) rows[i + k] = slice[k];
-    i = j;
-  }
-  return rows;
-}
 
 export async function GET(req: NextRequest) {
   try {
@@ -131,14 +87,6 @@ export async function GET(req: NextRequest) {
     // 1. 사용자 group affinity (favorites + highlights + asks 가중합)
     //    SQL 한 번에 처리하기 위해 RPC가 있으면 사용, 없으면 다단계 JS 계산
     // --------------------------------------------------------------------------
-    type AffinityRow = {
-      group_key: string;
-      score: number;
-      school_tags: string[] | null;
-      topic_tags: string[] | null;
-      display_name: string | null;
-    };
-
     let affinity: AffinityRow[] = [];
     const { data: affRpc, error: affErr } = await supabase.rpc('scripture_rec_group_affinity', {
       uid: userId,
@@ -351,96 +299,3 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// ============================================================================
-// Fallback: RPC 없을 때 JS 측 affinity 계산
-// (현재 RPC scripture_rec_group_affinity 정의 없음 — 이 경로가 실제 동작)
-// ============================================================================
-async function computeAffinityFallback(userId: string) {
-  type Sig = { group_key: string; weight: number };
-  const sigs: Sig[] = [];
-  const RECENT_DAYS = 30;
-  const RECENT_MULT = 1.5;
-  const recentCutoff = Date.now() - RECENT_DAYS * 24 * 60 * 60 * 1000;
-  const recentWeight = (createdAt: string | null) =>
-    createdAt && Date.parse(createdAt) > recentCutoff ? RECENT_MULT : 1.0;
-
-  // 1) favorites — group_key 직접
-  {
-    const { data } = await supabase
-      .from('scripture_favorites')
-      .select('group_key, created_at')
-      .eq('user_id', userId);
-    (data ?? []).forEach((r) => sigs.push({ group_key: r.group_key, weight: 5.0 * recentWeight(r.created_at) }));
-  }
-
-  // 2) highlights — title → scriptures.group_key 조회 후 합산
-  {
-    const { data } = await supabase
-      .from('highlights')
-      .select('title, memo, created_at')
-      .eq('user_id', userId);
-    if (data && data.length > 0) {
-      const titles = [...new Set(data.map((r) => r.title))];
-      const { data: scrip } = await supabase
-        .from('scriptures')
-        .select('title, group_key')
-        .in('title', titles);
-      const titleToGroup = new Map((scrip ?? []).map((s) => [s.title, s.group_key]));
-      data.forEach((h) => {
-        const gk = titleToGroup.get(h.title);
-        if (!gk) return;
-        const memoBoost = h.memo && h.memo.length > 0 ? 2.0 : 1.0;
-        sigs.push({ group_key: gk, weight: memoBoost * recentWeight(h.created_at) });
-      });
-    }
-  }
-
-  // 3) temp_answers — scripture_title → scriptures.group_key
-  {
-    const { data } = await supabase
-      .from('temp_answers')
-      .select('scripture_title, created_at')
-      .eq('user_id', userId)
-      .not('scripture_title', 'is', null);
-    if (data && data.length > 0) {
-      const titles = [...new Set(data.map((r) => r.scripture_title).filter(Boolean) as string[])];
-      const { data: scrip } = await supabase
-        .from('scriptures')
-        .select('title, group_key')
-        .in('title', titles);
-      const titleToGroup = new Map((scrip ?? []).map((s) => [s.title, s.group_key]));
-
-      const groupCounts = new Map<string, { count: number; recentMult: number }>();
-      data.forEach((a) => {
-        const gk = titleToGroup.get(a.scripture_title!);
-        if (!gk) return;
-        const cur = groupCounts.get(gk) ?? { count: 0, recentMult: 0 };
-        cur.count += 1;
-        cur.recentMult += recentWeight(a.created_at);
-        groupCounts.set(gk, cur);
-      });
-      groupCounts.forEach((v, gk) => {
-        sigs.push({ group_key: gk, weight: 3.0 * v.count * (v.recentMult / v.count) });
-      });
-    }
-  }
-
-  // 4) group_key 합산 + scripture_groups 메타 join
-  const scoreByGroup = new Map<string, number>();
-  sigs.forEach((s) => {
-    scoreByGroup.set(s.group_key, (scoreByGroup.get(s.group_key) ?? 0) + s.weight);
-  });
-  if (scoreByGroup.size === 0) return [];
-
-  const { data: meta } = await supabase
-    .from('scripture_groups')
-    .select('group_key, display_name, school_tags, topic_tags')
-    .in('group_key', [...scoreByGroup.keys()]);
-  return (meta ?? []).map((m) => ({
-    group_key: m.group_key,
-    display_name: m.display_name,
-    school_tags: m.school_tags,
-    topic_tags: m.topic_tags,
-    score: scoreByGroup.get(m.group_key) ?? 0,
-  }));
-}

@@ -9,6 +9,7 @@ import { useTheme } from 'next-themes';
 import { useHighlightStore } from '@/stores/useHighlightStore';
 import { titleToReaderPath } from '@/lib/scripturePath';
 import { supabase } from '@/lib/supabaseClient';
+import { formatDisplayTitle } from '@/lib/titleFormatting';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
 
@@ -45,11 +46,7 @@ export default function Home() {
     setSplashPhrase(SPLASH_PHRASES[Math.floor(Math.random() * SPLASH_PHRASES.length)]);
   }, []);
 
-  function formatDisplayTitle(rawTitle: string): string {
-    return rawTitle
-      .replace(/_GPT\d+(\.\d+)?번역/, '') // GPT 번역 제거
-      .replace(/_/g, ' ');                // _를 공백으로
-  }
+
 
   useEffect(() => setThemeMounted(true), []);
 
@@ -154,7 +151,6 @@ export default function Home() {
   
     fetchAll(); // ✅ 무조건 API 호출
   }, []);
-  
     
   if (isLoading || !fontReady) {
     return (

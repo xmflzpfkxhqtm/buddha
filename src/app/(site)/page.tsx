@@ -14,9 +14,9 @@
        <header className={`
             hidden md:flex                    
              /* ← mobile에서는 통째로 숨김 */
-fixed top-0 left-0 w-full z-50 px-4 py-4 md:px-8 lg:px-12
-                           flex items-center justify-between text-white
-                           transition-all duration-700 ${show ? '' : '-translate-y-6 opacity-0'}`}>
+            fixed top-0 left-0 w-full z-50 px-4 py-4 md:px-8 lg:px-12
+            flex items-center justify-between text-white
+            transition-all duration-700 ${show ? '' : '-translate-y-6 opacity-0'}`}>
          <span className="text-lg font-semibold">연등</span>
          <nav className="hidden md:flex gap-6 text-sm text-white">
            <a href="#features"  className="hover:text-pink-light">기능</a>

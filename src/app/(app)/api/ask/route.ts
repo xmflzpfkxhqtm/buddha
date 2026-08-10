@@ -4,10 +4,8 @@ export const maxDuration = 60; // Vercel 함수 타임아웃 60초 (Hobby 플랜
 import { NextRequest, NextResponse } from 'next/server';
 import { generateEmbeddingBatch } from '@/utils/embedding';
 import { searchSimilarDocuments, searchSimilarDocumentsOptimized } from '@/utils/supabase';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import Anthropic from "@anthropic-ai/sdk";
 import { supabase } from '@/lib/supabaseClient';
-import type { TextBlock } from '@anthropic-ai/sdk/resources/messages';
+import { type ChatMessage, callOpenAI, callClaude, callGemini, callGrok } from '@/lib/llmProviders';
 
 // 개별 LLM 호출 타임아웃 (60초)
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
@@ -47,96 +45,6 @@ const lengthSetting = {
   long: { charLimit: '1200자 내외로', maxTokens: 1500 },
 };
 
-interface ChatMessage {
-  role: string;
-  content: string;
-}
-
-async function callOpenAI(messages: ChatMessage[], model: string, maxTokens: number) {
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({ model, messages, temperature: 0.8, max_tokens: maxTokens })
-  });
-  
-  if (!response.ok) {
-    const errText = await response.text();
-    console.error('🔥 OpenAI 응답 오류:', response.status, errText);
-    throw new Error(`OpenAI 응답 실패: ${response.status}`);
-  }
-
-  return await response.json();
-}
-
-async function callClaude(messages: ChatMessage[], model: string, maxTokens: number) {
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  const systemMessage = messages.find(m => m.role === 'system')?.content || '';
-  const userMessage = messages.find(m => m.role === 'user')?.content || '';
-
-  const response = await anthropic.messages.create({
-    model,
-    max_tokens: maxTokens,
-    temperature: 0.8,
-    system: systemMessage,
-    messages: [
-      { role: 'user', content: [{ type: 'text', text: userMessage }] }
-    ]
-  });
-
-  const textBlock = response.content.find((block): block is TextBlock => block.type === 'text');
-  const messageText = textBlock?.text || '';
-
-  return {
-    choices: [{ message: { content: messageText } }],
-    usage: response.usage
-  };
-}
-
-async function callGemini(messages: ChatMessage[], model: string) {
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-  const genModel = genAI.getGenerativeModel({ model });
-  const prompt = `${messages[0].content}\n\n${messages[1].content}`;
-  const result = await genModel.generateContent(prompt);
-  return {
-    choices: [{ message: { content: result.response.text() } }],
-    usage: { total_tokens: 0 }
-  };
-}
-
-async function callGrok(messages: ChatMessage[], model: string, maxTokens: number) {
-  const system = messages.find(m => m.role === 'system')?.content || '';
-  const user = messages.find(m => m.role === 'user')?.content || '';
-
-  const response = await fetch('https://api.x.ai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.GROK_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
-      temperature: 0.8,
-      max_tokens: maxTokens,
-    }),
-  });
-
-  if (!response.ok) {
-    const errText = await response.text();
-    console.error('🔥 Grok 응답 오류:', response.status, errText);
-    throw new Error(`Grok 응답 실패: ${response.status}`);
-  }
-
-  const data = await response.json();
-  return {
-    choices: [{ message: { content: data.choices?.[0]?.message?.content || '' } }],
-    usage: data.usage
-  };
-}
-
 // 재시도 로직 구현
 async function withRetry<T>(fn: () => Promise<T>, maxRetries: number, delayMs: number, operationName: string): Promise<T> {
   let lastError: Error | unknown;
@@ -146,10 +54,7 @@ async function withRetry<T>(fn: () => Promise<T>, maxRetries: number, delayMs: n
       return await fn();
     } catch (error) {
       lastError = error;
-      console.warn(`⚠️ ${operationName} 실패 (시도 ${attempt}/${maxRetries}):`, error);
-      
       if (attempt < maxRetries) {
-        console.log(`🔄 ${delayMs}ms 후 재시도...`);
         await new Promise(resolve => setTimeout(resolve, delayMs));
       }
     }
@@ -174,6 +79,18 @@ type CitationHint = {
   source: string;
   sentenceStart: number;
 };
+
+function buildCitationHints(documents: { metadata: { source?: unknown; sentence_start?: unknown } }[]): CitationHint[] {
+  const hintMap = new Map<string, number>();
+  for (const doc of documents) {
+    const source = String(doc.metadata?.source ?? '').trim();
+    if (!source || hintMap.has(source)) continue;
+    const raw = doc.metadata?.sentence_start;
+    const sentenceStart = Number.isFinite(Number(raw)) ? Number(raw) : 0;
+    hintMap.set(source, Math.max(0, sentenceStart));
+  }
+  return Array.from(hintMap.entries()).map(([source, sentenceStart]) => ({ source, sentenceStart }));
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -208,78 +125,46 @@ export async function POST(request: NextRequest) {
           previousQA = `이전 질문: ${parent.question}\n부처님의 응답: ${parent.answer}\n\n`;
         }
       } catch (error) {
-        console.error('⚠️ 이전 대화 조회 실패:', error);
+        console.error('이전 대화 조회 실패:', error);
       }
     }
 
     // 임베딩 생성 및 벡터 검색
     let contextText = '';
     let citationHints: CitationHint[] = [];
+    let embedding: number[] | null = null;
     try {
-      // 임베딩 생성
       const embeddings = await withRetry(
         () => generateEmbeddingBatch([question]),
         MAX_RETRIES,
         RETRY_DELAY,
         '임베딩 생성'
       );
-      
-      console.log('✅ 임베딩 생성 완료');
-      
-      if (embeddings.length > 0) {
-        // 최적화된 벡터 검색 사용 (HNSW 인덱스)
+      embedding = embeddings[0] ?? null;
+    } catch (error) {
+      console.error('임베딩 생성 실패:', error);
+    }
+
+    if (embedding) {
+      try {
         const documents = await withRetry(
-          () => searchSimilarDocumentsOptimized(embeddings[0], 10),
+          () => searchSimilarDocumentsOptimized(embedding!, 10),
           MAX_RETRIES,
           RETRY_DELAY,
           '최적화 벡터 검색'
         );
-        
-        console.log('✅ 최적화 벡터 검색 완료, 결과 수:', documents.length);
-        console.log('✅ 최적화 벡터 검색 완료:', documents);
         contextText = normalizeRagContext(documents.map(doc => doc.content).join('\n\n'));
-        const hintMap = new Map<string, number>();
-        for (const doc of documents) {
-          const source = String(doc.metadata?.source ?? '').trim();
-          if (!source || hintMap.has(source)) continue;
-          const sentenceStartRaw = doc.metadata?.sentence_start;
-          const sentenceStart = Number.isFinite(Number(sentenceStartRaw))
-            ? Number(sentenceStartRaw)
-            : 0;
-          hintMap.set(source, Math.max(0, sentenceStart));
+        citationHints = buildCitationHints(documents);
+      } catch (error) {
+        console.error('최적화 벡터 검색 실패, 일반 검색 시도:', error);
+        try {
+          const documents = await searchSimilarDocuments(embedding, 10);
+          contextText = normalizeRagContext(documents.map(doc => doc.content).join('\n\n'));
+          citationHints = buildCitationHints(documents);
+        } catch (fallbackError) {
+          console.error('벡터 검색 실패:', fallbackError);
+          contextText = '벡터 검색 실패. 일반적인 지식으로 응답합니다.';
         }
-        citationHints = Array.from(hintMap.entries()).map(([source, sentenceStart]) => ({
-          source,
-          sentenceStart,
-        }));
-      }
-    } catch (error) {
-      console.error('❌ 최적화 벡터 검색 실패, 일반 검색 시도:', error);
-      
-      try {
-        // 일반 벡터 검색으로 폴백
-        const embeddings = await generateEmbeddingBatch([question]);
-        const documents = await searchSimilarDocuments(embeddings[0], 10);
-        console.log('✅ 일반 벡터 검색 완료, 결과 수:', documents.length);
-        console.log('✅ 일반 벡터 검색 완료:', documents);
-        contextText = normalizeRagContext(documents.map(doc => doc.content).join('\n\n'));
-        const hintMap = new Map<string, number>();
-        for (const doc of documents) {
-          const source = String(doc.metadata?.source ?? '').trim();
-          if (!source || hintMap.has(source)) continue;
-          const sentenceStartRaw = doc.metadata?.sentence_start;
-          const sentenceStart = Number.isFinite(Number(sentenceStartRaw))
-            ? Number(sentenceStartRaw)
-            : 0;
-          hintMap.set(source, Math.max(0, sentenceStart));
-        }
-        citationHints = Array.from(hintMap.entries()).map(([source, sentenceStart]) => ({
-          source,
-          sentenceStart,
-        }));
-      } catch (fallbackError) {
-        console.error('❌ 모든 벡터 검색 실패:', fallbackError);
-        contextText = '벡터 검색 실패. 일반적인 지식으로 응답합니다.';
       }
     }
 
@@ -340,11 +225,11 @@ export async function POST(request: NextRequest) {
       // LLM 호출은 재시도 없이 1회 (60초 Hobby 제한 내 수렴)
       data = await callLLM();
     } catch (apiError) {
-      console.warn('⚠️ API 모델 호출 실패, fallback 시도:', apiError);
+      console.warn('API 모델 호출 실패, fallback 시도:', apiError);
       try {
         data = await withTimeout(callOpenAI(messages, 'gpt-4.1-mini', maxTokens), LLM_TIMEOUT, 'Fallback OpenAI');
       } catch (fallbackError) {
-        console.error('❌ Fallback API도 실패:', fallbackError);
+        console.error('Fallback API도 실패:', fallbackError);
         data = {
           choices: [{ message: { content: '부처님께서 지금은 깊은 명상 중이시어 응답할 수 없습니다. 잠시 후 다시 여쭤보세요.' } }],
           usage: { total_tokens: 0 }
@@ -353,7 +238,6 @@ export async function POST(request: NextRequest) {
     }
     
     const answer = data.choices?.[0]?.message?.content || '부처님께서 조용히 침묵하십니다.';
-    console.log('📊 사용 토큰 정보:', { model, usage: data.usage, question, length });
 
     // Supabase 저장
     try {
@@ -381,12 +265,12 @@ export async function POST(request: NextRequest) {
         citationHints,
       });
     } catch (dbError) {
-      console.error('❌ Supabase 저장 실패:', dbError);
+      console.error('Supabase 저장 실패:', dbError);
       return NextResponse.json({ success: false, message: 'Supabase 저장에 실패했습니다.' }, { status: 500 });
     }
   
   } catch (error: unknown) {
-    console.error('❌ 최상위 오류 발생:', error);
+    console.error('ask 오류:', error);
   
     let message = '답변 생성 중 알 수 없는 오류';
     if (error instanceof Error) {

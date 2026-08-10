@@ -1,30 +1,14 @@
 // app/api/scripture/group/[key]/route.ts
 // Layer 2 (그룹 상세 + 권 리스트) 용. 기존 API 동결, 이 라우트는 순수 additive.
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin as supabase } from '@/lib/supabaseAdmin';
+import { type ScriptureGroupRow } from '@/types/scripture';
 
 export const runtime = 'nodejs';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { persistSession: false } },
-);
-
 const PAGE_SIZE = 1000;
 
-type GroupRow = {
-  group_key: string;
-  display_name: string | null;
-  chinese_title: string | null;
-  translator: string | null;
-  intro: string | null;
-  school_tags: string[] | null;
-  topic_tags: string[] | null;
-  is_featured: boolean | null;
-  volume_total: number | null;
-  k_code: string | null;
-};
+type GroupRow = ScriptureGroupRow;
 
 type VolumeRow = {
   title: string;
