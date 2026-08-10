@@ -28,6 +28,20 @@ export const BODY_MIND: { key: 'body' | 'speech' | 'mind'; label: string; hanja:
   { key: 'mind',   label: '의업(意業)', hanja: '意' },
 ]
 
+// KARMA_PAIRS 인덱스 0~9 의 신(身)/구(口)/의(意) 분류
+export const KARMA_PAIR_CATEGORY: ('body' | 'speech' | 'mind')[] = [
+  'body',   // 0: 불살생/살생
+  'body',   // 1: 불투도/투도
+  'body',   // 2: 불사음/사음
+  'speech', // 3: 불망어/망어
+  'speech', // 4: 불기어/기어
+  'speech', // 5: 불악구/악구
+  'speech', // 6: 불양설/양설
+  'mind',   // 7: 불탐욕/탐욕
+  'mind',   // 8: 불진에/진에
+  'mind',   // 9: 불사견/사견
+]
+
 // 3차 윤: 6개 × 3회 던져 합산(153~189) → 해당 번호 결과
 export const WHEEL_RANGES: [number, number, number][] = [
   [1, 2, 3], [4, 5, 6], [7, 8, 9],

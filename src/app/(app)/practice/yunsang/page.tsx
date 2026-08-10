@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from 'react';
 import { ChevronRight, RotateCcw } from 'lucide-react';
 import {
   KARMA_PAIRS, KARMA_STRENGTH, BODY_MIND, WHEEL_RANGES, OUTCOMES,
+  KARMA_PAIR_CATEGORY,
   type KarmaStrength,
 } from '@/data/yunsangData';
 
@@ -51,7 +52,7 @@ type FlowStage =
   | 'final';
 
 interface S1Result { index: number; isGood: boolean }
-interface S2Result { key: 'body'|'speech'|'mind'; strength: KarmaStrength }
+interface S2Result { key: 'body'|'speech'|'mind'; strength: KarmaStrength; isAligned: boolean }
 
 type Face = { label: string; sub?: string; bg: string; textColor: string; markType?: string };
 interface ScatterParam { lx: number; ly: number; sx: number; sy: number; rz: number; peak: number; dur: number; delay: number }
@@ -249,11 +250,12 @@ function makeStage2Faces(): [Face,Face,Face,Face][] {
 }
 
 function makeStage3Faces(range: readonly [number,number,number]): [Face,Face,Face,Face] {
-  return range.concat([range[0]]).slice(0,4).map((n, i) => ({
-    label: String(i < 3 ? range[i] : range[0]),
-    bg: i === 0 ? WOOD_BG : WOOD_SIDE_BG,
-    textColor: '#5a3000',
-  })) as [Face,Face,Face,Face];
+  return [
+    { label: String(range[0]), bg: WOOD_BG,       textColor: '#5a3000' },
+    { label: String(range[1]), bg: WOOD_SIDE_BG,  textColor: '#5a3000' },
+    { label: String(range[2]), bg: WOOD_SIDE_BG,  textColor: '#5a3000' },
+    { label: '',               bg: WOOD_SIDE_BG,  textColor: 'transparent' }, // 빈 면 — 경전: 3면에 숫자, 1면은 공백
+  ];
 }
 
 // ── 캔버스 유틸 ───────────────────────────────────────────────
@@ -316,8 +318,11 @@ export default function YunsangPage() {
 
   const [s1Results, setS1Results] = useState<S1Result[]>([]);
   const [s2Results, setS2Results] = useState<S2Result[]>([]);
-  const [s3Rounds,  setS3Rounds]  = useState<number[][]>([]);
-  const [s3Total,   setS3Total]   = useState(0);
+  const [s2ThrowIdx, setS2ThrowIdx] = useState(0); // 0=신업, 1=구업, 2=의업 순서
+  const [s3Rounds,    setS3Rounds]    = useState<number[][]>([]);
+  const [s3Total,     setS3Total]     = useState(0);
+  const [s3LastRound, setS3LastRound] = useState<(number | null)[]>([]);
+  const [s3BlankThrow, setS3BlankThrow] = useState(false);
 
   const canvasRef   = useRef<HTMLDivElement>(null);
   const spinsRef    = useRef<number[]>([]);
@@ -354,33 +359,69 @@ export default function YunsangPage() {
     });
   }
 
+  // 경전: "이 세 개의 윤을 한꺼번에 던져서는 안 되며, 하나하나 해당하는 윤으로 따로 점쳐야 합니다"
+  // → 신/구/의 윤을 하나씩 순서대로 던짐
+  function checkS2Alignment(wheelKey: 'body' | 'speech' | 'mind', strength: KarmaStrength): boolean {
+    const relevant = KARMA_PAIR_CATEGORY
+      .map((cat, idx) => cat === wheelKey ? idx : -1)
+      .filter(idx => idx >= 0);
+    const catResults = s1Results.filter(r => relevant.includes(r.index));
+    const hasGood = catResults.some(r => r.isGood);
+    const hasEvil = catResults.some(r => !r.isGood);
+    const resultIsGood = strength === 'good-strong' || strength === 'good-weak';
+    if (hasGood && !hasEvil) return resultIsGood;   // 선만 → 선 결과여야 상응
+    if (!hasGood && hasEvil) return !resultIsGood;  // 악만 → 악 결과여야 상응
+    return true; // 선악 혼재 → 어느 결과도 상응
+  }
+
   function throwS2() {
-    s2ScatterRef.current = buildScatter(3, 80, 24, canvasW());
-    doThrow(3, () => {
-      setS2Results(BODY_MIND.map(bm => ({
-        key: bm.key,
-        strength: pick<KarmaStrength>(['good-strong','good-weak','evil-strong','evil-weak']),
-      })));
-      setStage('stage2-result');
+    s2ScatterRef.current = buildScatter(1, 80, 24, canvasW());
+    doThrow(1, () => {
+      const bm = BODY_MIND[s2ThrowIdx];
+      const strength = pick<KarmaStrength>(['good-strong','good-weak','evil-strong','evil-weak']);
+      const isAligned = checkS2Alignment(bm.key, strength);
+      setS2Results(prev => [...prev, { key: bm.key, strength, isAligned }]);
     });
+  }
+
+  function nextS2() {
+    if (s2ThrowIdx >= BODY_MIND.length - 1) {
+      setStage('stage2-result');
+    } else {
+      setS2ThrowIdx(prev => prev + 1);
+      setLanded(false);
+    }
   }
 
   function throwS3() {
     s3ScatterRef.current = buildScatter(6, 48, 16, canvasW());
     doThrow(6, () => {
-      const vals = WHEEL_RANGES.map(r => pick(r));
-      const rounds = [...s3Rounds, vals];
-      setS3Rounds(rounds);
-      if (rounds.length === 3) {
-        setS3Total(rounds.flat().reduce((a, b) => a + b, 0));
-        setStage('stage3-result');
+      // 각 윤은 4면(숫자 3 + 빈 면 1) → 빈 면이 나오면 다시 던져야 함
+      const lastRound = WHEEL_RANGES.map(r => {
+        const fi = Math.floor(Math.random() * 4);
+        return fi < 3 ? r[fi] : null;
+      });
+      setS3LastRound(lastRound);
+      const hasBlank = lastRound.some(v => v === null);
+      if (hasBlank) {
+        setS3BlankThrow(true);
+      } else {
+        const nums = lastRound as number[];
+        const rounds = [...s3Rounds, nums];
+        setS3Rounds(rounds);
+        setS3BlankThrow(false);
+        if (rounds.length === 3) {
+          setS3Total(rounds.flat().reduce((a, b) => a + b, 0));
+          setStage('stage3-result');
+        }
       }
     });
   }
 
   function reset() {
     setStage('intro'); setSpinning(false); setLanded(false);
-    setS1Results([]); setS2Results([]); setS3Rounds([]); setS3Total(0);
+    setS1Results([]); setS2Results([]); setS2ThrowIdx(0); setS3Rounds([]); setS3Total(0);
+    setS3LastRound([]); setS3BlankThrow(false);
   }
 
   const outcome  = OUTCOMES.find(o => o.num === s3Total) ?? OUTCOMES[152];
@@ -529,14 +570,28 @@ export default function YunsangPage() {
         {(stage === 'stage2-ready' || stage === 'stage2-result') && (
           <div className="space-y-5">
             <StageHeader step={2} title="2차 윤 — 신·구·의 업의 강약" />
+
+            {/* 현재 던질 카테고리 컨텍스트: 해당 1차 결과 표시 */}
             {stage === 'stage2-ready' && (
-              <p className="text-xs text-accent/60 leading-relaxed">
-                각 목륜의 4면에는 획의 굵기와 깊이로 선악업의 강약이 새겨져 있습니다.<br />
-                身·口·意 각 하나씩, 세 개를 던집니다.
-              </p>
+              <div className="bg-surface-elevated rounded-xl p-3 border border-accent-soft text-xs space-y-2">
+                <p className="font-semibold text-accent">
+                  {BODY_MIND[s2ThrowIdx].label} 던지기 ({s2ThrowIdx + 1} / {BODY_MIND.length})
+                </p>
+                <p className="text-accent/55">1차 윤 — 이 카테고리에 해당하는 업:</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {s1Results
+                    .filter(r => KARMA_PAIR_CATEGORY[r.index] === BODY_MIND[s2ThrowIdx].key)
+                    .map(r => (
+                      <span key={r.index}
+                        className={`px-2 py-0.5 rounded font-medium ${r.isGood ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300' : 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300'}`}>
+                        {r.isGood ? KARMA_PAIRS[r.index].good : KARMA_PAIRS[r.index].evil}
+                      </span>
+                    ))}
+                </div>
+              </div>
             )}
 
-            {/* 목륜 던지기 캔버스 */}
+            {/* 목륜 던지기 캔버스 — 경전: "하나하나 해당하는 윤으로 따로 점쳐야" → 한 번에 1개씩 */}
             <div
               ref={canvasRef}
               className="relative w-full rounded-2xl border border-amber-200 dark:border-amber-800/50 overflow-hidden my-1"
@@ -552,16 +607,15 @@ export default function YunsangPage() {
                 boxShadow: 'inset 0 -8px 16px rgba(100,60,10,0.08)',
               }}
             >
-              {(spinning || landed) && BODY_MIND.map((bm, i) => {
-                const p = s2ScatterRef.current[i];
+              {stage === 'stage2-ready' && (spinning || landed) && (() => {
+                const p = s2ScatterRef.current[0];
                 if (!p) return null;
-                const result = s2Results.find(r => r.key === bm.key);
-                const faces = s2FacesRef.current[i];
+                const result = s2Results[s2Results.length - 1];
+                const faces = s2FacesRef.current[s2ThrowIdx];
                 const strengthOrder: KarmaStrength[] = ['good-strong','good-weak','evil-strong','evil-weak'];
-                const landFace = result ? (strengthOrder.indexOf(result.strength) as 0|1|2|3) : 0;
+                const landFace = (result && landed) ? (strengthOrder.indexOf(result.strength) as 0|1|2|3) : 0;
                 return (
                   <div
-                    key={bm.key}
                     className={spinning ? 'throw-arc' : ''}
                     style={{
                       position: 'absolute',
@@ -579,13 +633,13 @@ export default function YunsangPage() {
                       faces={faces}
                       landFace={landFace}
                       spinning={spinning}
-                      spins={spinsRef.current[i] ?? 4}
+                      spins={spinsRef.current[0] ?? 4}
                       delay={p.delay}
                       landed={landed && !!result}
                     />
                   </div>
                 );
-              })}
+              })()}
               {!spinning && !landed && (
                 <div className="absolute inset-0 flex items-end justify-center pb-5 text-amber-800/25 text-xs tracking-widest select-none">
                   목륜을 던져보세요
@@ -593,29 +647,22 @@ export default function YunsangPage() {
               )}
               <div className="absolute left-0 right-0 h-[1px] bg-amber-300/30 dark:bg-amber-700/20" style={{ bottom: `${(1-HAND_RATIO)*CANVAS_H}px` }} />
             </div>
-            {/* 신·구·의 레이블 (착지 후 표시) */}
-            {landed && (
-              <div className="flex justify-center gap-4 -mt-1 mb-1">
-                {BODY_MIND.map((bm, i) => {
-                  const p = s2ScatterRef.current[i];
-                  if (!p) return null;
-                  return (
-                    <span key={bm.key} className="text-xs text-accent/50">{bm.label}</span>
-                  );
-                })}
-              </div>
-            )}
 
-            {stage === 'stage2-result' && (
+            {/* 누적 결과 (던질 때마다 추가됨) */}
+            {s2Results.length > 0 && (
               <div className="bg-surface-elevated rounded-xl p-4 border border-accent-soft space-y-2.5">
-                {s2Results.map(r => {
+                {s2Results.map((r, idx) => {
                   const bm = BODY_MIND.find(b => b.key === r.key)!;
                   const info = KARMA_STRENGTH[r.strength];
+                  const isLatest = idx === s2Results.length - 1;
                   return (
-                    <div key={r.key} className="flex items-start gap-2 text-sm">
+                    <div key={r.key} className={`flex items-start gap-2 text-sm transition-opacity ${isLatest ? 'opacity-100' : 'opacity-60'}`}>
                       <span className="font-semibold text-accent w-16 shrink-0">{bm.label}</span>
-                      <div>
+                      <div className="flex-1">
                         <span className={`font-semibold ${info.color}`}>{info.label}</span>
+                        {!r.isAligned && (
+                          <span className="ml-2 text-xs text-amber-600 dark:text-amber-400">⚠ 서로 호응하지 않음</span>
+                        )}
                         <p className="text-xs text-accent/55 mt-0.5">{info.desc}</p>
                       </div>
                     </div>
@@ -624,13 +671,31 @@ export default function YunsangPage() {
               </div>
             )}
 
-            {stage === 'stage2-ready'
-              ? <ThrowBtn onClick={throwS2} disabled={spinning} label="목륜 던지기" />
-              : <button onClick={() => setStage('stage3-ready')}
-                  className="w-full py-4 rounded-2xl bg-accent text-on-brand font-semibold flex items-center justify-center gap-2">
-                  3차 윤으로 <ChevronRight size={18} />
-                </button>
-            }
+            {/* 정합 불일치 경고 (마지막 결과가 호응하지 않을 때) */}
+            {stage === 'stage2-ready' && landed && s2Results.length > 0 && !s2Results[s2Results.length - 1].isAligned && (
+              <p className="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg p-3 border border-amber-200">
+                1차 윤상의 결과와 서로 호응하지 않습니다. 지극한 마음으로 점찰해야 합니다.
+              </p>
+            )}
+
+            {/* 버튼 */}
+            {stage === 'stage2-ready' && !landed && (
+              <ThrowBtn onClick={throwS2} disabled={spinning} label={`${BODY_MIND[s2ThrowIdx].label} 던지기`} />
+            )}
+            {stage === 'stage2-ready' && landed && (
+              <button onClick={nextS2}
+                className="w-full py-4 rounded-2xl bg-accent text-on-brand font-semibold flex items-center justify-center gap-2">
+                {s2ThrowIdx < BODY_MIND.length - 1
+                  ? <>{BODY_MIND[s2ThrowIdx + 1].label} 던지기 <ChevronRight size={18} /></>
+                  : <>결과 확인 <ChevronRight size={18} /></>}
+              </button>
+            )}
+            {stage === 'stage2-result' && (
+              <button onClick={() => setStage('stage3-ready')}
+                className="w-full py-4 rounded-2xl bg-accent text-on-brand font-semibold flex items-center justify-center gap-2">
+                3차 윤으로 <ChevronRight size={18} />
+              </button>
+            )}
           </div>
         )}
 
@@ -638,10 +703,15 @@ export default function YunsangPage() {
         {(stage === 'stage3-ready' || stage === 'stage3-result') && (
           <div className="space-y-5">
             <StageHeader step={3} title={`3차 윤 — ${s3Rounds.length}/3회`} />
-            {s3Rounds.length === 0 && (
+            {s3Rounds.length === 0 && !s3BlankThrow && (
               <p className="text-xs text-accent/60 leading-relaxed">
-                6개의 목륜을 세 번 던집니다. 각 목륜에는 숫자가 새겨져 있습니다.<br />
-                세 번의 합산으로 189종 과보 중 하나가 정해집니다.
+                6개의 목륜을 세 번 던집니다. 각 목륜은 3면에 숫자, 1면은 비어있습니다.<br />
+                빈 면이 나오면 다시 던지고, 세 번의 합산으로 189종 과보 중 하나가 정해집니다.
+              </p>
+            )}
+            {s3BlankThrow && !spinning && (
+              <p className="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg p-3 border border-amber-200 text-center">
+                빈 면이 나왔습니다. 지극한 마음으로 다시 던지십시오.
               </p>
             )}
 
@@ -664,10 +734,11 @@ export default function YunsangPage() {
               {(spinning || landed) && WHEEL_RANGES.map((range, i) => {
                 const p = s3ScatterRef.current[i];
                 if (!p) return null;
-                const lastRound = s3Rounds[s3Rounds.length - 1];
-                const val = lastRound?.[i];
+                const val = s3LastRound[i]; // number | null | undefined
                 const faces = makeStage3Faces(range);
-                const faceIdx = val !== undefined ? (range.indexOf(val) as 0|1|2) : 0;
+                const faceIdx: 0|1|2|3 = typeof val === 'number'
+                  ? range.indexOf(val) as 0|1|2
+                  : val === null ? 3 : 0; // 3 = 빈 면
                 return (
                   <div
                     key={i}
@@ -686,7 +757,7 @@ export default function YunsangPage() {
                     <Piece3D
                       W={48} H={16}
                       faces={faces}
-                      landFace={faceIdx}
+                      landFace={faceIdx as 0|1|2|3}
                       spinning={spinning}
                       spins={spinsRef.current[i] ?? 4}
                       delay={p.delay}
