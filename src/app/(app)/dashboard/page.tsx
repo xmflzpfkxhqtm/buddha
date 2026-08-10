@@ -103,34 +103,28 @@ export default function Home() {
     const fetchAll = async () => {
       const start = Date.now();
 
-      console.log('✅ fetchAll 실행됨');
-
       try {
-        const [teachingRes, userRes, notesRes] = await Promise.all([
+        const getProfile = async () => {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return null;
+          const { data: profile } = await supabase
+            .from('users').select('username').eq('id', user.id).single();
+          return { user, profile };
+        };
+
+        const [teachingRes, profileResult, notesRes] = await Promise.all([
           fetch('/api/today-teaching').then((res) => res.json()),
-          supabase.auth.getUser(),
+          getProfile(),
           fetch('/api/update-notes').then((res) => res.json()).catch(() => ({ notes: [] })),
         ]);
-
-        console.log('✅ API 응답:', teachingRes);
 
         setTitle(teachingRes.title);
         setIndex(teachingRes.index);
         setSentence(teachingRes.sentence);
         setUpdateNotes(Array.isArray(notesRes?.notes) ? notesRes.notes : []);
-        console.log('✅ title:', teachingRes.title);
-        console.log('✅ index:', teachingRes.index);
-        console.log('✅ sentence:', teachingRes.sentence);
 
-        const user = userRes.data.user;
-
-        if (user) {
-          const { data: profile } = await supabase
-            .from('users')
-            .select('username')
-            .eq('id', user.id)
-            .single();
-
+        if (profileResult) {
+          const { user, profile } = profileResult;
           setUserName(profile?.username ?? user.user_metadata?.full_name ?? null);
         }
       } catch (err) {

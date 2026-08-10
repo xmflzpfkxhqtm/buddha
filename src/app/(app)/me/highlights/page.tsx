@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useHighlightStore } from '@/stores/useHighlightStore';
 import { titleToReaderPath } from '@/lib/scripturePath';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuthUser } from '@/hooks/useAuthUser';
-import { useListWithPagination } from '@/hooks/useListWithPagination';
 import { useRouter } from 'next/navigation';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import PaginationControls from '../../../../../components/PaginationControls';
@@ -13,9 +12,10 @@ import DeleteConfirmModal from '../../../../../components/DeleteConfirmModal';
 import { formatDisplayTitle } from '@/lib/titleFormatting';
 import { type DisplayHighlight as Highlight } from '@/types/highlights';
 
+const ITEMS_PER_PAGE = 5;
+const HL_SELECT = 'id, user_id, title, start_sentence, end_sentence, start_char_offset, end_char_offset, anchor_start_text, highlight_text, memo, created_at';
 
-/** 미리보기 텍스트 우선순위:
- *   highlight_text (정확히 선택한 텍스트) > anchor_start_text (sentence 첫 50자, 옛 row) > '내용 없음' */
+/** 미리보기 텍스트 우선순위: highlight_text > anchor_start_text > fallback */
 function getPreview(h: Highlight): string {
   if (h.highlight_text && h.highlight_text.trim()) return h.highlight_text;
   if (h.anchor_start_text && h.anchor_start_text.trim()) return h.anchor_start_text;
@@ -26,34 +26,66 @@ type Tab = 'all' | 'memo';
 
 export default function HighlightsPage() {
   const [highlights, setHighlights] = useState<Highlight[]>([]);
+  const [tabCounts, setTabCounts] = useState({ all: 0, memo: 0 });
   const [tab, setTab] = useState<Tab>('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const [memoTarget, setMemoTarget] = useState<Highlight | null>(null);
   const [memoInput, setMemoInput] = useState('');
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   const { setHighlight } = useHighlightStore();
   const router = useRouter();
   const userId = useAuthUser();
 
-  const memoHighlights = useMemo(
-    () => highlights.filter((h) => h.memo && h.memo.trim()),
-    [highlights],
-  );
-  const visible = tab === 'all' ? highlights : memoHighlights;
-
-  const { currentPage, setCurrentPage, totalPages, paginated, handlePageChange, deleteTargetId, setDeleteTargetId } = useListWithPagination(visible);
   useBodyScrollLock(!!deleteTargetId || !!memoTarget);
+
+  const totalCount = tab === 'all' ? tabCounts.all : tabCounts.memo;
+  const totalPages = Math.max(1, Math.ceil(totalCount / ITEMS_PER_PAGE));
+
+  const fetchPage = useCallback(async (t: Tab, page: number, uid: string) => {
+    const from = (page - 1) * ITEMS_PER_PAGE;
+    const to = from + ITEMS_PER_PAGE - 1;
+
+    const dataQuery = t === 'memo'
+      ? supabase.from('highlights').select(HL_SELECT)
+          .eq('user_id', uid).not('memo', 'is', null).neq('memo', '')
+          .order('created_at', { ascending: false }).range(from, to)
+      : supabase.from('highlights').select(HL_SELECT)
+          .eq('user_id', uid)
+          .order('created_at', { ascending: false }).range(from, to);
+
+    const countAllQuery = supabase.from('highlights')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', uid);
+
+    const countMemoQuery = supabase.from('highlights')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', uid).not('memo', 'is', null).neq('memo', '');
+
+    const [{ data }, { count: allCount }, { count: memoCount }] = await Promise.all([
+      dataQuery, countAllQuery, countMemoQuery,
+    ]);
+
+    if (data) setHighlights(data as Highlight[]);
+    setTabCounts({
+      all: allCount ?? 0,
+      memo: memoCount ?? 0,
+    });
+  }, []);
 
   useEffect(() => {
     if (!userId) return;
-    supabase
-      .from('highlights')
-      .select('id, user_id, title, start_sentence, end_sentence, start_char_offset, end_char_offset, anchor_start_text, highlight_text, memo, created_at')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .then(({ data: rows }) => { if (rows) setHighlights(rows); });
-  }, [userId]);
+    fetchPage(tab, currentPage, userId);
+  }, [userId, tab, currentPage, fetchPage]);
 
-  useEffect(() => setCurrentPage(1), [tab, setCurrentPage]);
+  const handleTabChange = (t: Tab) => {
+    setTab(t);
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) setCurrentPage(page);
+  };
 
   const goToReader = (title: string, index: number) => {
     setHighlight(title, index);
@@ -66,45 +98,37 @@ export default function HighlightsPage() {
   };
 
   const saveMemo = async () => {
-    if (!memoTarget) return;
+    if (!memoTarget || !userId) return;
     const { error } = await supabase
       .from('highlights')
       .update({ memo: memoInput })
       .eq('id', memoTarget.id);
-    if (error) {
-      alert('메모 저장에 실패했습니다.');
-      return;
-    }
-    setHighlights((prev) =>
-      prev.map((h) => (h.id === memoTarget.id ? { ...h, memo: memoInput } : h)),
-    );
+    if (error) { alert('메모 저장에 실패했습니다.'); return; }
     setMemoTarget(null);
     setMemoInput('');
+    fetchPage(tab, currentPage, userId);
   };
 
   const deleteMemo = async (h: Highlight) => {
-    const { error } = await supabase
-      .from('highlights')
-      .update({ memo: null })
-      .eq('id', h.id);
-    if (error) {
-      alert('메모 삭제에 실패했습니다.');
-      return;
-    }
-    setHighlights((prev) =>
-      prev.map((b) => (b.id === h.id ? { ...b, memo: undefined } : b)),
-    );
+    if (!userId) return;
+    const { error } = await supabase.from('highlights').update({ memo: null }).eq('id', h.id);
+    if (error) { alert('메모 삭제에 실패했습니다.'); return; }
+    fetchPage(tab, currentPage, userId);
   };
 
   const confirmDelete = async () => {
-    if (!deleteTargetId) return;
+    if (!deleteTargetId || !userId) return;
     const { error } = await supabase.from('highlights').delete().eq('id', deleteTargetId);
-    if (error) {
-      alert('삭제에 실패했습니다.');
-      return;
-    }
-    setHighlights((prev) => prev.filter((h) => h.id !== deleteTargetId));
+    if (error) { alert('삭제에 실패했습니다.'); return; }
     setDeleteTargetId(null);
+    const newTotal = totalCount - 1;
+    const newTotalPages = Math.max(1, Math.ceil(newTotal / ITEMS_PER_PAGE));
+    const nextPage = Math.min(currentPage, newTotalPages);
+    if (nextPage !== currentPage) {
+      setCurrentPage(nextPage);
+    } else {
+      fetchPage(tab, nextPage, userId);
+    }
   };
 
   const renderTab = (id: Tab, label: string, count: number) => {
@@ -113,7 +137,7 @@ export default function HighlightsPage() {
       <button
         key={id}
         type="button"
-        onClick={() => setTab(id)}
+        onClick={() => handleTabChange(id)}
         className={`flex-1 py-3 text-sm font-semibold border-b-2 transition-colors ${
           active
             ? 'border-accent text-accent'
@@ -129,11 +153,11 @@ export default function HighlightsPage() {
     <main className="px-4 pb-20 max-w-[460px] mx-auto bg-surface-elevated min-h-screen [overflow-wrap:anywhere]">
       {/* 탭 — 전체 / 메모 */}
       <div className="sticky top-0 z-10 bg-surface-elevated flex border-b border-line">
-        {renderTab('all', '전체', highlights.length)}
-        {renderTab('memo', '메모', memoHighlights.length)}
+        {renderTab('all', '전체', tabCounts.all)}
+        {renderTab('memo', '메모', tabCounts.memo)}
       </div>
 
-      {visible.length === 0 ? (
+      {highlights.length === 0 ? (
         <div className="pt-10 text-center text-ink-muted">
           <p>{tab === 'all' ? '아직 하이라이트가 없습니다.' : '메모가 있는 하이라이트가 없습니다.'}</p>
           <p className="mt-1 text-sm">
@@ -145,7 +169,7 @@ export default function HighlightsPage() {
       ) : (
         <section className="pt-3 pb-10">
           <ul className="divide-y divide-line border-y border-line">
-            {paginated.map((h) => (
+            {highlights.map((h) => (
               <li key={h.id} className="py-4">
                 <button
                   type="button"

@@ -2,6 +2,11 @@
 const path = require('path');
 
 const nextConfig = {
+  serverExternalPackages: [
+    '@anthropic-ai/sdk',
+    'openai',
+    '@google/generative-ai',
+  ],
   outputFileTracingExcludes: {
     '*': ['./data/**/*'],
   },

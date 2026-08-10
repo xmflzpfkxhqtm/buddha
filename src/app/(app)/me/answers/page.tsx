@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuthUser } from '@/hooks/useAuthUser';
-import { useListWithPagination } from '@/hooks/useListWithPagination';
 import { useAskStore } from '@/stores/askStore';
 import { useRouter } from 'next/navigation';
 import { X } from 'lucide-react';
@@ -15,18 +14,18 @@ import { formatScriptureTitle } from '@/lib/titleFormatting';
 
 type Tab = 'general' | 'scripture';
 
+const ITEMS_PER_PAGE = 5;
+
 /** 인용 prefix 가 들어간 question 에서 실제 사용자 질문 부분만 추출 (preview 용). */
 function extractUserQuestion(question: string): string {
-  // buildCitedQuestion 형식: "다음 경전 구절에 대해 여쭙습니다.\n\n[제목]\n\"...\"\n\n질문:\n<사용자 질문>"
   const m = question.match(/질문:\n([\s\S]+)$/);
   if (m) return m[1].trim();
-  // 질문 라벨 없이 자동 prefix 만 있는 경우 (사용자 질문 비었을 때)
   const auto = question.match(/이 구절의 의미를 자세히 알려주세요\.\s*$/);
   if (auto) return '이 구절의 의미를 자세히 알려주세요.';
   return question;
 }
 
-/** question prefix 에서 인용된 경전 텍스트 추출. 형식: ...[제목]\n"인용 텍스트"\n\n... */
+/** question prefix 에서 인용된 경전 텍스트 추출. */
 function extractCitationText(question: string): string | null {
   const m = question.match(/^다음 경전 구절에 대해 여쭙습니다\.[\s\S]*?\[[^\]]+\]\s*\n"([\s\S]+?)"\s*\n\n/);
   return m ? m[1] : null;
@@ -41,44 +40,83 @@ function simplifyScriptureCitations(answer: string): string {
 
 export default function AnswerPage() {
   const [answers, setAnswers] = useState<TempAnswer[]>([]);
+  const [tabCounts, setTabCounts] = useState({ general: 0, scripture: 0 });
   const [tab, setTab] = useState<Tab>('general');
+  const [currentPage, setCurrentPage] = useState(1);
   const [selectedItem, setSelectedItem] = useState<TempAnswer | null>(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const { setParentId } = useAskStore();
   const router = useRouter();
   const userId = useAuthUser();
 
-  const generalAnswers = useMemo(() => answers.filter((a) => !a.scripture_title), [answers]);
-  const scriptureAnswers = useMemo(() => answers.filter((a) => !!a.scripture_title), [answers]);
-  const visible = tab === 'general' ? generalAnswers : scriptureAnswers;
-
-  const { currentPage, setCurrentPage, totalPages, paginated, handlePageChange, deleteTargetId, setDeleteTargetId } = useListWithPagination(visible);
   useBodyScrollLock(!!selectedItem || !!deleteTargetId);
+
+  const totalCount = tab === 'general' ? tabCounts.general : tabCounts.scripture;
+  const totalPages = Math.max(1, Math.ceil(totalCount / ITEMS_PER_PAGE));
+
+  const fetchPage = useCallback(async (t: Tab, page: number, uid: string) => {
+    const from = (page - 1) * ITEMS_PER_PAGE;
+    const to = from + ITEMS_PER_PAGE - 1;
+    const isScripture = t === 'scripture';
+
+    const dataQuery = isScripture
+      ? supabase.from('temp_answers')
+          .select('id, question, answer, scripture_title, created_at')
+          .eq('user_id', uid).eq('is_saved', true)
+          .not('scripture_title', 'is', null)
+          .order('saved_at', { ascending: false }).range(from, to)
+      : supabase.from('temp_answers')
+          .select('id, question, answer, scripture_title, created_at')
+          .eq('user_id', uid).eq('is_saved', true)
+          .is('scripture_title', null)
+          .order('saved_at', { ascending: false }).range(from, to);
+
+    const countQuery = isScripture
+      ? supabase.from('temp_answers')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', uid).eq('is_saved', true)
+          .not('scripture_title', 'is', null)
+      : supabase.from('temp_answers')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', uid).eq('is_saved', true)
+          .is('scripture_title', null);
+
+    const [{ data }, { count }] = await Promise.all([dataQuery, countQuery]);
+    if (data) setAnswers(data as TempAnswer[]);
+    if (count !== null) setTabCounts((prev) => ({ ...prev, [t]: count }));
+  }, []);
 
   useEffect(() => {
     if (!userId) return;
-    supabase
-      .from('temp_answers')
-      .select('id, question, answer, scripture_title, created_at')
-      .eq('user_id', userId)
-      .eq('is_saved', true)
-      .order('saved_at', { ascending: false })
-      .then(({ data: rows }) => { if (rows) setAnswers(rows as TempAnswer[]); });
-  }, [userId]);
+    fetchPage(tab, currentPage, userId);
+  }, [userId, tab, currentPage, fetchPage]);
 
-  useEffect(() => setCurrentPage(1), [tab, setCurrentPage]);
+  const handleTabChange = (t: Tab) => {
+    setTab(t);
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) setCurrentPage(page);
+  };
 
   const confirmDelete = async () => {
-    if (!deleteTargetId) return;
+    if (!deleteTargetId || !userId) return;
     const { error } = await supabase
       .from('temp_answers')
       .update({ is_saved: false })
       .eq('id', deleteTargetId);
-    if (error) {
-      alert('삭제에 실패했습니다.');
-      return;
-    }
-    setAnswers((prev) => prev.filter((a) => a.id !== deleteTargetId));
+    if (error) { alert('삭제에 실패했습니다.'); return; }
     setDeleteTargetId(null);
+    const newTotal = totalCount - 1;
+    const newTotalPages = Math.max(1, Math.ceil(newTotal / ITEMS_PER_PAGE));
+    const nextPage = Math.min(currentPage, newTotalPages);
+    setTabCounts((prev) => ({ ...prev, [tab]: newTotal }));
+    if (nextPage !== currentPage) {
+      setCurrentPage(nextPage);
+    } else {
+      fetchPage(tab, nextPage, userId);
+    }
   };
 
   const renderTab = (id: Tab, label: string, count: number) => {
@@ -87,7 +125,7 @@ export default function AnswerPage() {
       <button
         key={id}
         type="button"
-        onClick={() => setTab(id)}
+        onClick={() => handleTabChange(id)}
         className={`flex-1 py-3 text-sm font-semibold border-b-2 transition-colors ${
           active
             ? 'border-accent text-accent'
@@ -103,11 +141,11 @@ export default function AnswerPage() {
     <main className="px-4 pb-20 max-w-[460px] mx-auto bg-surface-elevated min-h-screen [overflow-wrap:anywhere]">
       {/* 탭 */}
       <div className="sticky top-0 z-10 bg-surface-elevated flex border-b border-line">
-        {renderTab('general', '자유 질문', generalAnswers.length)}
-        {renderTab('scripture', '경전 질문', scriptureAnswers.length)}
+        {renderTab('general', '자유 질문', tabCounts.general)}
+        {renderTab('scripture', '경전 질문', tabCounts.scripture)}
       </div>
 
-      {visible.length === 0 ? (
+      {answers.length === 0 ? (
         <div className="pt-10 text-center text-ink-muted">
           <p>{tab === 'general' ? '저장된 자유 질문이 없습니다.' : '저장된 경전 질문이 없습니다.'}</p>
           <p className="mt-1 text-sm">
@@ -119,7 +157,7 @@ export default function AnswerPage() {
       ) : (
         <section className="pt-3 pb-10">
           <ul className="divide-y divide-line border-y border-line">
-            {paginated.map((item) => {
+            {answers.map((item) => {
               const userQ = extractUserQuestion(item.question);
               return (
                 <li key={item.id} className="py-4">

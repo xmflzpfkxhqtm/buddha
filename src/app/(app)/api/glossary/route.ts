@@ -67,12 +67,13 @@ export async function GET() {
     );
     const content = await readFile(glossaryPath, 'utf-8');
     const glossary = parseGlossaryCsv(content);
-    return NextResponse.json({ glossary });
-  } catch (error) {
-    console.error('용어사전 CSV 로딩 실패:', error);
-    return NextResponse.json(
-      { error: '용어사전 CSV를 불러오지 못했습니다.' },
-      { status: 500 },
-    );
+    return NextResponse.json({ glossary }, {
+      headers: { 'Cache-Control': 'public, s-maxage=86400, stale-while-revalidate=604800' },
+    });
+  } catch {
+    // CSV 파일 제거 후 구버전 Capacitor 클라이언트 호환 — 빈 glossary 반환
+    return NextResponse.json({ glossary: {} }, {
+      headers: { 'Cache-Control': 'public, s-maxage=86400, stale-while-revalidate=604800' },
+    });
   }
 }

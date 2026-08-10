@@ -11,15 +11,18 @@ import Link from 'next/link';
 import { useHighlightStore } from '@/stores/useHighlightStore';
 import { useChromeStore } from '@/stores/useChromeStore';
 import { useReaderSettingsStore } from '@/stores/useReaderSettingsStore';
-import AskHighlightModal, { type AskCitation as AskModalCitation } from '../../../../../../components/AskHighlightModal';
-import ConceptSheet from '../../../../../../components/ConceptSheet';
+import type { AskCitation as AskModalCitation } from '../../../../../../components/AskHighlightModal';
+import type { HighlightSheetTarget } from '../../../../../../components/HighlightSheet';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import { supabase } from '@/lib/supabaseClient';
 import { Capacitor } from '@capacitor/core';
 import { ChevronLeft, Search, Trash2, MessageSquarePlus, MessageCircleQuestion } from 'lucide-react';
-import ScriptureModal from '../../../../../../components/ScriptureModal';
-import HighlightSheet, { type HighlightSheetTarget } from '../../../../../../components/HighlightSheet';
 import FloatingActionBar from '../../../../../../components/FloatingActionBar';
+
+const ScriptureModal = dynamic(() => import('../../../../../../components/ScriptureModal'), { ssr: false });
+const HighlightSheet = dynamic(() => import('../../../../../../components/HighlightSheet'), { ssr: false });
+const AskHighlightModal = dynamic(() => import('../../../../../../components/AskHighlightModal'), { ssr: false });
+const ConceptSheet = dynamic(() => import('../../../../../../components/ConceptSheet'), { ssr: false });
 import { scriptureCache, type ScriptureGroupDetailResponse } from '@/lib/scriptureCache';
 import { titleToReaderPath } from '@/lib/scripturePath';
 import { findBestMatchIndex } from '@/lib/sentenceMatch';
@@ -91,6 +94,37 @@ type VolumeRow = {
 };
 
 // 마크다운/문장 파서는 src/lib/scriptureContent.ts 로 추출 (resolve API 와 공유).
+
+// ============================================================
+// 순수 헬퍼 (컴포넌트 외부 — 재렌더마다 재생성 방지)
+// ============================================================
+
+function renderEmphasisText(text: string, keyPrefix: string): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  const pattern = /(\*\*\*[^*]+?\*\*\*|\*\*[^*]+?\*\*|\*[^*]+?\*)/g;
+  let cursor = 0;
+  let match: RegExpExecArray | null = null;
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > cursor) nodes.push(text.slice(cursor, match.index));
+    const token = match[0];
+    if (token.startsWith('***') && token.endsWith('***')) {
+      nodes.push(
+        <strong key={`${keyPrefix}-bi-${match.index}`}>
+          <em>{token.slice(3, -3)}</em>
+        </strong>,
+      );
+    } else if (token.startsWith('**') && token.endsWith('**')) {
+      nodes.push(<strong key={`${keyPrefix}-b-${match.index}`}>{token.slice(2, -2)}</strong>);
+    } else if (token.startsWith('*') && token.endsWith('*')) {
+      nodes.push(<em key={`${keyPrefix}-i-${match.index}`}>{token.slice(1, -1)}</em>);
+    } else {
+      nodes.push(token);
+    }
+    cursor = match.index + token.length;
+  }
+  if (cursor < text.length) nodes.push(text.slice(cursor));
+  return nodes;
+}
 
 // ============================================================
 // 페이지 본체
@@ -891,38 +925,10 @@ export default function ScriptureReaderPage() {
     return platformInfo.isNative ? <NativeTTSPlayer {...playerProps} /> : <WebTTSPlayer {...playerProps} />;
   };
 
-  // 강조 마커 렌더 (옛 page.tsx 와 동일)
-  const renderEmphasisText = (text: string, keyPrefix: string): ReactNode[] => {
-    const nodes: ReactNode[] = [];
-    const pattern = /(\*\*\*[^*]+?\*\*\*|\*\*[^*]+?\*\*|\*[^*]+?\*)/g;
-    let cursor = 0;
-    let match: RegExpExecArray | null = null;
-    while ((match = pattern.exec(text)) !== null) {
-      if (match.index > cursor) nodes.push(text.slice(cursor, match.index));
-      const token = match[0];
-      if (token.startsWith('***') && token.endsWith('***')) {
-        nodes.push(
-          <strong key={`${keyPrefix}-bi-${match.index}`}>
-            <em>{token.slice(3, -3)}</em>
-          </strong>,
-        );
-      } else if (token.startsWith('**') && token.endsWith('**')) {
-        nodes.push(<strong key={`${keyPrefix}-b-${match.index}`}>{token.slice(2, -2)}</strong>);
-      } else if (token.startsWith('*') && token.endsWith('*')) {
-        nodes.push(<em key={`${keyPrefix}-i-${match.index}`}>{token.slice(1, -1)}</em>);
-      } else {
-        nodes.push(token);
-      }
-      cursor = match.index + token.length;
-    }
-    if (cursor < text.length) nodes.push(text.slice(cursor));
-    return nodes;
-  };
-
   // renderInlineTerms — density 인지 렌더.
   // densityState 는 호출자 (JSX IIFE) 가 한 paint 당 1회 makeDensityState() 로 생성해 넘김.
   // entry 가 없거나 density 가 "마크 안 함" 으로 결정되면 plain text 로 렌더 (가독성 ↑).
-  const renderInlineTerms = (text: string, densityState: DensityState): ReactNode[] => {
+  const renderInlineTerms = useCallback((text: string, densityState: DensityState): ReactNode[] => {
     const nodes: ReactNode[] = [];
     const pattern = /\[\[([^[\]]+?)\]\]/g;
     let cursor = 0;
@@ -963,7 +969,7 @@ export default function ScriptureReaderPage() {
     }
     if (cursor < text.length) nodes.push(...renderEmphasisText(text.slice(cursor), `tail-${cursor}`));
     return nodes;
-  };
+  }, [conceptsIndex, setTermPopup]);
 
   const layer2Path = `/scripture/${encodeURIComponent(groupKey)}`;
   const topNavTitle = (() => {

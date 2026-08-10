@@ -8,5 +8,15 @@ export async function GET() {
   const index = today.getDate() % todayTeaching.length;
   const teaching = todayTeaching[index];
 
-  return NextResponse.json(teaching);
+  // 오늘 자정까지 캐시 (날짜 기반 콘텐츠)
+  const now = new Date();
+  const midnight = new Date(now);
+  midnight.setHours(24, 0, 0, 0);
+  const secondsUntilMidnight = Math.floor((midnight.getTime() - now.getTime()) / 1000);
+
+  return NextResponse.json(teaching, {
+    headers: {
+      'Cache-Control': `public, s-maxage=${secondsUntilMidnight}, stale-while-revalidate=3600`,
+    },
+  });
 }

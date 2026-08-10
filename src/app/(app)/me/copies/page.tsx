@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuthUser } from '@/hooks/useAuthUser';
-import { useListWithPagination } from '@/hooks/useListWithPagination';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { X } from 'lucide-react';
@@ -19,53 +18,75 @@ interface CopyNote {
   created_at: string;
 }
 
+const ITEMS_PER_PAGE = 5;
+
 export default function MyCopyNotesPage() {
   const [notes, setNotes] = useState<CopyNote[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const [selected, setSelected] = useState<CopyNote | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const router = useRouter();
   const userId = useAuthUser();
 
-  const { currentPage, totalPages, paginated, handlePageChange, deleteTargetId: deleteId, setDeleteTargetId: setDeleteId } = useListWithPagination(notes);
   useBodyScrollLock(!!selected || !!deleteId);
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / ITEMS_PER_PAGE));
+
+  const fetchPage = useCallback(async (page: number, uid: string) => {
+    const from = (page - 1) * ITEMS_PER_PAGE;
+    const to = from + ITEMS_PER_PAGE - 1;
+    const [{ data, error }, { count }] = await Promise.all([
+      supabase.from('copy_notes').select('*')
+        .eq('user_id', uid).eq('completed', true)
+        .order('updated_at', { ascending: false }).range(from, to),
+      supabase.from('copy_notes').select('id', { count: 'exact', head: true })
+        .eq('user_id', uid).eq('completed', true),
+    ]);
+    if (error) { console.error(error); return; }
+    if (data) setNotes(data as CopyNote[]);
+    if (count !== null) setTotalCount(count);
+  }, []);
 
   useEffect(() => {
     if (userId === undefined) return;
     if (userId === null) { router.push('/login'); return; }
-    supabase
-      .from('copy_notes')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('completed', true)
-      .order('updated_at', { ascending: false })
-      .then(({ data, error }) => {
-        if (error) { console.error(error); return; }
-        setNotes(data as CopyNote[]);
-      });
-  }, [userId, router]);
+    fetchPage(currentPage, userId);
+  }, [userId, currentPage, fetchPage, router]);
+
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) setCurrentPage(page);
+  };
 
   const confirmDelete = async () => {
-    if (!deleteId) return;
+    if (!deleteId || !userId) return;
     const { error } = await supabase.from('copy_notes').delete().eq('id', deleteId);
-    if (error) {
-      alert('삭제에 실패했습니다.');
-      return;
-    }
-    setNotes((prev) => prev.filter((n) => n.id !== deleteId));
+    if (error) { alert('삭제에 실패했습니다.'); return; }
     setDeleteId(null);
+    // 현재 페이지가 비어서 이전 페이지로 가야 하는 경우 처리
+    const newTotal = totalCount - 1;
+    const newTotalPages = Math.max(1, Math.ceil(newTotal / ITEMS_PER_PAGE));
+    const nextPage = Math.min(currentPage, newTotalPages);
+    if (nextPage !== currentPage) {
+      setCurrentPage(nextPage);
+    } else {
+      fetchPage(nextPage, userId);
+    }
+    setTotalCount(newTotal);
   };
 
   return (
     <main className="px-4 pb-20 max-w-[460px] mx-auto bg-surface-elevated min-h-screen [overflow-wrap:anywhere]">
-      {notes.length === 0 ? (
+      {totalCount === 0 && notes.length === 0 ? (
         <div className="pt-10 text-center text-ink-muted">
           <p>아직 저장된 사경노트가 없습니다.</p>
           <p className="mt-1 text-sm">사경 탭에서 경전을 따라 적고 노트를 저장해보세요.</p>
         </div>
       ) : (
         <section className="pt-3 pb-10">
-          <p className="text-sm text-ink-muted mb-2">총 {notes.length}개 사경노트</p>
+          <p className="text-sm text-ink-muted mb-2">총 {totalCount}개 사경노트</p>
           <ul className="divide-y divide-line border-y border-line">
-            {paginated.map((n) => (
+            {notes.map((n) => (
               <li key={n.id} className="py-4">
                 <button
                   type="button"
