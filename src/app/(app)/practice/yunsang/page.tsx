@@ -322,7 +322,6 @@ export default function YunsangPage() {
   const [s3Rounds,    setS3Rounds]    = useState<number[][]>([]);
   const [s3Total,     setS3Total]     = useState(0);
   const [s3LastRound, setS3LastRound] = useState<(number | null)[]>([]);
-  const [s3BlankThrow, setS3BlankThrow] = useState(false);
 
   const canvasRef   = useRef<HTMLDivElement>(null);
   const spinsRef    = useRef<number[]>([]);
@@ -396,24 +395,18 @@ export default function YunsangPage() {
   function throwS3() {
     s3ScatterRef.current = buildScatter(6, 48, 16, canvasW());
     doThrow(6, () => {
-      // 각 윤은 4면(숫자 3 + 빈 면 1) → 빈 면이 나오면 다시 던져야 함
-      const lastRound = WHEEL_RANGES.map(r => {
+      // 빈 면(4번째 면) = 0으로 합산 — 경전: "세 면에 기재하되" → 1면은 공백, 공백은 0으로 계산
+      const visuals = WHEEL_RANGES.map(r => {
         const fi = Math.floor(Math.random() * 4);
-        return fi < 3 ? r[fi] : null;
+        return fi < 3 ? r[fi] : null; // null = 빈 면 (시각적 표시용)
       });
-      setS3LastRound(lastRound);
-      const hasBlank = lastRound.some(v => v === null);
-      if (hasBlank) {
-        setS3BlankThrow(true);
-      } else {
-        const nums = lastRound as number[];
-        const rounds = [...s3Rounds, nums];
-        setS3Rounds(rounds);
-        setS3BlankThrow(false);
-        if (rounds.length === 3) {
-          setS3Total(rounds.flat().reduce((a, b) => a + b, 0));
-          setStage('stage3-result');
-        }
+      setS3LastRound(visuals);
+      const nums = visuals.map(v => v ?? 0); // 빈 면 → 0
+      const rounds = [...s3Rounds, nums];
+      setS3Rounds(rounds);
+      if (rounds.length === 3) {
+        setS3Total(rounds.flat().reduce((a, b) => a + b, 0));
+        setStage('stage3-result');
       }
     });
   }
@@ -421,7 +414,7 @@ export default function YunsangPage() {
   function reset() {
     setStage('intro'); setSpinning(false); setLanded(false);
     setS1Results([]); setS2Results([]); setS2ThrowIdx(0); setS3Rounds([]); setS3Total(0);
-    setS3LastRound([]); setS3BlankThrow(false);
+    setS3LastRound([]);
   }
 
   const outcome  = OUTCOMES.find(o => o.num === s3Total) ?? OUTCOMES[152];
@@ -558,7 +551,7 @@ export default function YunsangPage() {
 
             {stage === 'stage1-ready'
               ? <ThrowBtn onClick={throwS1} disabled={spinning} label="목륜 던지기" />
-              : <button onClick={() => setStage('stage2-ready')}
+              : <button onClick={() => { setStage('stage2-ready'); setLanded(false); }}
                   className="w-full py-4 rounded-2xl bg-accent text-on-brand font-semibold flex items-center justify-center gap-2">
                   2차 윤으로 <ChevronRight size={18} />
                 </button>
@@ -691,7 +684,7 @@ export default function YunsangPage() {
               </button>
             )}
             {stage === 'stage2-result' && (
-              <button onClick={() => setStage('stage3-ready')}
+              <button onClick={() => { setStage('stage3-ready'); setLanded(false); }}
                 className="w-full py-4 rounded-2xl bg-accent text-on-brand font-semibold flex items-center justify-center gap-2">
                 3차 윤으로 <ChevronRight size={18} />
               </button>
@@ -703,15 +696,10 @@ export default function YunsangPage() {
         {(stage === 'stage3-ready' || stage === 'stage3-result') && (
           <div className="space-y-5">
             <StageHeader step={3} title={`3차 윤 — ${s3Rounds.length}/3회`} />
-            {s3Rounds.length === 0 && !s3BlankThrow && (
+            {s3Rounds.length === 0 && (
               <p className="text-xs text-accent/60 leading-relaxed">
                 6개의 목륜을 세 번 던집니다. 각 목륜은 3면에 숫자, 1면은 비어있습니다.<br />
-                빈 면이 나오면 다시 던지고, 세 번의 합산으로 189종 과보 중 하나가 정해집니다.
-              </p>
-            )}
-            {s3BlankThrow && !spinning && (
-              <p className="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg p-3 border border-amber-200 text-center">
-                빈 면이 나왔습니다. 지극한 마음으로 다시 던지십시오.
+                빈 면이 나오면 0으로 합산되며, 세 번의 합산으로 189종 과보 중 하나가 정해집니다.
               </p>
             )}
 
