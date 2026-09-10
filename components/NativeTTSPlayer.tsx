@@ -13,6 +13,7 @@ import type { TTSPlayerProps } from '@/types/tts';
 /* Component ---------------------------------------------------------------- */
 export default function NativeTTSPlayer({
   sentences,
+  scriptureId,
   currentIndex,
   setCurrentIndex,
   smoothCenter,
@@ -23,6 +24,7 @@ export default function NativeTTSPlayer({
   /* ------------------------------ state / refs --------------------------- */
   const [isSpeaking, setIsSpeaking] = useState(false);
   const stopRequested = useRef(false);
+  const cloudAudio = useRef<HTMLAudioElement | null>(null);
   const internalIndex = useRef(currentIndex);
   const playGeneration = useRef(0);
   const mounted = useRef(false);
@@ -47,18 +49,53 @@ export default function NativeTTSPlayer({
   // const destroyMusicControls = useCallback(...)
   // --- ---
 
+  const stopCloudAudio = useCallback(() => {
+    if (cloudAudio.current) {
+      cloudAudio.current.onended = null;
+      cloudAudio.current.onerror = null;
+      cloudAudio.current.pause();
+      cloudAudio.current = null;
+    }
+  }, []);
+
+  // 사전 생성된 클라우드 TTS 오디오(있으면) 재생. 실패 시 false를 반환해 네이티브 OS TTS로 폴백한다.
+  const tryCloudAudio = useCallback(async (text: string, idx: number): Promise<boolean> => {
+    if (!scriptureId) return false;
+    try {
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scripture_id: scriptureId, line_index: idx, text }),
+      });
+      if (!res.ok) return false;
+      const data = await res.json();
+      if (!data?.url) return false;
+
+      return await new Promise<boolean>((resolve) => {
+        const audio = new Audio(data.url);
+        cloudAudio.current = audio;
+        audio.onended = () => resolve(true);
+        audio.onerror = () => resolve(false);
+        audio.play().catch(() => resolve(false));
+      });
+    } catch {
+      return false;
+    }
+  }, [scriptureId]);
+
   const stopSpeech = useCallback(async (syncParent = true) => {
     if (!mounted.current) return;
     stopRequested.current = true;
     playGeneration.current += 1;
 
     try { await TextToSpeech.stop(); } catch {} // 네이티브 TTS 중지
+    stopCloudAudio();
     // await setMusicControlsPlaying(false); // 필요 시
     KeepAwake.allowSleep().catch(() => {}); // 네이티브 화면 유지 해제
 
     setIsSpeaking(false);
     if (syncParent) setCurrentIndex(internalIndex.current);
-  }, [setCurrentIndex /*, setMusicControlsPlaying */]); // mounted, internalIndex, playGeneration, stopRequested ref 불필요
+  }, [setCurrentIndex, stopCloudAudio /*, setMusicControlsPlaying */]); // mounted, internalIndex, playGeneration, stopRequested ref 불필요
 
   /* ----------------------------- speakText ------------------------------ */
   const speakText = useCallback(async (
@@ -73,6 +110,13 @@ export default function NativeTTSPlayer({
     setCurrentIndex(idx);
     smoothCenter(idx);
     setIsSpeaking(true);
+
+    const playedByCloud = await tryCloudAudio(text, idx);
+    if (!mounted.current || stopRequested.current || gen !== playGeneration.current) return;
+    if (playedByCloud) {
+      onDone();
+      return;
+    }
 
     try {
       const { rate, pitch } = getTtsSettings(); // 네이티브 설정
@@ -93,7 +137,7 @@ export default function NativeTTSPlayer({
       console.error('[TTS Native] speak error', e);
       stopSpeech(true);
     }
-  }, [setCurrentIndex, smoothCenter, stopSpeech, getTtsSettings]); // mounted, stopRequested, playGeneration, internalIndex ref 불필요
+  }, [setCurrentIndex, smoothCenter, stopSpeech, getTtsSettings, tryCloudAudio]); // mounted, stopRequested, playGeneration, internalIndex ref 불필요
 
   /* --------------------------- playFrom (재귀) --------------------------- */
   /* --------------------------- playFrom (재귀) --------------------------- */
@@ -153,6 +197,7 @@ export default function NativeTTSPlayer({
     const gen = playGeneration.current;
 
     await TextToSpeech.stop().catch(() => {}); // 네이티브 TTS 중지
+    stopCloudAudio();
     // iOS 딜레이 (필요 시 유지)
     if (platform === 'ios') {
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -171,7 +216,7 @@ export default function NativeTTSPlayer({
         setIsSpeaking(false);
         // await setMusicControlsPlaying(false); // 필요 시
     }
-  }, [platform, sentences.length, isSpeaking, setCurrentIndex, smoothCenter, playFrom /*, createMusicControls, setMusicControlsPlaying */]); // internalIndex, playGeneration, stopRequested ref 불필요
+  }, [platform, sentences.length, isSpeaking, setCurrentIndex, smoothCenter, playFrom, stopCloudAudio /*, createMusicControls, setMusicControlsPlaying */]); // internalIndex, playGeneration, stopRequested ref 불필요
 
   /* ------------------------------ lifecycle ------------------------------ */
   useEffect(() => {

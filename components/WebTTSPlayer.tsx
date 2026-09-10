@@ -18,6 +18,7 @@ const waitUntilVoicesReady = (): Promise<void> => {
 
 const WebTTSPlayer: React.FC<TTSPlayerProps> = ({
   sentences,
+  scriptureId,
   currentIndex: externalIndex,
   setCurrentIndex,
   onPlaybackStateChange,
@@ -28,6 +29,7 @@ const WebTTSPlayer: React.FC<TTSPlayerProps> = ({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const synth = useRef<SpeechSynthesis | null>(null);
   const currentUtterance = useRef<SpeechSynthesisUtterance | null>(null);
+  const cloudAudio = useRef<HTMLAudioElement | null>(null);
   const stopRequested = useRef(false);
   const internalIndex = useRef(externalIndex);
   const playGeneration = useRef(0);
@@ -48,7 +50,38 @@ const WebTTSPlayer: React.FC<TTSPlayerProps> = ({
       currentUtterance.current = null;
     }
     synth.current?.cancel();
+    if (cloudAudio.current) {
+      cloudAudio.current.onended = null;
+      cloudAudio.current.onerror = null;
+      cloudAudio.current.pause();
+      cloudAudio.current = null;
+    }
   }, []);
+
+  // 사전 생성된 클라우드 TTS 오디오(있으면) 재생. 실패 시 false를 반환해 브라우저 내장 TTS로 폴백한다.
+  const tryCloudAudio = useCallback(async (text: string, idx: number): Promise<boolean> => {
+    if (!scriptureId) return false;
+    try {
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scripture_id: scriptureId, line_index: idx, text }),
+      });
+      if (!res.ok) return false;
+      const data = await res.json();
+      if (!data?.url) return false;
+
+      return await new Promise<boolean>((resolve) => {
+        const audio = new Audio(data.url);
+        cloudAudio.current = audio;
+        audio.onended = () => resolve(true);
+        audio.onerror = () => resolve(false);
+        audio.play().catch(() => resolve(false));
+      });
+    } catch {
+      return false;
+    }
+  }, [scriptureId]);
 
   const stopSpeech = useCallback((syncParent = true) => {
     if (!mounted.current) return;
@@ -75,6 +108,13 @@ const WebTTSPlayer: React.FC<TTSPlayerProps> = ({
 
     smoothCenter(idx);
     setIsSpeaking(true);
+
+    const playedByCloud = await tryCloudAudio(text, idx);
+    if (!mounted.current || stopRequested.current || gen !== playGeneration.current) return;
+    if (playedByCloud) {
+      setTimeout(onDone, 50);
+      return;
+    }
 
     if (!synth.current) {
       console.error("[TTS] Web Speech Synthesis not initialized.");
@@ -114,7 +154,7 @@ const WebTTSPlayer: React.FC<TTSPlayerProps> = ({
       console.error('[TTS] speakText error (web)', e);
       stopSpeech(true);
     }
-  }, [setCurrentIndex, smoothCenter, stopSpeech, getTtsSettings]);
+  }, [setCurrentIndex, smoothCenter, stopSpeech, getTtsSettings, tryCloudAudio]);
 
   const playFrom = useCallback((startIdx: number, gen: number) => {
     if (!mounted.current || stopRequested.current || gen !== playGeneration.current) return;

@@ -6,104 +6,154 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabaseAdmin';
 import crypto from 'crypto';
 
+const BUCKET = 'tts-audios';
+const VOICE_NAME = 'ko-KR-Neural2-C';
+const DAILY_CHAR_CAP = 300_000; // Google Neural2 기준 최악의 경우에도 하루 약 $4.8 상한
+
 interface TTSRequest {
   scripture_id: string;
-  line_index:  number;
-  text:        string;
-  voice?:      string;
+  line_index: number;
+  text: string;
 }
 
-
-function makeKey({ scripture_id, line_index, voice = 'ko-KR-Wavenet-C' }: TTSRequest) {
-  return crypto
-    .createHash('sha1')
-    .update(`${scripture_id}:${line_index}:${voice}`)
-    .digest('hex') + '.mp3';
+function textHash(text: string) {
+  return crypto.createHash('md5').update(text).digest('hex');
 }
-async function getSignedUrl(key: string): Promise<string | null> {
-  // console.log(`[getSignedUrl] Generating signed URL for key: ${key}`); // 디버깅용 로그 추가
+
+function storagePath(hash: string) {
+  return `tts/${hash}.mp3`;
+}
+
+function getPublicUrl(path: string) {
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
+async function checkDailyCap(newChars: number): Promise<boolean> {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { data, error } = await supabase
-    .storage.from('tts-audios')
-    .createSignedUrl(key, 60 * 5); // 5분 유효기간
+    .from('tts_cache')
+    .select('text_original')
+    .gte('created_at', since);
 
   if (error) {
-    // 'Object not found' 는 정상적인 캐시 미스일 수 있으므로 에러 로깅 안 함
-    if (!error.message.includes('Object not found')) {
-       console.error(`[getSignedUrl] Storage Error for key ${key}:`, error.message);
-    }
-    return null; // 에러가 있으면 URL 없음
+    console.error('[API /tts] Daily cap check failed, allowing request:', error.message);
+    return true;
   }
 
-  // 에러가 없더라도 data 객체와 signedUrl 속성이 있는지 확인 (TypeScript 추론 도움)
-  if (!data || !data.signedUrl) {
-    console.warn(`[getSignedUrl] No error but signedUrl is missing for key ${key}. Data:`, data);
-    return null; // 예상치 못한 상황, URL 없음
+  const used = (data ?? []).reduce((sum, row) => sum + (row.text_original?.length ?? 0), 0);
+  return used + newChars <= DAILY_CHAR_CAP;
+}
+
+async function synthesize(text: string): Promise<Buffer> {
+  const apiKey = process.env.GOOGLE_TTS_API_KEY;
+  if (!apiKey) throw new Error('GOOGLE_TTS_API_KEY missing');
+
+  const res = await fetch(
+    `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        input: { text },
+        voice: { languageCode: 'ko-KR', name: VOICE_NAME },
+        audioConfig: { audioEncoding: 'MP3' },
+      }),
+    },
+  );
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Google TTS API error ${res.status}: ${body.slice(0, 500)}`);
   }
 
-  // console.log(`[getSignedUrl] Successfully got signed URL for key: ${key}`); // 디버깅용 로그
-  return data.signedUrl; // 이제 data.signedUrl 접근이 안전함
+  const json = await res.json();
+  if (!json.audioContent) throw new Error('Google TTS API returned no audioContent');
+  return Buffer.from(json.audioContent, 'base64');
 }
 
 export async function POST(req: NextRequest) {
-  const body: TTSRequest = await req.json();
-  const key = makeKey(body);
-
-  /* 1) 스토리지에서 직접 확인 (가장 빠른 캐시 히트) */
-  const storageUrl = await getSignedUrl(key);
-  if (storageUrl) {
-    return NextResponse.json({ url: storageUrl });
+  let body: TTSRequest;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  /* 2) 큐 테이블 확인 */
-  const { data: job, error: dbError } = await supabase
-    .from('tts_queue')
-    .select('ready') // ready 상태만 필요
-    .eq('key', key)
+  const { scripture_id, line_index, text } = body;
+  if (!scripture_id || typeof line_index !== 'number' || !text?.trim()) {
+    return NextResponse.json({ error: 'scripture_id, line_index, text가 필요합니다' }, { status: 400 });
+  }
+
+  const hash = textHash(text);
+  const path = storagePath(hash);
+
+  /* 1) DB 캐시 확인 (scripture_id + line_index + text_hash 조합) */
+  const { data: cached, error: cacheError } = await supabase
+    .from('tts_cache')
+    .select('audio_url')
+    .eq('scripture_id', scripture_id)
+    .eq('line_index', line_index)
+    .eq('text_hash', hash)
     .maybeSingle();
 
-  if (dbError) {
-    console.error(`[API /tts] DB Error checking queue for ${key}:`, dbError);
-    return NextResponse.json({ error: 'Database error' }, { status: 500 });
+  if (cacheError) {
+    console.error('[API /tts] Cache lookup error:', cacheError.message);
+  }
+  if (cached?.audio_url) {
+    return NextResponse.json({ url: cached.audio_url });
   }
 
-  if (job) {
-    // --- 작업이 큐에 있음 ---
-    if (job.ready) {
-      const finalUrl = await getSignedUrl(key);
-      if (finalUrl) {
-        return NextResponse.json({ url: finalUrl });
-      } else {
-        // 큐에는 ready인데 Storage에 파일이 없는 이상한 경우 (오류 처리)
-        console.error(`[API /tts] Discrepancy: Job ready but file not in storage for key ${key}. Re-queuing.`);
-        // 문제가 있으니 작업을 다시 큐에 넣는 로직을 추가하거나 에러 반환
-         await supabase.from('tts_queue').upsert({ key, ready: false, ...body });
-         // 워커 호출 (혹시 모르니 다시)
-         fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/tts_worker`, { method: 'POST' });
-         return NextResponse.json({ status: 'processing' }, { status: 200 }); // 다시 처리 중 상태 반환
-      }
-    } else {
-      return NextResponse.json({ status: 'processing' }, { status: 200 });
-    }
+  /* 2) 동일 텍스트가 다른 위치에서 이미 합성된 적 있는지 (Storage에 파일이 이미 존재하는지) 확인 → 있으면 재합성 없이 재사용 */
+  const { data: existingFile } = await supabase.storage.from(BUCKET).list('tts', { search: `${hash}.mp3` });
+  let audioUrl: string;
+
+  if (existingFile && existingFile.length > 0) {
+    audioUrl = getPublicUrl(path);
   } else {
-    const { error: upsertError } = await supabase.from('tts_queue').upsert({
-      key,
-      ready: false,
-      scripture_id: body.scripture_id,
-      line_index: body.line_index,
-      text: body.text, // 필요하면 voice도 저장
+    /* 3) 신규 합성 — 일일 상한 확인 후 Google TTS 호출 */
+    const withinCap = await checkDailyCap(text.length);
+    if (!withinCap) {
+      return NextResponse.json({ error: 'Daily TTS synthesis cap reached' }, { status: 429 });
+    }
+
+    let audioBuffer: Buffer;
+    try {
+      audioBuffer = await synthesize(text);
+    } catch (e) {
+      console.error('[API /tts] Synthesis failed:', e);
+      return NextResponse.json({ error: 'TTS synthesis failed' }, { status: 502 });
+    }
+
+    const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, audioBuffer, {
+      contentType: 'audio/mpeg',
+      cacheControl: '31536000', // 콘텐츠 해시 키라 영구 캐시 안전
+      upsert: true,
     });
 
-    if (upsertError) {
-      console.error(`[API /tts] DB Error upserting job for ${key}:`, upsertError);
-      return NextResponse.json({ error: 'Failed to queue job' }, { status: 500 });
+    if (uploadError) {
+      console.error('[API /tts] Upload failed:', uploadError.message);
+      return NextResponse.json({ error: 'Storage upload failed' }, { status: 500 });
     }
 
-    // 워커 호출 (백그라운드에서 실행되므로 await 필요 없음)
-    fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/tts_worker`, {
-      method: 'POST',
-    }).catch(err => console.error('[API /tts] Failed to trigger worker:', err)); // 호출 실패 로깅
-
-    // 클라이언트에게 작업이 시작되었고 폴링해야 함을 알림
-    return NextResponse.json({ status: 'pending' }, { status: 200 }); // 200 OK + 상태 정보
+    audioUrl = getPublicUrl(path);
   }
+
+  /* 4) 캐시 테이블에 기록 (동일 키 upsert) */
+  const { error: upsertError } = await supabase.from('tts_cache').upsert(
+    {
+      scripture_id,
+      line_index,
+      text_original: text,
+      text_hash: hash,
+      audio_url: audioUrl,
+    },
+    { onConflict: 'scripture_id,line_index,text_hash' },
+  );
+
+  if (upsertError) {
+    console.error('[API /tts] Cache row upsert failed:', upsertError.message);
+  }
+
+  return NextResponse.json({ url: audioUrl });
 }

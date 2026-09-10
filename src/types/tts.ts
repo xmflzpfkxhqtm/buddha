@@ -1,5 +1,6 @@
 export interface TTSPlayerProps {
   sentences: string[];
+  scriptureId?: string;
   currentIndex: number;
   setCurrentIndex: (idx: number) => void;
   smoothCenter: (idx: number, instant?: boolean) => void;

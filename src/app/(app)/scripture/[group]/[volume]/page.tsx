@@ -914,6 +914,7 @@ export default function ScriptureReaderPage() {
     const playerClassName = `transition-all duration-200 ${showChrome ? 'opacity-100' : 'opacity-0 translate-y-[200%] pointer-events-none'}`;
     const playerProps = {
       sentences: ttsSentences,
+      scriptureId: resolvedTitle,
       currentIndex,
       setCurrentIndex,
       smoothCenter,
