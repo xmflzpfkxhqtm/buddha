@@ -256,12 +256,11 @@ export default function AnswerClient({ initialQuestionId = null }: { initialQues
     setCitationHintsMap({});
     citationIndexMapRef.current = {};
 
-    /* 질문 + 답변 + citation_hints 로드 */
+    /* 질문 + 답변 + citation_hints 로드 — get_answer RPC는 공유 링크로도 읽히고
+       작성자 user_id는 돌려주지 않는다. */
     supabase
-      .from('temp_answers')
-      .select('question, answer, citation_hints')
-      .eq('id', questionId)
-      .single()
+      .rpc('get_answer', { p_id: questionId })
+      .single<{ question: string; answer: string; citation_hints: unknown }>()
       .then(({ data, error }) => {
         if (cancelled) return;
         if (error || !data) {

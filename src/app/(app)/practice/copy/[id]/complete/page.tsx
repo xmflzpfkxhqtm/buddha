@@ -85,26 +85,23 @@ export default function CompletePage() {
   const saveToNotebook = async () => {
     if (!jpegUrl || !textObj) return;
 
-    /* 1. JPEG → Blob */
-    const blob     = await (await fetch(jpegUrl)).blob();
-    const fileName = `${id}-${Date.now()}.jpg`;
+    /* 1. 사용자 — 이미지는 본인 폴더(<user id>/)에만 올릴 수 있다(Storage 정책). */
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { alert('로그인이 필요합니다.'); return; }
 
-    /* 2. Supabase 업로드 */
+    /* 2. JPEG → Blob */
+    const blob     = await (await fetch(jpegUrl)).blob();
+    const path     = `${user.id}/${id}-${Date.now()}.jpg`;
+
+    /* 3. Supabase 업로드 — 파일 이름에 시각이 있어 겹치지 않으므로 덮어쓰지 않는다. */
     const { error: upErr } = await supabase
       .storage.from('copy-thumbs')
-      .upload(`public/${fileName}`, blob, {
-        upsert     : true,
-        contentType: 'image/jpeg',
-      });
+      .upload(path, blob, { contentType: 'image/jpeg' });
     if (upErr) { alert('이미지 업로드 실패 🥲'); return; }
 
     const { data: { publicUrl } } = supabase
       .storage.from('copy-thumbs')
-      .getPublicUrl(`public/${fileName}`);
-
-    /* 3. 사용자 & DB */
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { alert('로그인이 필요합니다.'); return; }
+      .getPublicUrl(path);
 
     const { error: insertErr } = await supabase.from('copy_notes').insert({
       session_id   : id,

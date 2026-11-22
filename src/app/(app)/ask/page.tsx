@@ -75,7 +75,9 @@ export default function AskPage() {
   useEffect(() => {
     const fetchPrevious = async () => {
       if (!parentId) return;
-      const { data } = await supabase.from('temp_answers').select('question, answer').eq('id', parentId).single();
+      const { data } = await supabase
+        .rpc('get_answer', { p_id: parentId })
+        .maybeSingle<{ question: string; answer: string }>();
       if (data) setPreviousQA(data);
     };
 

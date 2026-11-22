@@ -59,10 +59,8 @@ export async function askBuddha({
     }
   }
   const { data: row, error } = await supabase
-    .from('temp_answers')
-    .select('id, question, answer')
-    .eq('id', data.questionId)
-    .single();
+    .rpc('get_answer', { p_id: data.questionId })
+    .single<BuddhaAnswer>();
   if (error || !row) throw new Error('답변을 불러오지 못했습니다.');
   return row as BuddhaAnswer;
 }
