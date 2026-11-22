@@ -15,6 +15,7 @@ import type { AskCitation as AskModalCitation } from '../../../../../../componen
 import type { HighlightSheetTarget } from '../../../../../../components/HighlightSheet';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import { supabase } from '@/lib/supabaseClient';
+import { authHeaders } from '@/lib/authHeaders';
 import { Capacitor } from '@capacitor/core';
 import { ChevronLeft, Search, Trash2, MessageSquarePlus, MessageCircleQuestion } from 'lucide-react';
 import FloatingActionBar from '../../../../../../components/FloatingActionBar';
@@ -437,6 +438,7 @@ export default function ScriptureReaderPage() {
       try {
         const res = await fetch(
           `/api/highlights/resolve-batch?user_id=${encodeURIComponent(userId)}&title=${encodeURIComponent(resolvedTitle)}`,
+          { headers: await authHeaders() },
         );
         if (!res.ok || cancelled) return;
         const json = (await res.json()) as {

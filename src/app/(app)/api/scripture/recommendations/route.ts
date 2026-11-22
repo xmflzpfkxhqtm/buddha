@@ -13,6 +13,7 @@
 //   탐험 슬롯           = 마지막 2개 (school overlap = 0 + featured)
 
 import { NextRequest, NextResponse } from 'next/server';
+import { requireSameUser } from '@/lib/requestUser';
 import { supabaseAdmin as supabase } from '@/lib/supabaseAdmin';
 import {
   type GroupRow,
@@ -35,12 +36,13 @@ const MAX_PER_SCHOOL_SIGNATURE = 2;
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('user_id');
+    // service role로 즐겨찾기·하이라이트·문답 활동을 읽으므로 본인 것만 허용한다.
+    const userId = await requireSameUser(req, searchParams.get('user_id'));
     const limit = Math.max(1, Math.min(20, Number(searchParams.get('limit')) || DEFAULT_LIMIT));
     const exploreSlots = Math.max(0, Math.min(limit, Number(searchParams.get('explore')) || DEFAULT_EXPLORE));
 
     if (!userId) {
-      return NextResponse.json({ error: 'user_id required' }, { status: 400 });
+      return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     }
 
     // --------------------------------------------------------------------------

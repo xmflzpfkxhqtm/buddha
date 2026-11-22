@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import { authHeaders } from '@/lib/authHeaders';
 import ScrollHeader from '../../../../../../components/ScrollHeader';
 import Image from 'next/image';
 import type { User } from '@supabase/supabase-js';
@@ -30,13 +31,11 @@ export default function AccountDeletePage() {
   const handleDelete = async () => {
     if (!confirmed || !user?.id) return;
     setMessage('계정 삭제 중입니다...');
-    console.log('Deleting userId:', user.id);  // userId가 제대로 전달되는지 확인
 
     try {
       const res = await fetch('/api/delete-account', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id }),
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
       });
   
       const result = await res.json();

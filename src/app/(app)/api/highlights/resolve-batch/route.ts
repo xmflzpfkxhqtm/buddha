@@ -18,6 +18,7 @@
 // Output: { highlights: [{ id, start_sentence, ..., anchor_status, resolved_version }] }
 
 import { NextRequest, NextResponse } from 'next/server';
+import { requireSameUser } from '@/lib/requestUser';
 import { supabaseAdmin as supabase } from '@/lib/supabaseAdmin';
 import { parseMarkdownToBlocks } from '@/lib/scriptureContent';
 import { type HighlightDbRow } from '@/types/highlights';
@@ -300,14 +301,20 @@ async function resolveForTitle(
   return { highlights: resolved, stats };
 }
 
+// POST 한 번에 처리할 경전 수 상한(경전마다 본문을 읽는다).
+const MAX_TITLES = 50;
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('user_id');
     const title = searchParams.get('title');
-
-    if (!userId || !title) {
+    if (!searchParams.get('user_id') || !title) {
       return NextResponse.json({ error: 'user_id and title required' }, { status: 400 });
+    }
+    // service role로 읽고 고치므로, 토큰의 본인 하이라이트만 다룬다.
+    const userId = await requireSameUser(req, searchParams.get('user_id'));
+    if (!userId) {
+      return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     }
 
     const { highlights, stats } = await resolveForTitle(userId, title);
@@ -325,11 +332,14 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as { user_id?: string; titles?: string[] };
-    const userId = body.user_id;
-    const titles = body.titles ?? [];
+    const titles = (body.titles ?? []).slice(0, MAX_TITLES);
 
-    if (!userId || titles.length === 0) {
+    if (!body.user_id || titles.length === 0) {
       return NextResponse.json({ error: 'user_id and titles[] required' }, { status: 400 });
+    }
+    const userId = await requireSameUser(req, body.user_id);
+    if (!userId) {
+      return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     }
 
     const results = await Promise.all(titles.map((t) => resolveForTitle(userId, t)));

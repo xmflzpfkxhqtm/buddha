@@ -2,6 +2,7 @@
 // /ask/confirm 페이지 흐름과 동일 endpoint, 모달에서 직접 사용.
 
 import { supabase } from '@/lib/supabaseClient';
+import { authHeaders } from '@/lib/authHeaders';
 
 export type BuddhaAnswer = {
   id: string;
@@ -23,15 +24,14 @@ export async function askBuddha({
   parentId = null,
   scriptureTitle,
 }: AskOptions): Promise<BuddhaAnswer> {
-  // user_id 를 server 에 함께 보냄 — temp_answers.user_id 채워야 /me/answers 에서 fetch 가능.
-  // (server 는 anon client 라 자체 auth 추출 불가)
+  // 로그인 토큰을 붙이면 서버가 temp_answers.user_id를 채운다(/me/answers 에서 fetch).
   const { data: { user } } = await supabase.auth.getUser();
   if (!user?.id) throw new Error('로그인이 필요합니다.');
 
   const res = await fetch('/api/ask', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ question, parentId, length, userId: user.id }),
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+    body: JSON.stringify({ question, parentId, length }),
   });
   if (!res.ok) {
     const errText = await res.text().catch(() => '');
