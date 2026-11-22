@@ -4,8 +4,9 @@ export const maxDuration = 60; // Vercel 함수 타임아웃 60초 (Hobby 플랜
 import { NextRequest, NextResponse } from 'next/server';
 import { generateEmbeddingBatch } from '@/utils/embedding';
 import { searchSimilarDocuments, searchSimilarDocumentsOptimized } from '@/utils/supabase';
-import { supabase } from '@/lib/supabaseClient';
-import { type ChatMessage, callOpenAI, callClaude, callGemini, callGrok } from '@/lib/llmProviders';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { getRequestUser } from '@/lib/requestUser';
+import { type ChatMessage, callOpenAI } from '@/lib/llmProviders';
 
 // 개별 LLM 호출 타임아웃 (60초)
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
@@ -30,15 +31,15 @@ function normalizeRagContext(text: string): string {
     .trim();
 }
 
-const modelMapping = {
-  'gpt4.1': 'gpt-4.1',
-  'gpt4o': 'gpt-4o',
-  'gpt-4.1-mini': 'gpt-4.1-mini',
-  'claude3.7': 'claude-3-7-sonnet-20250219',
-  'gemini-2.5-pro': 'gemini-2.5-pro-preview-03-25',
-  'o4-mini': 'o4-mini',
-  'grok': 'grok-3-beta'
-};
+// 모델은 gpt-4.1-mini 하나다. 예전에는 요청 본문의 model로 claude·gemini·grok 등을
+// 고를 수 있어 누구나 비싼 모델을 부를 수 있었다(웹 화면은 model을 보내지 않는다).
+const ANSWER_MODEL = 'gpt-4.1-mini';
+
+// 비용 상한. 로그인 사용자는 24시간에 50회(Flutter 앱의 ask-buddha와 같음), 비로그인
+// 질문은 모두 합쳐 24시간에 300회다(지난 180일 비로그인 하루 최대 83회).
+const MAX_QUESTION_CHARS = 4000;
+const USER_DAILY_LIMIT = 50;
+const GUEST_DAILY_LIMIT = 300;
 
 const lengthSetting = {
   short: { charLimit: '300자 내외로', maxTokens: 600 },
@@ -69,10 +70,8 @@ const RETRY_DELAY = 1000; // ms
 
 type AskRequestBody = {
   question?: string;
-  model?: string;
   length?: 'short' | 'long';
   parentId?: string | null;
-  userId?: string | null;
 };
 
 type CitationHint = {
@@ -103,26 +102,53 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: '요청 본문이 비어있거나 잘못되었습니다.' }, { status: 400 });
     }
 
-    const { question, model = 'gpt4.1-mini', length = 'long', parentId = null, userId = null } = body;
+    const { question, length = 'long', parentId = null } = body;
 
     if (!question || typeof question !== 'string') {
       return NextResponse.json({ success: false, message: '질문이 유효하지 않습니다.' }, { status: 400 });
+    }
+    if (question.length > MAX_QUESTION_CHARS) {
+      return NextResponse.json({ success: false, message: '질문이 너무 깁니다. 조금 줄여서 다시 여쭈어 주세요.' }, { status: 400 });
+    }
+
+    // 작성자는 요청 본문이 아니라 로그인 토큰으로 정한다. 토큰이 없으면 비로그인 질문이다.
+    const user = await getRequestUser(request);
+    const userId = user?.id ?? null;
+
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const countQuery = supabaseAdmin
+      .from('temp_answers')
+      .select('id', { count: 'exact', head: true })
+      .gte('created_at', since);
+    const { count, error: countError } = userId
+      ? await countQuery.eq('user_id', userId)
+      : await countQuery.is('user_id', null);
+    if (countError) {
+      console.error('질문 수 확인 실패:', countError);
+      return NextResponse.json({ success: false, message: '답변을 받아오는 데 실패했습니다. 잠시 후 다시 시도해주세요.' }, { status: 500 });
+    }
+    if ((count ?? 0) >= (userId ? USER_DAILY_LIMIT : GUEST_DAILY_LIMIT)) {
+      return NextResponse.json({ success: false, message: '오늘은 질문을 더 할 수 없습니다. 내일 다시 여쭈어 주세요.' }, { status: 429 });
     }
     
     const { charLimit, maxTokens } = lengthSetting[length as keyof typeof lengthSetting] || lengthSetting.long;
 
     // 이전 대화 가져오기
+    // 이어지는 질문은 본인의 문답(비로그인이면 비로그인 문답)만 맥락으로 쓴다.
+    // 예전에는 아무 parentId나 받아 다른 사람의 문답이 새 답변에 섞일 수 있었다.
     let previousQA = '';
+    let ownedParentId: string | null = null;
     if (parentId) {
       try {
-        const { data: parent } = await supabase
+        const { data: parent } = await supabaseAdmin
           .from('temp_answers')
-          .select('question, answer')
+          .select('id, question, answer, user_id')
           .eq('id', parentId)
           .single();
         
-        if (parent) {
+        if (parent && (parent.user_id ?? null) === userId) {
           previousQA = `이전 질문: ${parent.question}\n부처님의 응답: ${parent.answer}\n\n`;
+          ownedParentId = parent.id;
         }
       } catch (error) {
         console.error('이전 대화 조회 실패:', error);
@@ -206,20 +232,9 @@ export async function POST(request: NextRequest) {
     ];
 
     // LLM API 호출 (개별 타임아웃 적용)
-    const apiModel = modelMapping[model as keyof typeof modelMapping] || 'gpt-4.1-mini';
     let data;
-
-    const callLLM = async () => {
-      if (model.startsWith('claude')) {
-        return await withTimeout(callClaude(messages, apiModel, maxTokens), LLM_TIMEOUT, 'Claude API');
-      } else if (model.startsWith('gemini')) {
-        return await withTimeout(callGemini(messages, apiModel), LLM_TIMEOUT, 'Gemini API');
-      } else if (model === 'grok') {
-        return await withTimeout(callGrok(messages, apiModel, maxTokens), LLM_TIMEOUT, 'Grok API');
-      } else {
-        return await withTimeout(callOpenAI(messages, apiModel, maxTokens), LLM_TIMEOUT, 'OpenAI API');
-      }
-    };
+    const callLLM = async () =>
+      await withTimeout(callOpenAI(messages, ANSWER_MODEL, maxTokens), LLM_TIMEOUT, 'OpenAI API');
 
     try {
       // LLM 호출은 재시도 없이 1회 (60초 Hobby 제한 내 수렴)
@@ -244,9 +259,9 @@ export async function POST(request: NextRequest) {
       const { data: inserted, error } = await withRetry(
         async () => {
           // async 함수로 감싸서 Promise 반환
-          return await supabase
+          return await supabaseAdmin
             .from('temp_answers')
-            .insert([{ question, answer, parent_id: parentId, citation_hints: citationHints, user_id: userId }])
+            .insert([{ question, answer, parent_id: ownedParentId, citation_hints: citationHints, user_id: userId }])
             .select()
             .single();
         },

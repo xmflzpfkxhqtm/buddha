@@ -12,6 +12,7 @@ import { scriptureCache, hydrateRecommendationsFromLS, persistRecommendationsToL
 import HeroCarousel from './HeroCarousel';
 import { titleToReaderPath } from '@/lib/scripturePath';
 import { supabase } from '@/lib/supabaseClient';
+import { authHeaders } from '@/lib/authHeaders';
 import { formatDisplayTitle } from '@/lib/titleFormatting';
 
 type GroupSummary = {
@@ -378,6 +379,7 @@ export default function ScriptureBrowsePage() {
 
         const res = await fetch(
           `/api/scripture/recommendations?user_id=${encodeURIComponent(user.id)}&limit=10&explore=2`,
+          { headers: await authHeaders() },
         );
         if (!res.ok || cancelled) {
           // 첫 로드 fetch 실패 + 캐시 없음 → 섹션 hide

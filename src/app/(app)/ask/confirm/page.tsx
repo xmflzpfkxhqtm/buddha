@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAskStore } from '../../../../stores/askStore';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { authHeaders } from '@/lib/authHeaders';
 import Loading from '../../../../../components/Loading';
 
 // 재시도 유틸리티 함수
@@ -148,15 +149,14 @@ export default function ConfirmPage() {
     try {
       const minimumTimePromise = new Promise((resolve) => setTimeout(resolve, 3000));
 
-      // user_id 를 server 에 함께 보냄 — temp_answers.user_id 채워야 /me/answers 에서 fetch 가능.
-      const { data: { user } } = await supabase.auth.getUser();
+      // 로그인 토큰을 붙이면 서버가 temp_answers.user_id를 채운다(/me/answers 에서 fetch).
       // 재시도 로직 적용한 fetch 사용
       const response = await fetchWithRetry(
         '/api/ask',
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question, parentId, length: selectedLength, userId: user?.id ?? null }),
+          headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+          body: JSON.stringify({ question, parentId, length: selectedLength }),
         },
         3,  // 최대 3회 재시도
         2000 // 2초 간격

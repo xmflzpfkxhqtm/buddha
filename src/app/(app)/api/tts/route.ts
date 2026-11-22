@@ -5,6 +5,7 @@ export const maxDuration = 60;
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabaseAdmin';
 import crypto from 'crypto';
+import { contentContainsSentence } from '@/lib/ttsSentence';
 
 const BUCKET = 'tts-audios';
 const VOICE_NAME = 'ko-KR-Neural2-C';
@@ -111,7 +112,22 @@ export async function POST(req: NextRequest) {
   if (existingFile && existingFile.length > 0) {
     audioUrl = getPublicUrl(path);
   } else {
-    /* 3) 신규 합성 — 일일 상한 확인 후 Google TTS 호출 */
+    /* 3) 신규 합성 — 경전 본문에 있는 문장인지, 일일 상한 안인지 확인 후 Google TTS 호출.
+          예전에는 아무 문장이나 합성해 공개 오디오로 만들 수 있었다. 실패하면 플레이어는
+          기기·브라우저 내장 음성으로 읽는다. */
+    const { data: scripture, error: scriptureError } = await supabase
+      .from('scriptures')
+      .select('content')
+      .eq('title', scripture_id)
+      .maybeSingle();
+    if (scriptureError) {
+      console.error('[API /tts] Scripture lookup error:', scriptureError.message);
+      return NextResponse.json({ error: 'Scripture lookup failed' }, { status: 500 });
+    }
+    if (!scripture?.content || !contentContainsSentence(scripture.content, text)) {
+      return NextResponse.json({ error: 'Sentence not found in scripture' }, { status: 422 });
+    }
+
     const withinCap = await checkDailyCap(text.length);
     if (!withinCap) {
       return NextResponse.json({ error: 'Daily TTS synthesis cap reached' }, { status: 429 });
