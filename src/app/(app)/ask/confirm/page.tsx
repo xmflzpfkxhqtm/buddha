@@ -109,10 +109,8 @@ export default function ConfirmPage() {
       if (!parentId) return;
       try {
         const { data, error } = await supabase
-          .from('temp_answers')
-          .select('question, answer')
-          .eq('id', parentId)
-          .single();
+          .rpc('get_answer', { p_id: parentId })
+          .single<{ question: string; answer: string }>();
         if (data && !error) {
           setPreviousQA({ question: data.question, answer: data.answer });
         }
